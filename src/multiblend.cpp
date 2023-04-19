@@ -62,20 +62,6 @@ enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG };
 
 #include "image.cpp"
 
-#ifdef _WIN32
-FILE _iob[] = { *stdin, *stdout, *stderr };
-
-extern "C" FILE * __cdecl __iob_func(void) {
-	return _iob;
-}
-#pragma comment(lib, "legacy_stdio_definitions.lib")
-// the above are required to support VS 2010 build of libjpeg-turbo 2.0.6
-#pragma comment(lib, "tiff.lib")
-#pragma comment(lib, "turbojpeg-static.lib")
-#pragma comment(lib, "libpng16.lib")
-#pragma comment(lib, "zlib.lib")
-#endif
-
 #define MASKVAL(X) (((X) & 0x7fffffffffffffff) | images[(X) & 0xffffffff]->mask_state)
 
 int main(int argc, char* argv[]) {

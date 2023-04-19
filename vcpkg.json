@@ -1,0 +1,8 @@
+{
+  "name": "multiblend",
+  "dependencies": [
+    "libjpeg-turbo",
+    "libpng",
+    "tiff"
+  ]
+}
