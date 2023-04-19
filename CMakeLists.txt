@@ -23,6 +23,10 @@ target_link_libraries(Multiblend
   TIFF::TIFF
 )
 
+if(NOT MSVC)
+    target_compile_options(Multiblend PRIVATE -msse4.1)
+endif()
+
 if(BUILD_TESTING)
   add_subdirectory(tests)
 endif()

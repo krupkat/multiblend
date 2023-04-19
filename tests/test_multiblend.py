@@ -5,14 +5,11 @@ import subprocess
 from PIL import Image
 from PIL import ImageChops
 
-MULTIBLEND_PATH = os.path.join("..", "Multiblend.exe")
+MULTIBLEND_PATH = os.path.join("..", "Multiblend")
 RESULT_PATH = "result.jpg"
 
 
 class TestStringMethods(unittest.TestCase):
-    def test_multiblend_exists(self):
-        self.assertTrue(os.path.exists(MULTIBLEND_PATH))
-
     def test_multiblend(self):
         if os.path.exists(RESULT_PATH):
             os.remove(RESULT_PATH)
