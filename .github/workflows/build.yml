@@ -22,7 +22,7 @@ jobs:
           - os: ubuntu-latest
             generator: 'Unix Makefiles'
           - os: macos-latest
-            vcpkgCommitId: 'Unix Makefiles'
+            generator: 'Unix Makefiles'
 
     steps:
       - uses: actions/checkout@v3
