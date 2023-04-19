@@ -4,3 +4,5 @@ cmake -B build -G Ninja `
   -DVCPKG_TARGET_TRIPLET="x64-windows-static"
 
 cmake --build build
+
+ctest --test-dir build -V
