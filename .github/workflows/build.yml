@@ -38,7 +38,7 @@ jobs:
             -DVCPKG_TARGET_TRIPLET=${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_DEFAULT_TRIPLET_OUT }}
 
       - name: Build
-        run: cmake --build build -j $(nproc) --target install
+        run: cmake --build build -j $(nproc)
 
       - name: Test
         run: ctest --test-dir build -V
