@@ -24,7 +24,7 @@ target_link_libraries(Multiblend
 )
 
 if(NOT MSVC)
-    target_compile_options(Multiblend -msse4.1)
+    target_compile_options(Multiblend PRIVATE -msse4.1)
 endif()
 
 if(BUILD_TESTING)
