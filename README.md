@@ -1,2 +1,2 @@
-# super-couscous
+# Multiblend
 Fork of multiblend: http://horman.net/multiblend/
