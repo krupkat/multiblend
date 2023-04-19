@@ -16,6 +16,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: windows-latest
+            generator: 'Ninja'
+          - os: ubuntu-latest
+            generator: 'Unix Makefiles'
+          - os: macos-latest
+            vcpkgCommitId: 'Unix Makefiles'
 
     steps:
       - uses: actions/checkout@v3
@@ -31,7 +38,7 @@ jobs:
           vcpkgGitCommitId: '${{ env.VCPKG_VERSION }}'
 
       - name: Run CMake
-        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_TOOLCHAIN_FILE=${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
+        run: cmake -B build -G "${{ matrix.generator }}" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_TOOLCHAIN_FILE=${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
 
       - name: Build
         run: cmake --build build
