@@ -1,4 +1,4 @@
-[![tests](https://github.com/krupkat/multiblend/actions/workflows/build.yml/badge.svg)](https://github.com/krupkat/multiblend/actions/workflows/build.yml)
+[![tests](https://github.com/krupkat/multiblend/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/krupkat/multiblend/actions/workflows/build.yml)
 
 # Multiblend
 Fork of multiblend: http://horman.net/multiblend/
