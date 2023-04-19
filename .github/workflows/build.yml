@@ -70,6 +70,7 @@ jobs:
       - name: Build
         run: cmake --build build
 
+      - uses: actions/setup-python@v4
       - name: Test
         run: |
           pip3 install -r tests/requirements.txt
