@@ -9,48 +9,19 @@ env:
   VCPKG_VERSION: "eb8e75bb4f5b5f46f65cb10aa863285815c2b69c"
 
 jobs:
-  build-unix:
+  build-and-test:
     name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@main
-        id: runvcpkg
-        with:
-          vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
-          vcpkgGitCommitId: '${{ env.VCPKG_VERSION }}'
-
-      - name: Run CMake
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-            -DCMAKE_TOOLCHAIN_FILE=${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
-
-      - name: Build
-        run: cmake --build build -j $(nproc)
-
-      - name: Test
-        run: ctest --test-dir build -V
-
-  build-windows:
-    name: ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v3
 
       - uses: ilammy/msvc-dev-cmd@v1
+        if: matrix.os == 'windows-latest'
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@main
@@ -60,14 +31,10 @@ jobs:
           vcpkgGitCommitId: '${{ env.VCPKG_VERSION }}'
 
       - name: Run CMake
-        run: |
-          cmake -B build -G Ninja `
-            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
-            -DCMAKE_TOOLCHAIN_FILE=${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_TOOLCHAIN_FILE=${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
 
       - name: Build
         run: cmake --build build
 
-      - uses: actions/setup-python@v4
       - name: Test
         run: ctest --test-dir build -V
