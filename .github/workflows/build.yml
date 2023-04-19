@@ -25,7 +25,7 @@ jobs:
         id: runvcpkg
         with:
           vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
-          vcpkgGitCommitId: '$VCPKG_VERSION'
+          vcpkgGitCommitId: '${{ env.VCPKG_VERSION }}'
 
       - name: Run CMake
         run: |
@@ -59,7 +59,7 @@ jobs:
         id: runvcpkg
         with:
           vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
-          vcpkgGitCommitId: '$env:VCPKG_VERSION'
+          vcpkgGitCommitId: '${{ env.VCPKG_VERSION }}'
 
       - name: Run CMake
         run: |
