@@ -1,7 +1,10 @@
 #include "src/image.h"
 
+#include <stdio.h>
+
 #include "src/functions.h"
 #include "src/geotiff.h"
+#include "src/linux_overrides.h"
 #include "src/mapalloc.h"
 #include "src/pnger.h"
 #include "src/pyramid.h"

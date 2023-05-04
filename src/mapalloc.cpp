@@ -1,11 +1,5 @@
 #include "src/mapalloc.h"
 
-#ifdef __APPLE__
-#define memalign(a, b) malloc((b))
-#else
-#include <malloc.h>
-#endif
-
 #include <cstring>
 
 #ifndef _WIN32
@@ -14,8 +8,9 @@
 #include <unistd.h>
 
 #include <sys/mman.h>
-#define strcpy_s(a, b) strcpy(a, b)
 #endif
+
+#include "src/linux_overrides.h"
 
 std::vector<MapAlloc::MapAllocObject*> MapAlloc::objects;
 char MapAlloc::tmpdir[256] = "";

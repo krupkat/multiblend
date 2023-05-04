@@ -18,33 +18,13 @@
 */
 
 #include <algorithm>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <vector>
 
-#ifdef __APPLE__
-#define memalign(a, b) malloc((b))
-#else
-#include <malloc.h>
-#endif
-
 #include <jpeglib.h>
 #include <tiffio.h>
-
-#ifndef _WIN32
-#include <strings.h>
-int _stricmp(const char* a, const char* b) { return strcasecmp(a, b); }
-#define ZeroMemory(a, b) memset(a, 0, b)
-#define sprintf_s sprintf
-#define sscanf_s sscanf
-void* _aligned_malloc(size_t size, int boundary) {
-  return memalign(boundary, size);
-}
-void _aligned_free(void* a) { free(a); }
-void fopen_s(FILE** f, const char* filename, const char* mode) {
-  *f = fopen(filename, mode);
-}
-#endif
 
 extern int verbosity;
 
@@ -53,6 +33,7 @@ extern int verbosity;
 #include "src/functions.h"
 #include "src/geotiff.h"
 #include "src/image.h"
+#include "src/linux_overrides.h"
 #include "src/mapalloc.h"
 #include "src/pnger.h"
 #include "src/pyramid.h"

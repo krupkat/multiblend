@@ -7,6 +7,7 @@
 #include <png.h>
 
 #include "src/functions.h"
+#include "src/linux_overrides.h"
 
 png_color* Pnger::palette = NULL;
 
