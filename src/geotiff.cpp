@@ -1,12 +1,10 @@
-// some defintions for geotiff
+#include "src/geotiff.h"
 
-struct GeoTIFFInfo {
-  double XGeoRef, YGeoRef;
-  double XCellRes, YCellRes;
-  double projection[16];
-  int nodata;
-  bool set;
-};
+#include <cstdlib>
+
+#include <tiffio.h>
+
+// some defintions for geotiff
 
 #define TIFFTAG_GEOPIXELSCALE 33550
 #define TIFFTAG_GEOTIEPOINTS 33922
@@ -17,22 +15,25 @@ struct GeoTIFFInfo {
 
 #define TIFFTAG_GDAL_NODATA 42113
 
+#define TIFF_TRUE 1
+#define TIFF_FALSE 0
+
 static const TIFFFieldInfo xtiffFieldInfo[] = {
     /* XXX Insert Your tags here */
-    {TIFFTAG_GEOPIXELSCALE, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, TRUE, TRUE,
-     (char*)"GeoPixelScale"},
-    {TIFFTAG_GEOTRANSMATRIX, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, TRUE, TRUE,
-     (char*)"GeoTransformationMatrix"},
-    {TIFFTAG_GEOTIEPOINTS, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, TRUE, TRUE,
-     (char*)"GeoTiePoints"},
-    {TIFFTAG_GEOKEYDIRECTORY, -1, -1, TIFF_SHORT, FIELD_CUSTOM, TRUE, TRUE,
-     (char*)"GeoKeyDirectory"},
-    {TIFFTAG_GEODOUBLEPARAMS, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, TRUE, TRUE,
-     (char*)"GeoDoubleParams"},
-    {TIFFTAG_GEOASCIIPARAMS, -1, -1, TIFF_ASCII, FIELD_CUSTOM, TRUE, FALSE,
-     (char*)"GeoASCIIParams"},
-    {TIFFTAG_GDAL_NODATA, -1, -1, TIFF_ASCII, FIELD_CUSTOM, TRUE, FALSE,
-     (char*)"GDALNoDataValue"}};
+    {TIFFTAG_GEOPIXELSCALE, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, TIFF_TRUE,
+     TIFF_TRUE, (char*)"GeoPixelScale"},
+    {TIFFTAG_GEOTRANSMATRIX, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, TIFF_TRUE,
+     TIFF_TRUE, (char*)"GeoTransformationMatrix"},
+    {TIFFTAG_GEOTIEPOINTS, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, TIFF_TRUE,
+     TIFF_TRUE, (char*)"GeoTiePoints"},
+    {TIFFTAG_GEOKEYDIRECTORY, -1, -1, TIFF_SHORT, FIELD_CUSTOM, TIFF_TRUE,
+     TIFF_TRUE, (char*)"GeoKeyDirectory"},
+    {TIFFTAG_GEODOUBLEPARAMS, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, TIFF_TRUE,
+     TIFF_TRUE, (char*)"GeoDoubleParams"},
+    {TIFFTAG_GEOASCIIPARAMS, -1, -1, TIFF_ASCII, FIELD_CUSTOM, TIFF_TRUE,
+     TIFF_FALSE, (char*)"GeoASCIIParams"},
+    {TIFFTAG_GDAL_NODATA, -1, -1, TIFF_ASCII, FIELD_CUSTOM, TIFF_TRUE,
+     TIFF_FALSE, (char*)"GDALNoDataValue"}};
 
 void geotiff_register(TIFF* tif) {
   TIFFMergeFieldInfo(tif, xtiffFieldInfo,
@@ -68,7 +69,7 @@ int geotiff_read(TIFF* tiff, GeoTIFFInfo* info) {
   char* nodata;
 
   if (TIFFGetField(tiff, TIFFTAG_GDAL_NODATA, &nCount, &nodata))
-    info->nodata = atoi(nodata);
+    info->nodata = std::atoi(nodata);
 
   // TODO: read coordinate system definitions...
   info->set = true;

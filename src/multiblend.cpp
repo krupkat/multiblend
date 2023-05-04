@@ -53,7 +53,7 @@ extern int verbosity;
 #define PNGER
 
 #include "src/functions.h"
-#include "src/geotiff.cpp"
+#include "src/geotiff.h"
 #include "src/mapalloc.cpp"
 #include "src/pnger.cpp"
 #include "src/pyramid.cpp"
