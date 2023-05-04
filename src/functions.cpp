@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstring>
+#include <stdarg.h>
 #include <stdint.h>
 #include <vector>
 
