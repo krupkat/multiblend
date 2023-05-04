@@ -1,3 +1,5 @@
+#include "src/functions.h"
+
 int hist_red[256];
 int hist_grn[256];
 int hist_blu[256];

@@ -1,114 +1,13 @@
+#include "src/functions.h"
+
 #include <chrono>
 #include <cstring>
+#include <stdint.h>
+#include <vector>
 
 #include "src/pyramid.h"
 
-/***********************************************************************
- * Flexible data class
- ***********************************************************************/
-class Flex {
- public:
-  Flex(int _width, int _height) : width(_width), height(_height) {
-    rows = new int[height];
-    NextLine();
-  };
-
-  void NextLine() {
-    end_p = p;
-    if (y < height - 1) rows[++y] = p;
-
-    if (p + (width << 2) > size) {
-      if (y == 0) {
-        size = (std::max)(height, 16) << 4;  // was << 2
-        data = (uint8_t*)malloc(size);
-      } else if (y < height) {
-        int prev_size = size;
-        int new_size1 = (p / y) * height + (width << 4);
-        int new_size2 = size << 1;
-        size = (std::max)(new_size1, new_size2);
-        data = (uint8_t*)realloc(data, size);
-      }
-    }
-
-    MaskFinalise();
-    first = true;
-  }
-
-  void Shrink() {
-    data = (uint8_t*)realloc(data, p);
-    end_p = p;
-  }
-
-  void Write32(uint32_t w) {
-    *((uint32_t*)&data[p]) = w;
-    p += 4;
-  }
-  void Write64(uint64_t w) {
-    *((uint64_t*)&data[p]) = w;
-    p += 8;
-  }
-
-  void MaskWrite(int count, bool white) {
-    if (first) {
-      mask_count = count;
-      mask_white = white;
-      first = false;
-    } else {
-      if (white == mask_white) {
-        mask_count += count;
-      } else {
-        Write32((mask_white << 31) | mask_count);
-        mask_count = count;
-        mask_white = white;
-      }
-    }
-  }
-
-  void MaskFinalise() {
-    if (mask_count) Write32((mask_white << 31) | mask_count);
-  }
-
-  void IncrementLast32(int inc) { *((uint32_t*)&data[p - 4]) += inc; }
-
-  uint8_t ReadBackwards8() { return data[--p]; }
-  uint16_t ReadBackwards16() { return *((uint16_t*)&data[p -= 2]); }
-  uint32_t ReadBackwards32() { return *((uint32_t*)&data[p -= 4]); }
-  uint64_t ReadBackwards64() { return *((uint64_t*)&data[p -= 8]); }
-
-  uint32_t ReadForwards32() {
-    uint32_t out = *((uint32_t*)&data[p]);
-    p += 4;
-    return out;
-  }
-
-  void Copy(uint8_t* src, int len) {
-    memcpy(&data[p], src, len);
-    p += len;
-  }
-
-  void Start() { p = 0; }
-
-  void End() { p = end_p; }
-
-  ~Flex() {
-    free(data);
-    delete[] rows;
-  }
-
-  uint8_t* data = NULL;
-  int width;
-  int height;
-  int* rows;
-  int y = -1;
-
- private:
-  int size = 0;
-  int p = 0;
-  int end_p = 0;
-  int mask_count = 0;
-  bool mask_white;
-  bool first;
-};
+int verbosity = 1;
 
 /***********************************************************************
  * Output
@@ -123,25 +22,6 @@ void Output(int level, const char* fmt, ...) {
   }
   fflush(stdout);
 }
-
-/***********************************************************************
- * Timer
- ***********************************************************************/
-class Timer {
- public:
-  void Start() { start_time = std::chrono::high_resolution_clock::now(); };
-
-  double Read() {
-    std::chrono::duration<double> elapsed =
-        std::chrono::high_resolution_clock::now() - start_time;
-    return elapsed.count();
-  };
-
-  void Report(const char* name) { printf("%s: %.3fs\n", name, Read()); };
-
- private:
-  std::chrono::high_resolution_clock::time_point start_time;
-};
 
 /***********************************************************************
  * Die
@@ -531,32 +411,6 @@ void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
 }
 
 /***********************************************************************
- * Seam macro
- ***********************************************************************/
-// Record macro
-#define RECORD(I, C)                                                \
-  if ((I) != current_i) {                                           \
-    if (mc > 0) {                                                   \
-      if (seam_map) memset(&seam_map->line[x - mc], current_i, mc); \
-      for (i = 0; i < n_images; ++i) {                              \
-        if (i == current_i) {                                       \
-          images[i]->masks[0]->Write32(0xc0000000 | mc);            \
-        } else if (i == prev_i || prev_i == -1) {                   \
-          images[i]->masks[0]->Write32(0x80000000 | mc);            \
-        } else {                                                    \
-          images[i]->masks[0]->IncrementLast32(mc);                 \
-        }                                                           \
-      }                                                             \
-    }                                                               \
-    prev_i = current_i;                                             \
-    mc = C;                                                         \
-    current_i = I;                                                  \
-  } else {                                                          \
-    mc += C;                                                        \
-  }
-// end macro
-
-/***********************************************************************
  * DT reader and macros
  ***********************************************************************/
 void ReadInpaintDT(Flex* flex, int& current_count, int& current_step,
@@ -588,7 +442,7 @@ void ReadInpaintDT(Flex* flex, int& current_count, int& current_step,
   }
 }
 
-void ReadSeamDT(Flex* flex, int& current_count, int64& current_step,
+void ReadSeamDT(Flex* flex, int& current_count, int64_t& current_step,
                 uint64_t& dt_val) {
   if (current_count) {
     --current_count;
@@ -599,11 +453,11 @@ void ReadSeamDT(Flex* flex, int& current_count, int64& current_step,
       dt_val = flex->ReadBackwards64();
       return;
     } else {
-      current_step = ((int64)(_byte & 7) - 3) << 32;
+      current_step = ((int64_t)(_byte & 7) - 3) << 32;
       if (!(_byte & 0x80)) {  // 0b0ccccsss
         current_count = _byte >> 3;
       } else if (!(_byte & 0x40)) {  // 0b10ssssss
-        current_step = (int64)(_byte & 0x3f) << 32;
+        current_step = (int64_t)(_byte & 0x3f) << 32;
         current_count = 0;
       } else if (!(_byte & 0x20)) {  // 0b11000000
         current_count = flex->ReadBackwards8();
@@ -616,9 +470,6 @@ void ReadSeamDT(Flex* flex, int& current_count, int64& current_step,
     }
   }
 }
-
-#define SEAM_DT ReadSeamDT(seam_flex, current_count, current_step, dt_val);
-#define INPAINT_DT ReadInpaintDT(dt, current_count, current_step, dt_val);
 
 /***********************************************************************
  * Seam line compress
@@ -703,7 +554,7 @@ int CompressSeamLine(uint64_t* input, uint8_t* output, int width) {
   int current_step = -100;
   int current_count = 0;
 
-  int64 step;
+  int64_t step;
   int x = width;
   int p = 0;
   uint64_t left_val;
@@ -719,7 +570,7 @@ int CompressSeamLine(uint64_t* input, uint8_t* output, int width) {
     if (!(left_val & 0xffffffff00000000)) break;
 
     if (!((right_val ^ left_val) & 0xffffffff) &&
-        (step = ((int64)(right_val - left_val) >> 32) + 3) < 67 &&
+        (step = ((int64_t)(right_val - left_val) >> 32) + 3) < 67 &&
         step >= 0) {  // was <= 7
       if (step <= 7) {
         if (step == current_step) {
@@ -799,9 +650,9 @@ void SwapUnswapV(Pyramid* py, bool unswap) {
     uint8_t* temp2 = (uint8_t*)malloc(byte_pitch);
     if (unswap) {
       uint8_t* upper =
-          (uint8_t*)(py->GetData() + ((int64)height >> 1) * py->GetPitch());
+          (uint8_t*)(py->GetData() + ((int64_t)height >> 1) * py->GetPitch());
       uint8_t* lower =
-          (uint8_t*)(py->GetData() + ((int64)height - 1) * py->GetPitch());
+          (uint8_t*)(py->GetData() + ((int64_t)height - 1) * py->GetPitch());
 
       memcpy(temp, upper, byte_pitch);
 
@@ -818,7 +669,7 @@ void SwapUnswapV(Pyramid* py, bool unswap) {
     } else {
       uint8_t* upper = (uint8_t*)py->GetData();
       uint8_t* lower =
-          (uint8_t*)(py->GetData() + ((int64)height >> 1) * py->GetPitch());
+          (uint8_t*)(py->GetData() + ((int64_t)height >> 1) * py->GetPitch());
 
       memcpy(temp, lower, byte_pitch);
 
@@ -838,7 +689,7 @@ void SwapUnswapV(Pyramid* py, bool unswap) {
   } else {
     uint8_t* upper = (uint8_t*)py->GetData();
     uint8_t* lower =
-        (uint8_t*)(py->GetData() + (int64)half_height * py->GetPitch());
+        (uint8_t*)(py->GetData() + (int64_t)half_height * py->GetPitch());
     for (int y = 0; y < half_height; ++y) {
       memcpy(temp, upper, byte_pitch);
       memcpy(upper, lower, byte_pitch);

@@ -48,11 +48,11 @@ void fopen_s(FILE** f, const char* filename, const char* mode) {
 }
 #endif
 
-int verbosity = 1;
+extern int verbosity;
 
 #define PNGER
 
-#include "src/functions.cpp"
+#include "src/functions.h"
 #include "src/geotiff.cpp"
 #include "src/mapalloc.cpp"
 #include "src/pnger.cpp"
@@ -929,7 +929,7 @@ int main(int argc, char* argv[]) {
    * Forward distance transform
    ***********************************************************************/
   int current_count = 0;
-  int64 current_step;
+  int64_t current_step;
   uint64_t dt_val;
 
   prev_line = thread_lines[1];
@@ -1559,7 +1559,7 @@ int main(int argc, char* argv[]) {
                   (uint8_t*)(output_pyramid->GetData() +
                              wrap_pyramids[p]->GetX() +
                              wrap_pyramids[p]->GetY() *
-                                 (int64)output_pyramid->GetPitch()),
+                                 (int64_t)output_pyramid->GetPitch()),
                   1, output_pyramid->GetPitch(), false, 32);
               wrap_pyramids[p]->Shrink();
               wrap_pyramids[p]->Laplace();
@@ -1703,7 +1703,7 @@ int main(int argc, char* argv[]) {
 
     int n_strips = (int)((height + ROWS_PER_STRIP - 1) / ROWS_PER_STRIP);
     int remaining = height;
-    void* strip = malloc((ROWS_PER_STRIP * (int64)width) * bytes_per_pixel);
+    void* strip = malloc((ROWS_PER_STRIP * (int64_t)width) * bytes_per_pixel);
     void* oc_p[3] = {output_channels[0], output_channels[1],
                      output_channels[2]};
     if (bgr) std::swap(oc_p[0], oc_p[2]);
@@ -1839,7 +1839,7 @@ int main(int argc, char* argv[]) {
       switch (output_type) {
         case ImageType::MB_TIFF: {
           TIFFWriteEncodedStrip(tiff_file, s, strip,
-                                rows * (int64)bytes_per_row);
+                                rows * (int64_t)bytes_per_row);
         } break;
         case ImageType::MB_JPEG: {
           jpeg_write_scanlines(&cinfo, scanlines, rows);

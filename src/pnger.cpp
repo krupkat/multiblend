@@ -2,6 +2,8 @@
 
 #include <png.h>
 
+#include "src/functions.h"
+
 void Output(int level, const char* fmt, ...);
 
 class Pnger {
