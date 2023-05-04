@@ -14,7 +14,7 @@ find_package(PNG REQUIRED)
 find_package(TIFF REQUIRED)
 
 target_include_directories(Multiblend PRIVATE 
-  "src"
+  "."
 )
 
 target_link_libraries(Multiblend
