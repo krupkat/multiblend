@@ -50,6 +50,8 @@ void fopen_s(FILE** f, const char* filename, const char* mode) {
 
 int verbosity = 1;
 
+#define PNGER
+
 #include "src/functions.cpp"
 #include "src/geotiff.cpp"
 #include "src/mapalloc.cpp"

@@ -1,4 +1,7 @@
 #include <chrono>
+#include <cstring>
+
+#include "src/pyramid.h"
 
 /***********************************************************************
  * Flexible data class
