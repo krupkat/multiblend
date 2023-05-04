@@ -136,9 +136,7 @@ class Pyramid {
   size_t GetTotalBytes() { return total_bytes; }
   std::vector<Level>& GetLevels() { return levels; };
   Level& GetLevel(int level) { return levels[level]; };
-#ifdef PNGER
   void Png(const char* filename);
-#endif
 };
 
 /***********************************************************************

@@ -63,11 +63,7 @@ void MapAlloc::SetTmpdir(const char* _tmpdir) {
 MapAlloc::MapAllocObject::MapAllocObject(size_t _size, int alignment)
     : size(_size) {
   if (total_allocated + size < cache_threshold) {
-#ifdef _WIN32
     pointer = _aligned_malloc(size, alignment);
-#else
-    pointer = memalign(alignment, size);
-#endif
   }
 
   if (!pointer) {

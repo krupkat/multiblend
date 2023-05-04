@@ -1412,7 +1412,6 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
   }
 }
 
-#ifdef PNGER
 /***********************************************************************
  * PNG debug
  ***********************************************************************/
@@ -1446,4 +1445,3 @@ void Pyramid::Png(const char* filename) {
 
   free(temp);
 }
-#endif

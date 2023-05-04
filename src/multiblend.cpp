@@ -28,8 +28,6 @@
 
 extern int verbosity;
 
-#define PNGER
-
 #include "src/functions.h"
 #include "src/geotiff.h"
 #include "src/image.h"
