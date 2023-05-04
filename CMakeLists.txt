@@ -12,6 +12,7 @@ add_executable(Multiblend
   "src/multiblend.cpp"
   "src/pnger.cpp"
   "src/pyramid.cpp"
+  "src/threadpool.cpp"
 )
 
 find_package(JPEG REQUIRED)

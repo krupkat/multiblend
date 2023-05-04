@@ -3,6 +3,7 @@
 #include "src/mapalloc.h"
 #include "src/pnger.h"
 #include "src/pyramid.h"
+#include "src/threadpool.h"
 
 int hist_red[256];
 int hist_grn[256];

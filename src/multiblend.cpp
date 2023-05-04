@@ -17,8 +17,6 @@
         The author can be contacted at davidhorman47@gmail.com
 */
 
-#define NOMINMAX
-
 #include <algorithm>
 #include <stdint.h>
 #include <stdio.h>
@@ -57,7 +55,7 @@ extern int verbosity;
 #include "src/mapalloc.h"
 #include "src/pnger.h"
 #include "src/pyramid.h"
-#include "src/threadpool.cpp"
+#include "src/threadpool.h"
 
 class PyramidWithMasks : public Pyramid {
  public:

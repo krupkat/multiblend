@@ -6,6 +6,7 @@
 #endif
 
 #include "src/pnger.h"
+#include "src/threadpool.h"
 
 /***********************************************************************
  * Constructor/destructor
