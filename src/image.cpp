@@ -1,5 +1,6 @@
 #include "src/functions.h"
 #include "src/geotiff.h"
+#include "src/mapalloc.h"
 
 int hist_red[256];
 int hist_grn[256];

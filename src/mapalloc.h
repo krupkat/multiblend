@@ -10,8 +10,6 @@
 
 class MapAlloc {
  private:
-  MapAlloc();
-  ~MapAlloc();
   class MapAllocObject {
    public:
     MapAllocObject(size_t _size, int alignment);
