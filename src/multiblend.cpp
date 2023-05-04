@@ -52,6 +52,7 @@ extern int verbosity;
 
 #include "src/functions.h"
 #include "src/geotiff.h"
+#include "src/image.h"
 #include "src/mapalloc.h"
 #include "src/pnger.h"
 #include "src/pyramid.h"
@@ -62,10 +63,6 @@ class PyramidWithMasks : public Pyramid {
   using Pyramid::Pyramid;
   std::vector<Flex*> masks;
 };
-
-enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG };
-
-#include "image.cpp"
 
 #define MASKVAL(X) \
   (((X)&0x7fffffffffffffff) | images[(X)&0xffffffff]->mask_state)

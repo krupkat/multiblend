@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD 20)
 add_executable(Multiblend
   "src/functions.cpp"
   "src/geotiff.cpp"
+  "src/image.cpp"
   "src/mapalloc.cpp"
   "src/multiblend.cpp"
   "src/pnger.cpp"
