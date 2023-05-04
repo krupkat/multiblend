@@ -3,6 +3,7 @@
 #include <vector>
 
 #ifdef _WIN32
+#define NOMINMAX
 #include <Windows.h>
 #endif
 
@@ -10,8 +11,6 @@
 
 class MapAlloc {
  private:
-  MapAlloc();
-  ~MapAlloc();
   class MapAllocObject {
    public:
     MapAllocObject(size_t _size, int alignment);

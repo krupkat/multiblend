@@ -17,57 +17,31 @@
         The author can be contacted at davidhorman47@gmail.com
 */
 
-#define NOMINMAX
-
 #include <algorithm>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <vector>
 
-#ifdef __APPLE__
-#define memalign(a, b) malloc((b))
-#else
-#include <malloc.h>
-#endif
-
 #include <jpeglib.h>
 #include <tiffio.h>
 
-#ifndef _WIN32
-#include <strings.h>
-int _stricmp(const char* a, const char* b) { return strcasecmp(a, b); }
-#define ZeroMemory(a, b) memset(a, 0, b)
-#define sprintf_s sprintf
-#define sscanf_s sscanf
-void* _aligned_malloc(size_t size, int boundary) {
-  return memalign(boundary, size);
-}
-void _aligned_free(void* a) { free(a); }
-void fopen_s(FILE** f, const char* filename, const char* mode) {
-  *f = fopen(filename, mode);
-}
-#endif
+extern int verbosity;
 
-int verbosity = 1;
-
-#define PNGER
-
-#include "src/functions.cpp"
-#include "src/geotiff.cpp"
-#include "src/mapalloc.cpp"
-#include "src/pnger.cpp"
-#include "src/pyramid.cpp"
-#include "src/threadpool.cpp"
+#include "src/functions.h"
+#include "src/geotiff.h"
+#include "src/image.h"
+#include "src/linux_overrides.h"
+#include "src/mapalloc.h"
+#include "src/pnger.h"
+#include "src/pyramid.h"
+#include "src/threadpool.h"
 
 class PyramidWithMasks : public Pyramid {
  public:
   using Pyramid::Pyramid;
   std::vector<Flex*> masks;
 };
-
-enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG };
-
-#include "image.cpp"
 
 #define MASKVAL(X) \
   (((X)&0x7fffffffffffffff) | images[(X)&0xffffffff]->mask_state)
@@ -929,7 +903,7 @@ int main(int argc, char* argv[]) {
    * Forward distance transform
    ***********************************************************************/
   int current_count = 0;
-  int64 current_step;
+  int64_t current_step;
   uint64_t dt_val;
 
   prev_line = thread_lines[1];
@@ -1559,7 +1533,7 @@ int main(int argc, char* argv[]) {
                   (uint8_t*)(output_pyramid->GetData() +
                              wrap_pyramids[p]->GetX() +
                              wrap_pyramids[p]->GetY() *
-                                 (int64)output_pyramid->GetPitch()),
+                                 (int64_t)output_pyramid->GetPitch()),
                   1, output_pyramid->GetPitch(), false, 32);
               wrap_pyramids[p]->Shrink();
               wrap_pyramids[p]->Laplace();
@@ -1703,7 +1677,7 @@ int main(int argc, char* argv[]) {
 
     int n_strips = (int)((height + ROWS_PER_STRIP - 1) / ROWS_PER_STRIP);
     int remaining = height;
-    void* strip = malloc((ROWS_PER_STRIP * (int64)width) * bytes_per_pixel);
+    void* strip = malloc((ROWS_PER_STRIP * (int64_t)width) * bytes_per_pixel);
     void* oc_p[3] = {output_channels[0], output_channels[1],
                      output_channels[2]};
     if (bgr) std::swap(oc_p[0], oc_p[2]);
@@ -1839,7 +1813,7 @@ int main(int argc, char* argv[]) {
       switch (output_type) {
         case ImageType::MB_TIFF: {
           TIFFWriteEncodedStrip(tiff_file, s, strip,
-                                rows * (int64)bytes_per_row);
+                                rows * (int64_t)bytes_per_row);
         } break;
         case ImageType::MB_JPEG: {
           jpeg_write_scanlines(&cinfo, scanlines, rows);

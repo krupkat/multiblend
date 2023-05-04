@@ -5,6 +5,12 @@
 #include "sse_mathfun.h"
 #endif
 
+#include <math.h>
+
+#include "src/linux_overrides.h"
+#include "src/pnger.h"
+#include "src/threadpool.h"
+
 /***********************************************************************
  * Constructor/destructor
  ***********************************************************************/
@@ -1270,7 +1276,7 @@ void Pyramid::Blend(Pyramid* b) {
  ***********************************************************************/
 #define BLUR_SSE_GET(y, x) \
   y = _mm_set_ps(line3[x], line2[x], line1[x], line0[x])
-//#define BLUR_SSE_GET2(x) _mm_load_ps((float*)&transposed[x])
+// #define BLUR_SSE_GET2(x) _mm_load_ps((float*)&transposed[x])
 #define BLUR_SSE_GET_LEFT                                                 \
   temp1 = _mm_set_ps(line3[left], line2[left], line1[left], line0[left]); \
   left++;
@@ -1406,7 +1412,6 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
   }
 }
 
-#ifdef PNGER
 /***********************************************************************
  * PNG debug
  ***********************************************************************/
@@ -1440,4 +1445,3 @@ void Pyramid::Png(const char* filename) {
 
   free(temp);
 }
-#endif
