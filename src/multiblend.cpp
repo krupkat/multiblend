@@ -55,7 +55,7 @@ extern int verbosity;
 #include "src/functions.h"
 #include "src/geotiff.h"
 #include "src/mapalloc.h"
-#include "src/pnger.cpp"
+#include "src/pnger.h"
 #include "src/pyramid.cpp"
 #include "src/threadpool.cpp"
 
