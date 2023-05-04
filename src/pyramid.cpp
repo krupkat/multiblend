@@ -1144,7 +1144,7 @@ void Pyramid::Fuse(Pyramid* _b, Pyramid* mask, bool pre = false,
   int l;
 
   for (l = 0; l < (int)levels.size(); ++l) {
-    //		fuse_thread((__m128*)levels[l].data,
+    //  fuse_thread((__m128*)levels[l].data,
     //(__m128*)_b->levels[l].data,
     //(__m128*)mask->levels[l].data, m128_pitch, 0, levels[l].height, pre,
     // black);

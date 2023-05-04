@@ -44,5 +44,5 @@ class MapAlloc {
   static void CacheThreshold(size_t threshold);
   static void SetTmpdir(const char* _tmpdir);
   static bool LastFile() { return objects.back()->IsFile(); }
-  //	static bool last_mapped;
+  // static bool last_mapped;
 };

@@ -36,7 +36,7 @@ class Image {
   uint16_t spp;
   void Open();
   void Read(void* data, bool gamma);
-  //	size_t untrimmed_pixels;
+  // size_t untrimmed_pixels;
   size_t untrimmed_bytes;
   Flex* tiff_mask;
   float tiff_xres, tiff_yres;
@@ -113,7 +113,7 @@ void Image::Open() {
         TIFFGetField(tiff, TIFFTAG_BITSPERSAMPLE, &bpp);
         if (bpp != 8 && bpp != 16) die("Invalid bpp %d (%s)", bpp, filename);
       }
-      //			if (spp != 4) die("Images must be RGBA (%s)",
+      //   if (spp != 4) die("Images must be RGBA (%s)",
       // filename);
 
       geotiff.set = false;
@@ -579,7 +579,7 @@ void Image::Read(void* data, bool gamma) {
               this_line[x++] = 0;
               ++mc;
             }
-            //						}
+            //      }
           } break;
         }
 
@@ -831,7 +831,7 @@ void Image::Read(void* data, bool gamma) {
       } break;
     }
 
-    //		total_pixels += width * height;
+    //  total_pixels += width * height;
   }
 
   Output(1, "\n");

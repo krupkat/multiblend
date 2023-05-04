@@ -341,7 +341,7 @@ int main(int argc, char* argv[]) {
     else if (!strcmp(my_argv[i], "--no-dither") ||
              !strcmp(my_argv[i], "--nodither"))
       dither = false;
-    //		else if (!strcmp(my_argv[i], "--force"))     force_coverage =
+    //  else if (!strcmp(my_argv[i], "--force"))     force_coverage =
     // true;
     else if (!strncmp(my_argv[i], "-f", 2))
       Output(0, "ignoring Enblend option -f\n");
@@ -364,7 +364,7 @@ int main(int argc, char* argv[]) {
           compression = COMPRESSION_LZW;
         else if (_stricmp(my_argv[i], "packbits") == 0)
           compression = COMPRESSION_PACKBITS;
-        //				else if (_stricmp(my_argv[i], "deflate")
+        //    else if (_stricmp(my_argv[i], "deflate")
         //== 0) compression = COMPRESSION_DEFLATE;
         else if (_stricmp(my_argv[i], "none") == 0)
           compression = COMPRESSION_NONE;
