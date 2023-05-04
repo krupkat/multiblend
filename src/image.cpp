@@ -793,18 +793,15 @@ void Image::Read(void* data, bool gamma) {
           for (x = 0; x < width; ++x) {
             byte = *bytes++;
             ((uint8_t*)channels[0]->data)[p] = byte;
-            //						channel_totals[0] += gamma ? byte*byte
-            //: byte;
+            // channel_totals[0] += gamma ? byte*byte : byte;
 
             byte = *bytes++;
             ((uint8_t*)channels[1]->data)[p] = byte;
-            //						channel_totals[1] += gamma ? byte * byte
-            //: byte;
+            // channel_totals[1] += gamma ? byte * byte : byte;
 
             byte = *bytes++;
             ((uint8_t*)channels[2]->data)[p] = byte;
-            //						channel_totals[2] += gamma ? byte * byte
-            //: byte;
+            // channel_totals[2] += gamma ? byte * byte : byte;
 
             ++p;
           }
@@ -818,18 +815,15 @@ void Image::Read(void* data, bool gamma) {
           for (x = 0; x < width; ++x) {
             word = *words++;
             ((uint16_t*)channels[0]->data)[p] = word;
-            //						channel_totals[0] += gamma ? word * word
-            //: word;
+            // channel_totals[0] += gamma ? word * word : word;
 
             word = *words++;
             ((uint16_t*)channels[1]->data)[p] = word;
-            //						channel_totals[1] += gamma ? word * word
-            //: word;
+            // channel_totals[1] += gamma ? word * word : word;
 
             word = *words++;
             ((uint16_t*)channels[2]->data)[p] = word;
-            //						channel_totals[2] += gamma ? word * word
-            //: word;
+            // channel_totals[2] += gamma ? word * word : word;
 
             ++p;
           }
