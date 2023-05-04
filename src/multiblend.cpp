@@ -56,7 +56,7 @@ extern int verbosity;
 #include "src/geotiff.h"
 #include "src/mapalloc.h"
 #include "src/pnger.h"
-#include "src/pyramid.cpp"
+#include "src/pyramid.h"
 #include "src/threadpool.cpp"
 
 class PyramidWithMasks : public Pyramid {

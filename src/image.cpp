@@ -2,6 +2,7 @@
 #include "src/geotiff.h"
 #include "src/mapalloc.h"
 #include "src/pnger.h"
+#include "src/pyramid.h"
 
 int hist_red[256];
 int hist_grn[256];

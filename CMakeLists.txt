@@ -11,6 +11,7 @@ add_executable(Multiblend
   "src/mapalloc.cpp"
   "src/multiblend.cpp"
   "src/pnger.cpp"
+  "src/pyramid.cpp"
 )
 
 find_package(JPEG REQUIRED)

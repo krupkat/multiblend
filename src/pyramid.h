@@ -139,10 +139,6 @@ class Pyramid {
 #ifdef PNGER
   void Png(const char* filename);
 #endif
-#ifdef SIMPLE
-  void shrink_simple();
-  void laplace_simple(bool collapse);
-#endif
 };
 
 /***********************************************************************

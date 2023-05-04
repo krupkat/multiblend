@@ -8,8 +8,6 @@
 
 #include "src/functions.h"
 
-void Output(int level, const char* fmt, ...);
-
 png_color* Pnger::palette = NULL;
 
 Pnger::Pnger(const char* filename, const char* name, int w, int _h, int type,
