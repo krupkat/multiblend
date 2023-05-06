@@ -54,7 +54,6 @@ int main(int argc, char* argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  int i;
   Timer timer_all, timer;
   timer_all.Start();
 
@@ -194,7 +193,7 @@ int main(int argc, char* argv[]) {
 
   bool skip = false;
 
-  for (i = 1; i < argc; ++i) {
+  for (int i = 1; i < argc; ++i) {
     my_argv.push_back(argv[i]);
 
     if (!skip) {
@@ -220,63 +219,66 @@ int main(int argc, char* argv[]) {
   if ((int)my_argv.size() < 3)
     die("Error: Not enough arguments (try -h for help)");
 
-  for (i = 0; i < (int)my_argv.size(); ++i) {
-    if (!strcmp(my_argv[i], "-d") || !strcmp(my_argv[i], "--d") ||
-        !strcmp(my_argv[i], "--depth") || !strcmp(my_argv[i], "--bpp")) {
-      if (++i < (int)my_argv.size()) {
-        output_bpp = atoi(my_argv[i]);
+  int pos;
+  for (pos = 0; pos < (int)my_argv.size(); ++pos) {
+    if (!strcmp(my_argv[pos], "-d") || !strcmp(my_argv[pos], "--d") ||
+        !strcmp(my_argv[pos], "--depth") || !strcmp(my_argv[pos], "--bpp")) {
+      if (++pos < (int)my_argv.size()) {
+        output_bpp = atoi(my_argv[pos]);
         if (output_bpp != 8 && output_bpp != 16) {
           die("Error: Invalid output depth specified");
         }
       } else {
         die("Error: Missing parameter value");
       }
-    } else if (!strcmp(my_argv[i], "-l") || !strcmp(my_argv[i], "--levels")) {
-      if (++i < (int)my_argv.size()) {
+    } else if (!strcmp(my_argv[pos], "-l") ||
+               !strcmp(my_argv[pos], "--levels")) {
+      if (++pos < (int)my_argv.size()) {
         int n;
-        if (my_argv[i][0] == '+' || my_argv[i][0] == '-') {
-          sscanf_s(my_argv[i], "%d%n", &add_levels, &n);
+        if (my_argv[pos][0] == '+' || my_argv[pos][0] == '-') {
+          sscanf_s(my_argv[pos], "%d%n", &add_levels, &n);
         } else {
-          sscanf_s(my_argv[i], "%d%n", &fixed_levels, &n);
+          sscanf_s(my_argv[pos], "%d%n", &fixed_levels, &n);
           if (fixed_levels == 0) fixed_levels = 1;
         }
-        if (my_argv[i][n]) die("Error: Bad --levels parameter");
+        if (my_argv[pos][n]) die("Error: Bad --levels parameter");
       } else {
         die("Error: Missing parameter value");
       }
-    } else if (!strcmp(my_argv[i], "--wrap") || !strcmp(my_argv[i], "-w")) {
-      if (i + 1 >= (int)my_argv.size()) {
+    } else if (!strcmp(my_argv[pos], "--wrap") || !strcmp(my_argv[pos], "-w")) {
+      if (pos + 1 >= (int)my_argv.size()) {
         die("Error: Missing parameters");
       }
-      if (!strcmp(my_argv[i + 1], "none") || !strcmp(my_argv[i + 1], "open"))
-        ++i;
-      else if (!strcmp(my_argv[i + 1], "horizontal") ||
-               !strcmp(my_argv[i + 1], "h")) {
+      if (!strcmp(my_argv[pos + 1], "none") ||
+          !strcmp(my_argv[pos + 1], "open"))
+        ++pos;
+      else if (!strcmp(my_argv[pos + 1], "horizontal") ||
+               !strcmp(my_argv[pos + 1], "h")) {
         wrap = 1;
-        ++i;
-      } else if (!strcmp(my_argv[i + 1], "vertical") ||
-                 !strcmp(my_argv[i + 1], "v")) {
+        ++pos;
+      } else if (!strcmp(my_argv[pos + 1], "vertical") ||
+                 !strcmp(my_argv[pos + 1], "v")) {
         wrap = 2;
-        ++i;
-      } else if (!strcmp(my_argv[i + 1], "both") ||
-                 !strcmp(my_argv[i + 1], "hv")) {
+        ++pos;
+      } else if (!strcmp(my_argv[pos + 1], "both") ||
+                 !strcmp(my_argv[pos + 1], "hv")) {
         wrap = 3;
-        ++i;
+        ++pos;
       } else
         wrap = 1;
-    } else if (!strcmp(my_argv[i], "--cache-threshold")) {
-      if (i + 1 >= (int)my_argv.size()) {
+    } else if (!strcmp(my_argv[pos], "--cache-threshold")) {
+      if (pos + 1 >= (int)my_argv.size()) {
         die("Error: Missing parameters");
       }
-      ++i;
+      ++pos;
       int shift = 0;
       int n = 0;
-      size_t len = strlen(my_argv[i]);
+      size_t len = strlen(my_argv[pos]);
       size_t threshold;
-      sscanf_s(my_argv[i], "%zu%n", &threshold, &n);
+      sscanf_s(my_argv[pos], "%zu%n", &threshold, &n);
       if (n != len) {
         if (n == len - 1) {
-          switch (my_argv[i][len - 1]) {
+          switch (my_argv[pos][len - 1]) {
             case 'k':
             case 'K':
               shift = 10;
@@ -298,81 +300,82 @@ int main(int argc, char* argv[]) {
         }
       }
       MapAlloc::CacheThreshold(threshold);
-    } else if (!strcmp(my_argv[i], "--nomask") ||
-               !strcmp(my_argv[i], "--no-mask"))
+    } else if (!strcmp(my_argv[pos], "--nomask") ||
+               !strcmp(my_argv[pos], "--no-mask"))
       no_mask = true;
-    else if (!strcmp(my_argv[i], "--timing") ||
-             !strcmp(my_argv[i], "--timings"))
+    else if (!strcmp(my_argv[pos], "--timing") ||
+             !strcmp(my_argv[pos], "--timings"))
       timing = true;
-    else if (!strcmp(my_argv[i], "--bigtiff"))
+    else if (!strcmp(my_argv[pos], "--bigtiff"))
       big_tiff = true;
-    else if (!strcmp(my_argv[i], "--bgr"))
+    else if (!strcmp(my_argv[pos], "--bgr"))
       bgr = true;
-    else if (!strcmp(my_argv[i], "--wideblend"))
+    else if (!strcmp(my_argv[pos], "--wideblend"))
       wideblend = true;
-    else if (!strcmp(my_argv[i], "--reverse"))
+    else if (!strcmp(my_argv[pos], "--reverse"))
       reverse = true;
-    else if (!strcmp(my_argv[i], "--gamma"))
+    else if (!strcmp(my_argv[pos], "--gamma"))
       gamma = true;
-    else if (!strcmp(my_argv[i], "--no-dither") ||
-             !strcmp(my_argv[i], "--nodither"))
+    else if (!strcmp(my_argv[pos], "--no-dither") ||
+             !strcmp(my_argv[pos], "--nodither"))
       dither = false;
     //  else if (!strcmp(my_argv[i], "--force"))     force_coverage =
     // true;
-    else if (!strncmp(my_argv[i], "-f", 2))
+    else if (!strncmp(my_argv[pos], "-f", 2))
       Output(0, "ignoring Enblend option -f\n");
-    else if (!strcmp(my_argv[i], "-a"))
+    else if (!strcmp(my_argv[pos], "-a"))
       Output(0, "ignoring Enblend option -a\n");
-    else if (!strcmp(my_argv[i], "--no-ciecam"))
+    else if (!strcmp(my_argv[pos], "--no-ciecam"))
       Output(0, "ignoring Enblend option --no-ciecam\n");
-    else if (!strcmp(my_argv[i], "--primary-seam-generator")) {
+    else if (!strcmp(my_argv[pos], "--primary-seam-generator")) {
       Output(0, "ignoring Enblend option --primary-seam-generator\n");
-      ++i;
+      ++pos;
     }
 
-    else if (!strcmp(my_argv[i], "--compression")) {
-      if (++i < (int)my_argv.size()) {
-        if (strcmp(my_argv[i], "0") == 0)
+    else if (!strcmp(my_argv[pos], "--compression")) {
+      if (++pos < (int)my_argv.size()) {
+        if (strcmp(my_argv[pos], "0") == 0)
           jpeg_quality = 0;
-        else if (atoi(my_argv[i]) > 0)
-          jpeg_quality = atoi(my_argv[i]);
-        else if (_stricmp(my_argv[i], "lzw") == 0)
+        else if (atoi(my_argv[pos]) > 0)
+          jpeg_quality = atoi(my_argv[pos]);
+        else if (_stricmp(my_argv[pos], "lzw") == 0)
           compression = COMPRESSION_LZW;
-        else if (_stricmp(my_argv[i], "packbits") == 0)
+        else if (_stricmp(my_argv[pos], "packbits") == 0)
           compression = COMPRESSION_PACKBITS;
         //    else if (_stricmp(my_argv[i], "deflate")
         //== 0) compression = COMPRESSION_DEFLATE;
-        else if (_stricmp(my_argv[i], "none") == 0)
+        else if (_stricmp(my_argv[pos], "none") == 0)
           compression = COMPRESSION_NONE;
         else
-          die("Error: Unknown compression codec %s", my_argv[i]);
+          die("Error: Unknown compression codec %s", my_argv[pos]);
       } else {
         die("Error: Missing parameter value");
       }
-    } else if (!strcmp(my_argv[i], "-v") || !strcmp(my_argv[i], "--verbose"))
+    } else if (!strcmp(my_argv[pos], "-v") ||
+               !strcmp(my_argv[pos], "--verbose"))
       ++verbosity;
-    else if (!strcmp(my_argv[i], "-q") || !strcmp(my_argv[i], "--quiet"))
+    else if (!strcmp(my_argv[pos], "-q") || !strcmp(my_argv[pos], "--quiet"))
       --verbosity;
-    else if ((!strcmp(my_argv[i], "--saveseams") ||
-              !strcmp(my_argv[i], "--save-seams")) &&
-             i < (int)my_argv.size() - 1)
-      seamsave_filename = my_argv[++i];
-    else if ((!strcmp(my_argv[i], "--loadseams") ||
-              !strcmp(my_argv[i], "--load-seams")) &&
-             i < (int)my_argv.size() - 1)
-      seamload_filename = my_argv[++i];
-    else if ((!strcmp(my_argv[i], "--savexor") ||
-              !strcmp(my_argv[i], "--save-xor")) &&
-             i < (int)my_argv.size() - 1)
-      xor_filename = my_argv[++i];
-    else if (!strcmp(my_argv[i], "--tempdir") ||
-             !strcmp(my_argv[i], "--tmpdir") && i < (int)my_argv.size() - 1)
-      MapAlloc::SetTmpdir(my_argv[++i]);
-    else if (!strcmp(my_argv[i], "--all-threads"))
+    else if ((!strcmp(my_argv[pos], "--saveseams") ||
+              !strcmp(my_argv[pos], "--save-seams")) &&
+             pos < (int)my_argv.size() - 1)
+      seamsave_filename = my_argv[++pos];
+    else if ((!strcmp(my_argv[pos], "--loadseams") ||
+              !strcmp(my_argv[pos], "--load-seams")) &&
+             pos < (int)my_argv.size() - 1)
+      seamload_filename = my_argv[++pos];
+    else if ((!strcmp(my_argv[pos], "--savexor") ||
+              !strcmp(my_argv[pos], "--save-xor")) &&
+             pos < (int)my_argv.size() - 1)
+      xor_filename = my_argv[++pos];
+    else if (!strcmp(my_argv[pos], "--tempdir") ||
+             !strcmp(my_argv[pos], "--tmpdir") && pos < (int)my_argv.size() - 1)
+      MapAlloc::SetTmpdir(my_argv[++pos]);
+    else if (!strcmp(my_argv[pos], "--all-threads"))
       all_threads = true;
-    else if (!strcmp(my_argv[i], "-o") || !strcmp(my_argv[i], "--output")) {
-      if (++i < (int)my_argv.size()) {
-        output_filename = my_argv[i];
+    else if (!strcmp(my_argv[pos], "-o") || !strcmp(my_argv[pos], "--output")) {
+      if (++pos < (int)my_argv.size()) {
+        output_filename = my_argv[pos];
         char* ext = strrchr(output_filename, '.');
 
         if (!ext) {
@@ -391,14 +394,14 @@ int main(int argc, char* argv[]) {
           die("Error: Unknown file extension");
         }
 
-        ++i;
+        ++pos;
         break;
       }
-    } else if (!strcmp(my_argv[i], "--no-output")) {
-      ++i;
+    } else if (!strcmp(my_argv[pos], "--no-output")) {
+      ++pos;
       break;
     } else {
-      die("Error: Unknown argument \"%s\"", my_argv[i]);
+      die("Error: Unknown argument \"%s\"", my_argv[pos]);
     }
   }
 
@@ -413,9 +416,9 @@ int main(int argc, char* argv[]) {
 
   if (jpeg_quality != -1 && output_type != ImageType::MB_JPEG &&
       output_type != ImageType::MB_PNG) {
-    Output(
-        0,
-        "Warning: non-JPEG/PNG output; ignoring compression quality setting\n");
+    Output(0,
+           "Warning: non-JPEG/PNG output; ignoring compression quality "
+           "setting\n");
   }
 
   if ((jpeg_quality < -1 || jpeg_quality > 9) &&
@@ -430,25 +433,27 @@ int main(int argc, char* argv[]) {
   if (wrap == 3)
     die("Error: Wrapping in both directions is not currently supported");
 
-  if (!strcmp(my_argv[i], "--")) ++i;
+  if (!strcmp(my_argv[pos], "--")) {
+    ++pos;
+  }
 
   /***********************************************************************
    * Push remaining arguments to images vector
    ***********************************************************************/
-  int x, y, n;
 
-  while (i < (int)my_argv.size()) {
+  while (pos < (int)my_argv.size()) {
     if (images.size()) {
-      n = 0;
-      sscanf_s(my_argv[i], "%d,%d%n", &x, &y, &n);
-      if (!my_argv[i][n]) {
+      int x, y;
+      int n = 0;
+      sscanf_s(my_argv[pos], "%d,%d%n", &x, &y, &n);
+      if (!my_argv[pos][n]) {
         images.back()->xpos_add = x;
         images.back()->ypos_add = y;
-        i++;
+        pos++;
         continue;
       }
     }
-    images.push_back(new Image(my_argv[i++]));
+    images.push_back(new Image(my_argv[pos++]));
   }
 
   int n_images = (int)images.size();
@@ -517,7 +522,7 @@ int main(int argc, char* argv[]) {
    ***********************************************************************/
   size_t untrimmed_bytes = 0;
 
-  for (i = 0; i < n_images; ++i) {
+  for (int i = 0; i < n_images; ++i) {
     images[i]->Open();
     untrimmed_bytes = std::max(untrimmed_bytes, images[i]->untrimmed_bytes);
   }
@@ -525,7 +530,7 @@ int main(int argc, char* argv[]) {
   /***********************************************************************
    * Check paramters, display warnings
    ***********************************************************************/
-  for (i = 1; i < n_images; ++i) {
+  for (int i = 1; i < n_images; ++i) {
     if (images[i]->tiff_xres != images[0]->tiff_xres ||
         images[i]->tiff_yres != images[0]->tiff_yres) {
       Output(0, "Warning: TIFF resolution mismatch (%f %f/%f %f)\n",
@@ -534,7 +539,7 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  for (i = 0; i < n_images; ++i) {
+  for (int i = 0; i < n_images; ++i) {
     if (output_bpp == 0 && images[i]->bpp == 16) output_bpp = 16;
     if (images[i]->bpp != images[0]->bpp) {
       die("Error: mixture of 8bpp and 16bpp images detected (not currently "
@@ -542,9 +547,9 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  if (output_bpp == 0)
+  if (output_bpp == 0) {
     output_bpp = 8;
-  else if (output_bpp == 16 && output_type == ImageType::MB_JPEG) {
+  } else if (output_bpp == 16 && output_type == ImageType::MB_JPEG) {
     Output(0, "Warning: 8bpp output forced by JPEG output\n");
     output_bpp = 8;
   }
@@ -557,7 +562,7 @@ int main(int argc, char* argv[]) {
   /***********************************************************************
    * Read/trim/extract
    ***********************************************************************/
-  for (i = 0; i < n_images; ++i) {
+  for (int i = 0; i < n_images; ++i) {
     try {
       images[i]->Read(untrimmed_data, gamma);
     } catch (char* e) {
@@ -580,12 +585,12 @@ int main(int argc, char* argv[]) {
   width = 0;
   height = 0;
 
-  for (i = 0; i < n_images; ++i) {
+  for (int i = 0; i < n_images; ++i) {
     min_xpos = std::min(min_xpos, images[i]->xpos);
     min_ypos = std::min(min_ypos, images[i]->ypos);
   }
 
-  for (i = 0; i < n_images; ++i) {
+  for (int i = 0; i < n_images; ++i) {
     images[i]->xpos -= min_xpos;
     images[i]->ypos -= min_ypos;
     width = std::max(width, images[i]->xpos + images[i]->width);
@@ -626,7 +631,9 @@ int main(int argc, char* argv[]) {
     }
 
     blend_levels = (int)floor(log2(blend_wh + 4.0f) - 1);
-    if (wideblend) blend_levels++;
+    if (wideblend) {
+      blend_levels++;
+    }
   } else {
     blend_levels = fixed_levels;
   }
@@ -692,23 +699,23 @@ int main(int argc, char* argv[]) {
 
     uint8_t** thread_comp_lines = new uint8_t*[n_threads];
 
-    for (i = 0; i < n_threads; ++i) {
+    for (int i = 0; i < n_threads; ++i) {
       thread_lines[i] = new uint64_t[width];
       thread_comp_lines[i] = new uint8_t[width];
     }
 
     // set all image masks to bottom right
-    for (i = 0; i < n_images; ++i) {
+    for (int i = 0; i < n_images; ++i) {
       images[i]->tiff_mask->End();
     }
 
-    for (y = height - 1; y >= 0; --y) {
+    for (int y = height - 1; y >= 0; --y) {
       int t = y % n_threads;
       this_line = thread_lines[t];
       uint8_t* comp = thread_comp_lines[t];
 
       // set initial image mask states
-      for (i = 0; i < n_images; ++i) {
+      for (int i = 0; i < n_images; ++i) {
         images[i]->mask_state = 0x8000000000000000;
         if (y >= images[i]->ypos && y < images[i]->ypos + images[i]->height) {
           images[i]->mask_count = width - (images[i]->xpos + images[i]->width);
@@ -719,7 +726,7 @@ int main(int argc, char* argv[]) {
         }
       }
 
-      x = width - 1;
+      int x = width - 1;
 
       {  // make sure the last compression thread to use this chunk of memory is
          // finished
@@ -733,7 +740,7 @@ int main(int argc, char* argv[]) {
         xor_count = 0;
 
         // update image mask states
-        for (i = 0; i < n_images; ++i) {
+        for (int i = 0; i < n_images; ++i) {
           if (!images[i]->mask_count) {
             if (x >= images[i]->mask_limit) {
               utemp = images[i]->tiff_mask->ReadBackwards32();
@@ -784,7 +791,7 @@ int main(int argc, char* argv[]) {
               this_line[x--] = d;
 
               if (x == stop) {
-                for (i = 0; i < n_images; ++i) {
+                for (int i = 0; i < n_images; ++i) {
                   images[i]->mask_count -= min_count;
                 }
                 continue;
@@ -836,7 +843,7 @@ int main(int argc, char* argv[]) {
           }
         }
 
-        for (i = 0; i < n_images; ++i) {
+        for (int i = 0; i < n_images; ++i) {
           images[i]->mask_count -= min_count;
         }
       }
@@ -865,15 +872,17 @@ int main(int argc, char* argv[]) {
 
     threadpool->Wait();
 
-    for (i = 0; i < n_images; ++i) {
+    for (int i = 0; i < n_images; ++i) {
       if (!images[i]->seam_present) {
         Output(1, "Warning: %s is fully obscured by other images\n",
                images[i]->filename);
       }
     }
 
-    for (i = 0; i < n_threads; ++i) {
-      if (i >= 2) delete[] thread_lines[i];
+    for (int i = 0; i < n_threads; ++i) {
+      if (i >= 2) {
+        delete[] thread_lines[i];
+      }
       delete[] thread_comp_lines[i];
     }
 
@@ -881,13 +890,13 @@ int main(int argc, char* argv[]) {
     delete flex_mutex_p;
     delete flex_cond_p;
   } else {  // if seamload_filename:
-    for (i = 0; i < n_images; ++i) {
+    for (int i = 0; i < n_images; ++i) {
       images[i]->tiff_mask->Start();
     }
   }
 
   // create top level masks
-  for (i = 0; i < n_images; ++i) {
+  for (int i = 0; i < n_images; ++i) {
     images[i]->masks.push_back(new Flex(width, height));
   }
 
@@ -916,8 +925,8 @@ int main(int argc, char* argv[]) {
 
   bool alpha = false;
 
-  for (y = 0; y < height; ++y) {
-    for (i = 0; i < n_images; ++i) {
+  for (int y = 0; y < height; ++y) {
+    for (int i = 0; i < n_images; ++i) {
       images[i]->mask_state = 0x8000000000000000;
       if (y >= images[i]->ypos && y < images[i]->ypos + images[i]->height) {
         images[i]->mask_count = images[i]->xpos;
@@ -928,7 +937,7 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    x = 0;
+    int x = 0;
     int mc = 0;
     int prev_i = -1;
     int current_i = -1;
@@ -938,7 +947,7 @@ int main(int argc, char* argv[]) {
       min_count = width - x;
       xor_count = 0;
 
-      for (i = 0; i < n_images; ++i) {
+      for (int i = 0; i < n_images; ++i) {
         if (!images[i]->mask_count) {
           if (x < images[i]->mask_limit) {
             utemp = images[i]->tiff_mask->ReadForwards32();
@@ -1056,10 +1065,12 @@ int main(int argc, char* argv[]) {
 
               if (best & 0x8000000000000000 && xor_count) {
                 arbitrary_seam = true;
-                for (i = 0; i < n_images; ++i) {
+                for (int i = 0; i < n_images; ++i) {
                   if (!images[i]->mask_state) {
                     best = 0x8000000000000000 | i;
-                    if (!reverse) break;
+                    if (!reverse) {
+                      break;
+                    }
                   }
                 }
               }
@@ -1084,10 +1095,12 @@ int main(int argc, char* argv[]) {
 
               if (best & 0x8000000000000000 && xor_count) {
                 arbitrary_seam = true;
-                for (i = 0; i < n_images; ++i) {
+                for (int i = 0; i < n_images; ++i) {
                   if (!images[i]->mask_state) {
                     best = 0x8000000000000000 | i;
-                    if (!reverse) break;
+                    if (!reverse) {
+                      break;
+                    }
                   }
                 }
               }
@@ -1097,7 +1110,7 @@ int main(int argc, char* argv[]) {
               this_line[x++] = best;
 
               if (x == stop) {
-                for (i = 0; i < n_images; ++i) {
+                for (int i = 0; i < n_images; ++i) {
                   images[i]->mask_count -= min_count;
                 }
                 continue;
@@ -1135,10 +1148,12 @@ int main(int argc, char* argv[]) {
 
               if (best & 0x8000000000000000 && xor_count) {
                 arbitrary_seam = true;
-                for (i = 0; i < n_images; ++i) {
+                for (int i = 0; i < n_images; ++i) {
                   if (!images[i]->mask_state) {
                     best = 0x8000000000000000 | i;
-                    if (!reverse) break;
+                    if (!reverse) {
+                      break;
+                    }
                   }
                 }
               }
@@ -1162,10 +1177,12 @@ int main(int argc, char* argv[]) {
 
               if (best & 0x8000000000000000 && xor_count) {
                 arbitrary_seam = true;
-                for (i = 0; i < n_images; ++i) {
+                for (int i = 0; i < n_images; ++i) {
                   if (!images[i]->mask_state) {
                     best = 0x8000000000000000 | i;
-                    if (!reverse) break;
+                    if (!reverse) {
+                      break;
+                    }
                   }
                 }
               }
@@ -1182,7 +1199,7 @@ int main(int argc, char* argv[]) {
         }
       }
 
-      for (i = 0; i < n_images; ++i) {
+      for (int i = 0; i < n_images; ++i) {
         images[i]->mask_count -= min_count;
       }
     }
@@ -1190,7 +1207,7 @@ int main(int argc, char* argv[]) {
     if (!seamload_filename) {
       RECORD(-1, 0);
 
-      for (i = 0; i < n_images; ++i) {
+      for (int i = 0; i < n_images; ++i) {
         images[i]->masks[0]->NextLine();
       }
     }
@@ -1213,7 +1230,9 @@ int main(int argc, char* argv[]) {
   delete xor_map;
   delete seam_map;
 
-  if (!alpha || output_type == ImageType::MB_JPEG) no_mask = true;
+  if (!alpha || output_type == ImageType::MB_JPEG) {
+    no_mask = true;
+  }
 
   /***********************************************************************
    * Seam load
@@ -1227,15 +1246,23 @@ int main(int argc, char* argv[]) {
     FILE* f;
 
     fopen_s(&f, seamload_filename, "rb");
-    if (!f) die("Error: Couldn't open seam file");
+    if (!f) {
+      die("Error: Couldn't open seam file");
+    }
 
     size_t r = fread(sig, 1, 8, f);  // assignment suppresses g++ -Ofast warning
-    if (!png_check_sig(sig, 8)) die("Error: Bad PNG signature");
+    if (!png_check_sig(sig, 8)) {
+      die("Error: Bad PNG signature");
+    }
 
     png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    if (!png_ptr) die("Error: Seam PNG problem");
+    if (!png_ptr) {
+      die("Error: Seam PNG problem");
+    }
     info_ptr = png_create_info_struct(png_ptr);
-    if (!info_ptr) die("Error: Seam PNG problem");
+    if (!info_ptr) {
+      die("Error: Seam PNG problem");
+    }
 
     png_init_io(png_ptr, f);
     png_set_sig_bytes(png_ptr, 8);
@@ -1243,14 +1270,16 @@ int main(int argc, char* argv[]) {
     png_get_IHDR(png_ptr, info_ptr, &png_width, &png_height, &png_depth,
                  &png_colour, NULL, NULL, NULL);
 
-    if (png_width != width || png_height != png_height)
+    if (png_width != width || png_height != png_height) {
       die("Error: Seam PNG dimensions don't match workspace");
-    if (png_depth != 8 || png_colour != PNG_COLOR_TYPE_PALETTE)
+    }
+    if (png_depth != 8 || png_colour != PNG_COLOR_TYPE_PALETTE) {
       die("Error: Incorrect seam PNG format");
+    }
 
     png_bytep png_line = (png_bytep)malloc(width);
 
-    for (y = 0; y < height; ++y) {
+    for (int y = 0; y < height; ++y) {
       png_read_row(png_ptr, png_line, NULL);
 
       int ms = 0;
@@ -1258,6 +1287,7 @@ int main(int argc, char* argv[]) {
       int prev_i = -1;
       int current_i = -1;
 
+      int x = 0;  // Used in the RECORD macro
       for (x = 0; x < width; ++x) {
         if (png_line[x] > n_images)
           die("Error: Bad pixel found in seam file: %d,%d", x, y);
@@ -1266,7 +1296,7 @@ int main(int argc, char* argv[]) {
 
       RECORD(-1, 0);
 
-      for (i = 0; i < n_images; ++i) {
+      for (int i = 0; i < n_images; ++i) {
         images[i]->masks[0]->NextLine();
       }
     }
@@ -1289,7 +1319,7 @@ int main(int argc, char* argv[]) {
 
     timer.Start();
 
-    for (i = 0; i < n_images; ++i) {
+    for (int i = 0; i < n_images; ++i) {
       threadpool->Queue([=] { ShrinkMasks(images[i]->masks, blend_levels); });
     }
     threadpool->Wait();
@@ -1398,37 +1428,39 @@ int main(int argc, char* argv[]) {
 
     output_pyramid = new Pyramid(width, height, total_levels, 0, 0, true);
 
-    for (int l = total_levels - 1; l >= 0; --l) {
+    for (int level = total_levels - 1; level >= 0; --level) {
       float* temp;
 
       try {
-        temp = (float*)MapAlloc::Alloc(output_pyramid->GetLevel(l).bytes);
+        temp = (float*)MapAlloc::Alloc(output_pyramid->GetLevel(level).bytes);
       } catch (char* e) {
         printf("%s\n", e);
         exit(EXIT_FAILURE);
       }
 
-      output_pyramid->GetLevel(l).data = temp;
+      output_pyramid->GetLevel(level).data = temp;
     }
 
     /***********************************************************************
      * Blend
      ***********************************************************************/
     if (n_images == 1) {
-      if (wrap)
+      if (wrap) {
         Output(1, "Wrapping...\n");
-      else
+      } else {
         Output(1, "Processing...\n");
+      }
     } else {
-      if (wrap)
+      if (wrap) {
         Output(1, "Blending/wrapping...\n");
-      else
+      } else {
         Output(1, "Blending...\n");
+      }
     }
 
     for (int c = 0; c < 3; ++c) {
       if (n_images > 1) {
-        for (i = 0; i < n_images; ++i) {
+        for (int i = 0; i < n_images; ++i) {
           timer.Start();
 
           images[i]->pyramid->Copy((uint8_t*)images[i]->channels[c]->data, 1,
@@ -1455,12 +1487,12 @@ int main(int argc, char* argv[]) {
 
           timer.Start();
 
-          for (int l = 0; l < blend_levels; ++l) {
-            auto in_level = images[i]->pyramid->GetLevel(l);
-            auto out_level = output_pyramid->GetLevel(l);
+          for (int level = 0; level < blend_levels; ++level) {
+            auto in_level = images[i]->pyramid->GetLevel(level);
+            auto out_level = output_pyramid->GetLevel(level);
 
-            int x_offset = (in_level.x - out_level.x) >> l;
-            int y_offset = (in_level.y - out_level.y) >> l;
+            int x_offset = (in_level.x - out_level.x) >> level;
+            int y_offset = (in_level.y - out_level.y) >> level;
 
             for (int b = 0; b < (int)out_level.bands.size() - 1; ++b) {
               int sy = out_level.bands[b];
@@ -1480,8 +1512,8 @@ int main(int argc, char* argv[]) {
 
                   CompositeLine(input_p, output_p, i, x_offset, in_level.width,
                                 out_level.width, out_level.pitch,
-                                images[i]->masks[l]->data,
-                                images[i]->masks[l]->rows[y]);
+                                images[i]->masks[level]->data,
+                                images[i]->masks[level]->rows[y]);
                 }
               });
             }
@@ -1538,12 +1570,12 @@ int main(int argc, char* argv[]) {
               wrap_pyramids[p]->Shrink();
               wrap_pyramids[p]->Laplace();
 
-              for (int l = 0; l < wrap_levels; ++l) {
-                auto in_level = wrap_pyramids[p]->GetLevel(l);
-                auto out_level = output_pyramid->GetLevel(l);
+              for (int level = 0; level < wrap_levels; ++level) {
+                auto in_level = wrap_pyramids[p]->GetLevel(level);
+                auto out_level = output_pyramid->GetLevel(level);
 
-                int x_offset = (in_level.x - out_level.x) >> l;
-                int y_offset = (in_level.y - out_level.y) >> l;
+                int x_offset = (in_level.x - out_level.x) >> level;
+                int y_offset = (in_level.y - out_level.y) >> level;
 
                 for (int b = 0; b < (int)out_level.bands.size() - 1; ++b) {
                   int sy = out_level.bands[b];
@@ -1561,11 +1593,11 @@ int main(int argc, char* argv[]) {
                       float* output_p =
                           out_level.data + (size_t)y * out_level.pitch;
 
-                      CompositeLine(input_p, output_p, wp + (l == 0), x_offset,
-                                    in_level.width, out_level.width,
+                      CompositeLine(input_p, output_p, wp + (level == 0),
+                                    x_offset, in_level.width, out_level.width,
                                     out_level.pitch,
-                                    wrap_pyramids[p]->masks[l]->data,
-                                    wrap_pyramids[p]->masks[l]->rows[y]);
+                                    wrap_pyramids[p]->masks[level]->data,
+                                    wrap_pyramids[p]->masks[level]->rows[y]);
                     }
                   });
                 }
@@ -1597,8 +1629,8 @@ int main(int argc, char* argv[]) {
         float* data = output_pyramid->GetData();
         xor_mask.Start();
 
-        for (y = 0; y < height; ++y) {
-          x = 0;
+        for (int y = 0; y < height; ++y) {
+          int x = 0;
           while (x < width) {
             uint32_t v = xor_mask.ReadForwards32();
             if (v & 0x80000000) {
@@ -1744,7 +1776,7 @@ int main(int argc, char* argv[]) {
 
     if (output_type == ImageType::MB_PNG || output_type == ImageType::MB_JPEG) {
       scanlines = new JSAMPROW[ROWS_PER_STRIP];
-      for (i = 0; i < ROWS_PER_STRIP; ++i) {
+      for (int i = 0; i < ROWS_PER_STRIP; ++i) {
         scanlines[i] = (JSAMPROW) & ((uint8_t*)strip)[i * bytes_per_row];
       }
     }
@@ -1756,7 +1788,7 @@ int main(int argc, char* argv[]) {
       int rows = std::min(remaining, ROWS_PER_STRIP);
 
       for (int strip_y = 0; strip_y < rows; ++strip_y) {
-        x = 0;
+        int x = 0;
         while (x < width) {
           uint32_t cur = full_mask.ReadForwards32();
           if (cur & 0x80000000) {

@@ -95,14 +95,18 @@ class Flex {
   void End() { p = end_p; }
 
   ~Flex() {
-    free(data);
-    delete[] rows;
+    if (data) {
+      free(data);
+    }
+    if (rows) {
+      delete[] rows;
+    }
   }
 
   uint8_t* data = NULL;
   int width;
   int height;
-  int* rows;
+  int* rows = nullptr;
   int y = -1;
 
  private:
@@ -151,7 +155,7 @@ void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
   if ((I) != current_i) {                                           \
     if (mc > 0) {                                                   \
       if (seam_map) memset(&seam_map->line[x - mc], current_i, mc); \
-      for (i = 0; i < n_images; ++i) {                              \
+      for (int i = 0; i < n_images; ++i) {                          \
         if (i == current_i) {                                       \
           images[i]->masks[0]->Write32(0xc0000000 | mc);            \
         } else if (i == prev_i || prev_i == -1) {                   \
