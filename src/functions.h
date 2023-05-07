@@ -12,10 +12,43 @@
  ***********************************************************************/
 class Flex {
  public:
+  Flex() : width(0), height(0) {}
   Flex(int _width, int _height) : width(_width), height(_height) {
     rows = new int[height];
     NextLine();
   };
+
+  Flex(const Flex& other) = delete;
+  Flex& operator=(const Flex& other) = delete;
+
+  Flex(Flex&& other) { *this = std::move(other); }
+  Flex& operator=(Flex&& other) {
+    if (this != &other) {
+      if (data) {
+        free(data);
+      }
+      if (rows) {
+        delete[] rows;
+      }
+
+      data = other.data;
+      width = other.width;
+      height = other.height;
+      rows = other.rows;
+      y = other.y;
+
+      size = other.size;
+      p = other.p;
+      end_p = other.end_p;
+      mask_count = other.mask_count;
+      mask_white = other.mask_white;
+      first = other.first;
+
+      other.data = nullptr;
+      other.rows = nullptr;
+    }
+    return *this;
+  }
 
   void NextLine() {
     end_p = p;
@@ -95,14 +128,18 @@ class Flex {
   void End() { p = end_p; }
 
   ~Flex() {
-    free(data);
-    delete[] rows;
+    if (data) {
+      free(data);
+    }
+    if (rows) {
+      delete[] rows;
+    }
   }
 
   uint8_t* data = NULL;
   int width;
   int height;
-  int* rows;
+  int* rows = nullptr;
   int y = -1;
 
  private:
@@ -151,7 +188,7 @@ void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
   if ((I) != current_i) {                                           \
     if (mc > 0) {                                                   \
       if (seam_map) memset(&seam_map->line[x - mc], current_i, mc); \
-      for (i = 0; i < n_images; ++i) {                              \
+      for (int i = 0; i < n_images; ++i) {                          \
         if (i == current_i) {                                       \
           images[i]->masks[0]->Write32(0xc0000000 | mc);            \
         } else if (i == prev_i || prev_i == -1) {                   \

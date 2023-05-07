@@ -9,6 +9,7 @@ add_executable(Multiblend
   "src/functions.cpp"
   "src/geotiff.cpp"
   "src/image.cpp"
+  "src/main.cpp"
   "src/mapalloc.cpp"
   "src/multiblend.cpp"
   "src/pnger.cpp"
