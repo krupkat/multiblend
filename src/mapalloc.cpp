@@ -14,36 +14,36 @@
 
 namespace multiblend::memory {
 
-std::vector<MapAlloc::MapAllocObject*> MapAlloc::objects;
-char MapAlloc::tmpdir[256] = "";
-char MapAlloc::filename[512];
-int MapAlloc::suffix = 0;
-size_t MapAlloc::cache_threshold = ~(size_t)0;
-size_t MapAlloc::total_allocated = 0;
+std::vector<MapAlloc::MapAllocObject*> MapAlloc::objects_;
+char MapAlloc::tmpdir_[256] = "";
+char MapAlloc::filename_[512];
+int MapAlloc::suffix_ = 0;
+size_t MapAlloc::cache_threshold_ = ~(size_t)0;
+size_t MapAlloc::total_allocated_ = 0;
 
 /***********************************************************************
  * MapAlloc
  ***********************************************************************/
-void MapAlloc::CacheThreshold(size_t limit) { cache_threshold = limit; }
+void MapAlloc::CacheThreshold(size_t limit) { cache_threshold_ = limit; }
 
 void* MapAlloc::Alloc(size_t size, int alignment) {
   MapAllocObject* m = new MapAllocObject(size, alignment);
-  objects.push_back(m);
+  objects_.push_back(m);
   return m->GetPointer();
 }
 
 void MapAlloc::Free(void* p) {
-  for (auto it = objects.begin(); it < objects.end(); ++it) {
+  for (auto it = objects_.begin(); it < objects_.end(); ++it) {
     if ((*it)->GetPointer() == p) {
       delete (*it);
-      objects.erase(it);
+      objects_.erase(it);
       break;
     }
   }
 }
 
 size_t MapAlloc::GetSize(void* p) {
-  for (auto it = objects.begin(); it < objects.end(); ++it) {
+  for (auto it = objects_.begin(); it < objects_.end(); ++it) {
     if ((*it)->GetPointer() == p) {
       return (*it)->GetSize();
     }
@@ -53,22 +53,22 @@ size_t MapAlloc::GetSize(void* p) {
 }
 
 void MapAlloc::SetTmpdir(const char* _tmpdir) {
-  strcpy_s(tmpdir, _tmpdir);
-  size_t l = strlen(tmpdir);
-  while (tmpdir[l - 1] == '\\' || tmpdir[l - 1] == '/' && l > 0)
-    tmpdir[--l] = 0;
+  strcpy_s(tmpdir_, _tmpdir);
+  size_t l = strlen(tmpdir_);
+  while (tmpdir_[l - 1] == '\\' || tmpdir_[l - 1] == '/' && l > 0)
+    tmpdir_[--l] = 0;
 }
 
 /***********************************************************************
  * MapAllocObject
  ***********************************************************************/
-MapAlloc::MapAllocObject::MapAllocObject(size_t _size, int alignment)
-    : size(_size) {
-  if (total_allocated + size < cache_threshold) {
-    pointer = _aligned_malloc(size, alignment);
+MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
+    : size_(size) {
+  if (total_allocated_ + size_ < cache_threshold_) {
+    pointer_ = _aligned_malloc(size_, alignment);
   }
 
-  if (!pointer) {
+  if (!pointer_) {
 #ifdef _WIN32
     if (!tmpdir[0]) {
       GetTempPath(256, tmpdir);
@@ -116,43 +116,43 @@ MapAlloc::MapAllocObject::MapAllocObject(size_t _size, int alignment)
       throw(filename);
     }
 #else
-    if (!tmpdir[0]) {
+    if (!tmpdir_[0]) {
       char* td = getenv("TMPDIR");
       if (td) {
-        strcpy(tmpdir, td);
+        strcpy(tmpdir_, td);
       } else {
-        strcpy(tmpdir, "/tmp");
+        strcpy(tmpdir_, "/tmp");
       }
     }
 
-    sprintf(filename, "%s/.mbXXXXXX", tmpdir);
-    file = mkstemp(filename);
+    sprintf(filename_, "%s/.mbXXXXXX", tmpdir_);
+    file_ = mkstemp(filename_);
 
-    if (file <= 0) {
-      sprintf(filename, "Could not create temp file in %s/: %s", tmpdir,
+    if (file_ <= 0) {
+      sprintf(filename_, "Could not create temp file in %s/: %s", tmpdir_,
               strerror(errno));
-      throw(filename);
+      throw(filename_);
     }
 
-    if (ftruncate(file, size)) {
-      unlink(filename);
-      sprintf(filename, "Could not allocate %zu temporary bytes in %s: %s",
-              size, tmpdir, strerror(errno));
-      throw(filename);
+    if (ftruncate(file_, size_)) {
+      unlink(filename_);
+      sprintf(filename_, "Could not allocate %zu temporary bytes in %s: %s",
+              size_, tmpdir_, strerror(errno));
+      throw(filename_);
     }
 
-    pointer = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, file, 0);
-    if (pointer == MAP_FAILED) {
-      unlink(filename);
-      pointer = NULL;
-      sprintf(filename, "Could not mmap temporary file");
-      throw(filename);
+    pointer_ = mmap(NULL, size_, PROT_READ | PROT_WRITE, MAP_PRIVATE, file_, 0);
+    if (pointer_ == MAP_FAILED) {
+      unlink(filename_);
+      pointer_ = NULL;
+      sprintf(filename_, "Could not mmap temporary file");
+      throw(filename_);
     }
 
-    unlink(filename);
+    unlink(filename_);
 #endif
   } else {
-    total_allocated += size;
+    total_allocated_ += size_;
   }
 }
 
@@ -167,17 +167,17 @@ MapAlloc::MapAllocObject::~MapAllocObject() {
     CloseHandle(file);
   }
 #else
-  if (!file) {
-    free(pointer);
+  if (!file_) {
+    free(pointer_);
   } else {
-    munmap(pointer, size);
-    close(file);
+    munmap(pointer_, size_);
+    close(file_);
   }
 #endif
 }
 
-void* MapAlloc::MapAllocObject::GetPointer() { return pointer; }
+void* MapAlloc::MapAllocObject::GetPointer() { return pointer_; }
 
-bool MapAlloc::MapAllocObject::IsFile() { return !!file; }
+bool MapAlloc::MapAllocObject::IsFile() { return !!file_; }
 
 }  // namespace multiblend::memory

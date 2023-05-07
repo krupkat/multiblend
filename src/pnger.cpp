@@ -11,15 +11,15 @@
 
 namespace multiblend::io::png {
 
-png_color* Pnger::palette = NULL;
+png_color* Pnger::palette_ = NULL;
 
-Pnger::Pnger(const char* filename, const char* name, int w, int _h, int type,
-             int bpp, FILE* _f, int compression) {
-  y = 0;
-  h = _h;
+Pnger::Pnger(const char* filename, const char* name, int width, int height,
+             int type, int bpp, FILE* file, int compression) {
+  y_ = 0;
+  height_ = height;
 
-  if (type == PNG_COLOR_TYPE_PALETTE && !palette) {
-    palette = (png_color*)malloc(256 * sizeof(png_color));
+  if (type == PNG_COLOR_TYPE_PALETTE && !palette_) {
+    palette_ = (png_color*)malloc(256 * sizeof(png_color));
 
     double base = 2;
     double rad;
@@ -36,93 +36,94 @@ Pnger::Pnger(const char* filename, const char* name, int w, int _h, int type,
       b = std::max(0.0, std::min(1.0, std::min(rad, 4 - rad)));
       base += 6 * 0.618033988749895;
       if (base >= 6) base -= 6;
-      palette[i].red = (png_byte)(sqrt(r) * 255 + 0.5);
-      palette[i].green = (png_byte)(sqrt(g) * 255 + 0.5);
-      palette[i].blue = (png_byte)(sqrt(b) * 255 + 0.5);
+      palette_[i].red = (png_byte)(sqrt(r) * 255 + 0.5);
+      palette_[i].green = (png_byte)(sqrt(g) * 255 + 0.5);
+      palette_[i].blue = (png_byte)(sqrt(b) * 255 + 0.5);
     }
 
-    palette[255].red = 0;
-    palette[255].green = 0;
-    palette[255].blue = 0;
+    palette_[255].red = 0;
+    palette_[255].green = 0;
+    palette_[255].blue = 0;
   }
 
-  if (!_f) {
-    fopen_s(&f, filename, "wb");
-    if (!f) {
+  if (!file) {
+    fopen_s(&file_, filename, "wb");
+    if (!file_) {
       if (name) {
         utils::Output(0, "WARNING: Could not save %s\n", name);
       }
       return;
     }
   } else {
-    f = _f;
+    file_ = file;
   }
 
-  png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-  if (!png_ptr) {
+  png_ptr_ = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+  if (!png_ptr_) {
     if (name) {
       utils::Output(0, "WARNING: PNG create failed\n");
     }
-    fclose(f);
+    fclose(file_);
     remove(filename);
-    f = NULL;
+    file_ = NULL;
     return;
   }
 
-  info_ptr = png_create_info_struct(png_ptr);
-  if (!info_ptr) {
+  info_ptr_ = png_create_info_struct(png_ptr_);
+  if (!info_ptr_) {
     if (name) {
       utils::Output(0, "WARNING: PNG create failed\n");
     }
-    png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
-    fclose(f);
+    png_destroy_write_struct(&png_ptr_, (png_infopp)NULL);
+    fclose(file_);
     remove(filename);
-    f = NULL;
+    file_ = NULL;
     return;
   }
 
-  png_init_io(png_ptr, f);
+  png_init_io(png_ptr_, file_);
 
-  png_set_IHDR(png_ptr, info_ptr, w, h, bpp, type, PNG_INTERLACE_NONE,
-               PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+  png_set_IHDR(png_ptr_, info_ptr_, width, height, bpp, type,
+               PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
+               PNG_FILTER_TYPE_DEFAULT);
   if (type == PNG_COLOR_TYPE_PALETTE)
-    png_set_PLTE(png_ptr, info_ptr, palette, 256);
+    png_set_PLTE(png_ptr_, info_ptr_, palette_, 256);
 
-  png_write_info(png_ptr, info_ptr);
-  png_set_compression_level(png_ptr, compression < 0 ? 3 : compression);
-  if (bpp == 16) png_set_swap(png_ptr);
+  png_write_info(png_ptr_, info_ptr_);
+  png_set_compression_level(png_ptr_, compression < 0 ? 3 : compression);
+  if (bpp == 16) png_set_swap(png_ptr_);
 
-  line = name ? new uint8_t[(type == PNG_COLOR_TYPE_RGB_ALPHA ? (w << 2)
-                             : type == PNG_COLOR_TYPE_RGB     ? w * 3
-                                                              : w)
-                            << (bpp >> 4)]
-              : NULL;
+  line_ = name ? new uint8_t[(type == PNG_COLOR_TYPE_RGB_ALPHA ? (width << 2)
+                              : type == PNG_COLOR_TYPE_RGB     ? width * 3
+                                                               : width)
+                             << (bpp >> 4)]
+               : NULL;
 };
 
 void Pnger::Write() {
-  if (!f) return;
+  if (!file_) return;
 
-  png_write_row(png_ptr, (uint8_t*)line);
+  png_write_row(png_ptr_, (uint8_t*)line_);
 
-  if (++y == h) {
+  if (++y_ == height_) {
     //  printf("png close\n");
-    png_write_end(png_ptr, NULL);
-    png_destroy_write_struct(&png_ptr, &info_ptr);
-    fclose(f);
-    f = NULL;
+    png_write_end(png_ptr_, NULL);
+    png_destroy_write_struct(&png_ptr_, &info_ptr_);
+    fclose(file_);
+    file_ = NULL;
   }
 }
 
 void Pnger::WriteRows(uint8_t** rows, int num_rows) {
-  if (!f) return;
+  if (!file_) return;
 
-  png_write_rows(png_ptr, rows, num_rows);
+  png_write_rows(png_ptr_, rows, num_rows);
 
-  if ((y += num_rows) == h) {
-    png_write_end(png_ptr, NULL);
-    png_destroy_write_struct(&png_ptr, &info_ptr);
-    fclose(f);
-    f = NULL;
+  if ((y_ += num_rows) == height_) {
+    png_write_end(png_ptr_, NULL);
+    png_destroy_write_struct(&png_ptr_, &info_ptr_);
+    fclose(file_);
+    file_ = NULL;
   }
 }
 
@@ -137,8 +138,8 @@ void Pnger::Quick(char* filename, uint8_t* data, int width, int height,
 }
 
 Pnger::~Pnger() {
-  delete line;
-  if (f) fclose(f);
+  delete line_;
+  if (file_) fclose(file_);
 }
 
 }  // namespace multiblend::io::png

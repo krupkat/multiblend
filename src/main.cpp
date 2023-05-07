@@ -428,8 +428,8 @@ int main(int argc, char* argv[]) {
       int n = 0;
       sscanf_s(my_argv[pos], "%d,%d%n", &x, &y, &n);
       if (!my_argv[pos][n]) {
-        images.back()->xpos_add = x;
-        images.back()->ypos_add = y;
+        images.back()->xpos_add_ = x;
+        images.back()->ypos_add_ = y;
         pos++;
         continue;
       }
@@ -571,22 +571,22 @@ int main(int argc, char* argv[]) {
         }
 
         TIFFSetField(tiff_file, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
-        if (images[0]->tiff_xres != -1) {
-          TIFFSetField(tiff_file, TIFFTAG_XRESOLUTION, images[0]->tiff_xres);
+        if (images[0]->tiff_xres_ != -1) {
+          TIFFSetField(tiff_file, TIFFTAG_XRESOLUTION, images[0]->tiff_xres_);
           TIFFSetField(tiff_file, TIFFTAG_XPOSITION,
-                       (float)(result.min_xpos / images[0]->tiff_xres));
+                       (float)(result.min_xpos / images[0]->tiff_xres_));
         }
-        if (images[0]->tiff_yres != -1) {
-          TIFFSetField(tiff_file, TIFFTAG_YRESOLUTION, images[0]->tiff_yres);
+        if (images[0]->tiff_yres_ != -1) {
+          TIFFSetField(tiff_file, TIFFTAG_YRESOLUTION, images[0]->tiff_yres_);
           TIFFSetField(tiff_file, TIFFTAG_YPOSITION,
-                       (float)(result.min_ypos / images[0]->tiff_yres));
+                       (float)(result.min_ypos / images[0]->tiff_yres_));
         }
 
-        if (images[0]->geotiff.set) {
+        if (images[0]->geotiff_.set) {
           // if we got a georeferenced input, store the geotags in the output
-          io::tiff::GeoTIFFInfo info(images[0]->geotiff);
-          info.XGeoRef = result.min_xpos * images[0]->geotiff.XCellRes;
-          info.YGeoRef = -result.min_ypos * images[0]->geotiff.YCellRes;
+          io::tiff::GeoTIFFInfo info(images[0]->geotiff_);
+          info.XGeoRef = result.min_xpos * images[0]->geotiff_.XCellRes;
+          info.YGeoRef = -result.min_ypos * images[0]->geotiff_.YCellRes;
           utils::Output(1, "Output georef: UL: %f %f, pixel size: %f %f\n",
                         info.XGeoRef, info.YGeoRef, info.XCellRes,
                         info.YCellRes);

@@ -183,7 +183,7 @@ int Squish(uint32_t* in, uint32_t* out, int in_width, int out_width) {
 
 void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
   int i;
-  Flex flex_temp(masks[0]->width, masks[0]->height);
+  Flex flex_temp(masks[0]->width_, masks[0]->height_);
   uint32_t cur;
   uint32_t* lines[5];
   uint32_t* real_lines[5];
@@ -192,18 +192,18 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
   float vals[5];
   int min_count;
 
-  for (int i = 0; i < 5; ++i) real_lines[i] = new uint32_t[masks[0]->width];
+  for (int i = 0; i < 5; ++i) real_lines[i] = new uint32_t[masks[0]->width_];
 
   for (int l = 1; l < n_levels; ++l) {
-    int in_width = masks[l - 1]->width;
+    int in_width = masks[l - 1]->width_;
     int out_width = (in_width + 6) >> 1;
-    int out_height = (masks[l - 1]->height + 6) >> 1;
+    int out_height = (masks[l - 1]->height_ + 6) >> 1;
     masks.push_back(new Flex(out_width, out_height));
 
     int input_p = 0;
 
     // first line
-    input_p += Squish((uint32_t*)&masks[l - 1]->data[input_p], real_lines[0],
+    input_p += Squish((uint32_t*)&masks[l - 1]->data_[input_p], real_lines[0],
                       in_width, out_width)
                << 2;
     int lines_read = 1;
@@ -228,15 +228,15 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
     lines[3] = real_lines[3];
     lines[4] = real_lines[4];
 
-    input_p += Squish((uint32_t*)&masks[l - 1]->data[input_p], lines[3],
+    input_p += Squish((uint32_t*)&masks[l - 1]->data_[input_p], lines[3],
                       in_width, out_width)
                << 2;
-    input_p += Squish((uint32_t*)&masks[l - 1]->data[input_p], lines[4],
+    input_p += Squish((uint32_t*)&masks[l - 1]->data_[input_p], lines[4],
                       in_width, out_width)
                << 2;
     lines_read += 2;
 
-    for (int y = 1; y < masks[l]->height; ++y) {
+    for (int y = 1; y < masks[l]->height_; ++y) {
       masks[l]->NextLine();
 
       wrote = 0;
@@ -298,8 +298,8 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
       lines[1] = lines[3];
       lines[3] = temp;
 
-      if (lines_read < masks[l - 1]->height) {
-        input_p += Squish((uint32_t*)&masks[l - 1]->data[input_p], lines[3],
+      if (lines_read < masks[l - 1]->height_) {
+        input_p += Squish((uint32_t*)&masks[l - 1]->data_[input_p], lines[3],
                           in_width, out_width)
                    << 2;
         ++lines_read;
@@ -307,8 +307,8 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
         lines[3] = lines[2];
       }
 
-      if (lines_read < masks[l - 1]->height) {
-        input_p += Squish((uint32_t*)&masks[l - 1]->data[input_p], lines[4],
+      if (lines_read < masks[l - 1]->height_) {
+        input_p += Squish((uint32_t*)&masks[l - 1]->data_[input_p], lines[4],
                           in_width, out_width)
                    << 2;
         ++lines_read;

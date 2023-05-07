@@ -16,15 +16,15 @@ int hist_red[256];
 int hist_grn[256];
 int hist_blu[256];
 
-Image::Image(char* _filename) : filename(_filename) {}
+Image::Image(char* filename) : filename_(filename) {}
 
 Image::~Image() {
-  for (auto it = channels.begin(); it < channels.end(); ++it) delete (*it);
-  for (auto it = masks.begin(); it < masks.end(); ++it) delete (*it);
-  channels.clear();
-  masks.clear();
+  for (auto it = channels_.begin(); it < channels_.end(); ++it) delete (*it);
+  for (auto it = masks_.begin(); it < masks_.end(); ++it) delete (*it);
+  channels_.clear();
+  masks_.clear();
 
-  delete pyramid;
+  delete pyramid_;
 }
 
 /***********************************************************************
@@ -36,80 +36,82 @@ void Image::Open() {
   float tiff_xpos, tiff_ypos;
   uint16_t compression;
 
-  char* ext = strrchr(filename, '.');
+  char* ext = strrchr(filename_, '.');
   if (!ext) {
-    utils::die("Could not identify file extension: %s", filename);
+    utils::die("Could not identify file extension: %s", filename_);
   }
   ++ext;
 
   if (!_stricmp(ext, "tif") || !_stricmp(ext, "tiff")) {
-    type = ImageType::MB_TIFF;
+    type_ = ImageType::MB_TIFF;
   } else if (!_stricmp(ext, "jpg") || !_stricmp(ext, "jpeg")) {
-    type = ImageType::MB_JPEG;
+    type_ = ImageType::MB_JPEG;
   } else if (!_stricmp(ext, "png")) {
-    type = ImageType::MB_PNG;
+    type_ = ImageType::MB_PNG;
   } else {
-    utils::die("Unknown file extension: %s", filename);
+    utils::die("Unknown file extension: %s", filename_);
   }
 
-  switch (type) {
+  switch (type_) {
     case ImageType::MB_TIFF: {
-      tiff = TIFFOpen(filename, "r");
-      if (!tiff) {
-        utils::die("Could not open %s", filename);
+      tiff_ = TIFFOpen(filename_, "r");
+      if (!tiff_) {
+        utils::die("Could not open %s", filename_);
       }
 
-      if (!TIFFGetField(tiff, TIFFTAG_XPOSITION, &tiff_xpos)) tiff_xpos = -1;
-      if (!TIFFGetField(tiff, TIFFTAG_YPOSITION, &tiff_ypos)) tiff_ypos = -1;
-      if (!TIFFGetField(tiff, TIFFTAG_XRESOLUTION, &tiff_xres)) tiff_xres = -1;
-      if (!TIFFGetField(tiff, TIFFTAG_YRESOLUTION, &tiff_yres)) tiff_yres = -1;
-      TIFFGetField(tiff, TIFFTAG_IMAGEWIDTH, &tiff_width);
-      TIFFGetField(tiff, TIFFTAG_IMAGELENGTH, &tiff_height);
-      TIFFGetField(tiff, TIFFTAG_BITSPERSAMPLE, &bpp);
-      TIFFGetField(tiff, TIFFTAG_SAMPLESPERPIXEL, &spp);
-      TIFFGetField(tiff, TIFFTAG_ROWSPERSTRIP, &rows_per_strip);
-      TIFFGetField(tiff, TIFFTAG_COMPRESSION, &compression);
+      if (!TIFFGetField(tiff_, TIFFTAG_XPOSITION, &tiff_xpos)) tiff_xpos = -1;
+      if (!TIFFGetField(tiff_, TIFFTAG_YPOSITION, &tiff_ypos)) tiff_ypos = -1;
+      if (!TIFFGetField(tiff_, TIFFTAG_XRESOLUTION, &tiff_xres_))
+        tiff_xres_ = -1;
+      if (!TIFFGetField(tiff_, TIFFTAG_YRESOLUTION, &tiff_yres_))
+        tiff_yres_ = -1;
+      TIFFGetField(tiff_, TIFFTAG_IMAGEWIDTH, &tiff_width_);
+      TIFFGetField(tiff_, TIFFTAG_IMAGELENGTH, &tiff_height_);
+      TIFFGetField(tiff_, TIFFTAG_BITSPERSAMPLE, &bpp_);
+      TIFFGetField(tiff_, TIFFTAG_SAMPLESPERPIXEL, &spp_);
+      TIFFGetField(tiff_, TIFFTAG_ROWSPERSTRIP, &rows_per_strip_);
+      TIFFGetField(tiff_, TIFFTAG_COMPRESSION, &compression);
 
-      if (bpp != 8 && bpp != 16) {
-        printf("Invalid bpp %d (%s)", bpp, filename);
-        printf("%d, %d\n", tiff_width, tiff_height);
-        TIFFGetField(tiff, TIFFTAG_BITSPERSAMPLE, &bpp);
-        if (bpp != 8 && bpp != 16) {
-          utils::die("Invalid bpp %d (%s)", bpp, filename);
+      if (bpp_ != 8 && bpp_ != 16) {
+        printf("Invalid bpp %d (%s)", bpp_, filename_);
+        printf("%d, %d\n", tiff_width_, tiff_height_);
+        TIFFGetField(tiff_, TIFFTAG_BITSPERSAMPLE, &bpp_);
+        if (bpp_ != 8 && bpp_ != 16) {
+          utils::die("Invalid bpp %d (%s)", bpp_, filename_);
         }
       }
       //   if (spp != 4) die("Images must be RGBA (%s)",
       // filename);
 
-      geotiff.set = false;
+      geotiff_.set = false;
 
       if (tiff_xpos == -1 && tiff_ypos == -1) {
         // try to read geotiff tags
-        if (tiff::geotiff_read(tiff, &geotiff)) {
-          xpos = (int)(geotiff.XGeoRef / geotiff.XCellRes);
-          ypos = (int)(geotiff.YGeoRef / geotiff.YCellRes);
+        if (tiff::geotiff_read(tiff_, &geotiff_)) {
+          xpos_ = (int)(geotiff_.XGeoRef / geotiff_.XCellRes);
+          ypos_ = (int)(geotiff_.YGeoRef / geotiff_.YCellRes);
         } else {
-          xpos = 0;
-          ypos = 0;
+          xpos_ = 0;
+          ypos_ = 0;
         }
       } else {
-        if (tiff_xpos != -1 && tiff_xres > 0)
-          xpos = (int)(tiff_xpos * tiff_xres + 0.5);
-        if (tiff_ypos != -1 && tiff_yres > 0)
-          ypos = (int)(tiff_ypos * tiff_yres + 0.5);
+        if (tiff_xpos != -1 && tiff_xres_ > 0)
+          xpos_ = (int)(tiff_xpos * tiff_xres_ + 0.5);
+        if (tiff_ypos != -1 && tiff_yres_ > 0)
+          ypos_ = (int)(tiff_ypos * tiff_yres_ + 0.5);
       }
 
-      first_strip = 0;
-      end_strip = TIFFNumberOfStrips(tiff);
+      first_strip_ = 0;
+      end_strip_ = TIFFNumberOfStrips(tiff_);
 
       int s;
       tmsize_t temp;
 
-      if (tiff_xpos <= 0 && tiff_ypos <= 0 && compression != 1 && spp == 4) {
+      if (tiff_xpos <= 0 && tiff_ypos <= 0 && compression != 1 && spp_ == 4) {
         tmsize_t min_stripsize = 0xffffffff;
         int min_stripcount = 0;
-        for (s = 0; s < (int)TIFFNumberOfStrips(tiff) - 1; ++s) {
-          temp = TIFFRawStripSize(tiff, s);
+        for (s = 0; s < (int)TIFFNumberOfStrips(tiff_) - 1; ++s) {
+          temp = TIFFRawStripSize(tiff_, s);
           if (temp < min_stripsize) {
             min_stripsize = temp;
             min_stripcount = 1;
@@ -118,29 +120,29 @@ void Image::Open() {
         }
 
         if (min_stripcount > 2) {
-          first_strip = -1;
-          for (s = 0; s < (int)TIFFNumberOfStrips(tiff); ++s) {
-            temp = TIFFRawStripSize(tiff, s);
+          first_strip_ = -1;
+          for (s = 0; s < (int)TIFFNumberOfStrips(tiff_); ++s) {
+            temp = TIFFRawStripSize(tiff_, s);
             if (temp != min_stripsize) {
-              if (first_strip == -1) first_strip = s;
-              end_strip = s + 1;
+              if (first_strip_ == -1) first_strip_ = s;
+              end_strip_ = s + 1;
             }
           }
-          if (first_strip == -1) first_strip = 0;
+          if (first_strip_ == -1) first_strip_ = 0;
         }
       }
 
-      if (first_strip ||
-          end_strip !=
-              TIFFNumberOfStrips(tiff)) {  // double check that min strips are
-                                           // (probably) transparent
-        tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tiff));
-        if (first_strip)
-          TIFFReadScanline(tiff, buf, 0);
+      if (first_strip_ ||
+          end_strip_ !=
+              TIFFNumberOfStrips(tiff_)) {  // double check that min strips are
+                                            // (probably) transparent
+        tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tiff_));
+        if (first_strip_)
+          TIFFReadScanline(tiff_, buf, 0);
         else
-          TIFFReadScanline(tiff, buf, tiff_u_height - 1);
+          TIFFReadScanline(tiff_, buf, tiff_u_height_ - 1);
         bool trans;
-        switch (bpp) {
+        switch (bpp_) {
           case 8:
             trans = !(((uint32_t*)buf)[0] && 0xff000000);
             break;
@@ -149,110 +151,112 @@ void Image::Open() {
             break;
         }
         if (!trans) {
-          first_strip = 0;
-          end_strip = TIFFNumberOfStrips(tiff);
+          first_strip_ = 0;
+          end_strip_ = TIFFNumberOfStrips(tiff_);
         }
         _TIFFfree(buf);
       }
 
-      ypos += first_strip * rows_per_strip;
+      ypos_ += first_strip_ * rows_per_strip_;
       int rows_missing =
-          TIFFNumberOfStrips(tiff) * rows_per_strip - tiff_height;
+          TIFFNumberOfStrips(tiff_) * rows_per_strip_ - tiff_height_;
 
-      tiff_u_height = (end_strip - first_strip) * rows_per_strip;
-      if (end_strip == TIFFNumberOfStrips(tiff)) tiff_u_height -= rows_missing;
+      tiff_u_height_ = (end_strip_ - first_strip_) * rows_per_strip_;
+      if (end_strip_ == TIFFNumberOfStrips(tiff_))
+        tiff_u_height_ -= rows_missing;
     } break;
     case ImageType::MB_JPEG: {
-      fopen_s(&file, filename, "rb");
-      if (!file) {
-        utils::die("Could not open %s", filename);
+      fopen_s(&file_, filename_, "rb");
+      if (!file_) {
+        utils::die("Could not open %s", filename_);
       }
 
-      cinfo.err = jpeg_std_error(&jerr);
-      jpeg_create_decompress(&cinfo);
-      jpeg_stdio_src(&cinfo, file);
-      jpeg_read_header(&cinfo, TRUE);
-      jpeg_start_decompress(&cinfo);
+      cinfo_.err = jpeg_std_error(&jerr_);
+      jpeg_create_decompress(&cinfo_);
+      jpeg_stdio_src(&cinfo_, file_);
+      jpeg_read_header(&cinfo_, TRUE);
+      jpeg_start_decompress(&cinfo_);
 
-      if (!cinfo.output_width || !cinfo.output_height) {
-        utils::die("Unknown JPEG format (%s)", filename);
+      if (!cinfo_.output_width || !cinfo_.output_height) {
+        utils::die("Unknown JPEG format (%s)", filename_);
       }
 
-      if (cinfo.out_color_components != 3) {
-        utils::die("Unknown JPEG format (%s)", filename);
+      if (cinfo_.out_color_components != 3) {
+        utils::die("Unknown JPEG format (%s)", filename_);
       }
 
-      tiff_width = cinfo.output_width;
-      tiff_height = tiff_u_height = cinfo.output_height;
+      tiff_width_ = cinfo_.output_width;
+      tiff_height_ = tiff_u_height_ = cinfo_.output_height;
 
-      bpp = 8;
-      spp = 3;
+      bpp_ = 8;
+      spp_ = 3;
 
-      xpos = ypos = 0;
+      xpos_ = ypos_ = 0;
       tiff_xpos = tiff_ypos = 0;
-      tiff_xres = tiff_yres = 90;
+      tiff_xres_ = tiff_yres_ = 90;
     } break;
     case ImageType::MB_PNG: {
-      fopen_s(&file, filename, "rb");
-      if (!file) {
-        utils::die("Could not open %s", filename);
+      fopen_s(&file_, filename_, "rb");
+      if (!file_) {
+        utils::die("Could not open %s", filename_);
       }
 
       uint8_t sig[8];
       size_t r =
-          fread(sig, 1, 8, file);  // assignment suppresses g++ -Ofast warning
+          fread(sig, 1, 8, file_);  // assignment suppresses g++ -Ofast warning
       if (!png_check_sig(sig, 8)) {
-        utils::die("Bad PNG signature (%s)", filename);
+        utils::die("Bad PNG signature (%s)", filename_);
       }
 
-      png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-      if (!png_ptr) {
+      png_ptr_ =
+          png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+      if (!png_ptr_) {
         utils::die("Error: libpng problem");
       }
-      png_infop info_ptr = png_create_info_struct(png_ptr);
+      png_infop info_ptr = png_create_info_struct(png_ptr_);
       if (!info_ptr) {
         utils::die("Error: libpng problem");
       }
 
-      png_init_io(png_ptr, file);
-      png_set_sig_bytes(png_ptr, 8);
-      png_read_info(png_ptr, info_ptr);
+      png_init_io(png_ptr_, file_);
+      png_set_sig_bytes(png_ptr_, 8);
+      png_read_info(png_ptr_, info_ptr);
 
       int png_colour;
       uint32_t png_width, png_height;
       int _bpp;
-      png_get_IHDR(png_ptr, info_ptr, &png_width, &png_height, &_bpp,
+      png_get_IHDR(png_ptr_, info_ptr, &png_width, &png_height, &_bpp,
                    &png_colour, NULL, NULL, NULL);
-      bpp = _bpp;
-      tiff_width = png_width;
-      tiff_u_height = tiff_height = png_height;
+      bpp_ = _bpp;
+      tiff_width_ = png_width;
+      tiff_u_height_ = tiff_height_ = png_height;
 
       switch (png_colour) {
         case PNG_COLOR_TYPE_RGB:
-          spp = 3;
+          spp_ = 3;
           break;
         case PNG_COLOR_TYPE_RGBA:
-          spp = 4;
+          spp_ = 4;
           break;
         default:
-          utils::die("Bad PNG colour type (%s)", filename);
+          utils::die("Bad PNG colour type (%s)", filename_);
       }
 
-      if (bpp != 8 && bpp != 16) {
-        utils::die("Bad bit depth (%s)", filename);
+      if (bpp_ != 8 && bpp_ != 16) {
+        utils::die("Bad bit depth (%s)", filename_);
       }
 
-      xpos = ypos = 0;
+      xpos_ = ypos_ = 0;
       tiff_xpos = tiff_ypos = 0;
-      tiff_xres = tiff_yres = 90;
+      tiff_xres_ = tiff_yres_ = 90;
     } break;
   }
 
-  xpos += xpos_add;
-  ypos += ypos_add;
+  xpos_ += xpos_add_;
+  ypos_ += ypos_add_;
 
-  size_t untrimmed_pixels = (size_t)tiff_u_height * tiff_width;
-  untrimmed_bytes = (untrimmed_pixels * spp) << (bpp >> 4);
+  size_t untrimmed_pixels = (size_t)tiff_u_height_ * tiff_width_;
+  untrimmed_bytes_ = (untrimmed_pixels * spp_) << (bpp_ >> 4);
 }
 
 /***********************************************************************
@@ -261,31 +265,31 @@ void Image::Open() {
 ************************************************************************
 ***********************************************************************/
 void Image::Read(void* data, bool gamma) {
-  utils::Output(1, "Processing %s...", filename);
+  utils::Output(1, "Processing %s...", filename_);
 
-  switch (type) {
+  switch (type_) {
     case ImageType::MB_TIFF: {
       char* pointer = (char*)data;
 
-      for (int s = first_strip; s < end_strip; s++) {
-        auto strip_size = TIFFReadEncodedStrip(tiff, s, pointer, -1);
+      for (int s = first_strip_; s < end_strip_; s++) {
+        auto strip_size = TIFFReadEncodedStrip(tiff_, s, pointer, -1);
         pointer += strip_size;
       }
     } break;
     case ImageType::MB_JPEG: {
       uint8_t* pointer = (uint8_t*)data;
 
-      while (cinfo.output_scanline < cinfo.output_height) {
-        jpeg_read_scanlines(&cinfo, &pointer, 1);
-        pointer += (tiff_width * spp) << (bpp >> 4);
+      while (cinfo_.output_scanline < cinfo_.output_height) {
+        jpeg_read_scanlines(&cinfo_, &pointer, 1);
+        pointer += (tiff_width_ * spp_) << (bpp_ >> 4);
       }
     } break;
     case ImageType::MB_PNG: {
       uint8_t* pointer = (uint8_t*)data;
 
-      for (int y = 0; y < tiff_height; ++y) {
-        png_read_row(png_ptr, pointer, NULL);
-        pointer += (tiff_width * spp) << (bpp >> 4);
+      for (int y = 0; y < tiff_height_; ++y) {
+        png_read_row(png_ptr_, pointer, NULL);
+        pointer += (tiff_width_ * spp_) << (bpp_ >> 4);
       }
     } break;
   }
@@ -296,26 +300,26 @@ void Image::Read(void* data, bool gamma) {
   int x, y;
   int top, left, bottom, right;
 
-  if (spp == 4) {
-    switch (bpp) {
+  if (spp_ == 4) {
+    switch (bpp_) {
       case 8: {
         uint32_t* p = (uint32_t*)data;
         p--;
 
-        for (y = 0; y < tiff_u_height; ++y) {
-          for (x = 0; x < tiff_width; ++x) {
+        for (y = 0; y < tiff_u_height_; ++y) {
+          for (x = 0; x < tiff_width_; ++x) {
             if (*++p >= 0xff000000) {
               left = x;
               top = y;
-              y = tiff_u_height;
+              y = tiff_u_height_;
               break;
             }
           }
         }
 
-        p = ((uint32_t*)data) + tiff_width * tiff_u_height;
-        for (y = tiff_u_height - 1; y >= 0; --y) {
-          for (x = tiff_width - 1; x >= 0; --x) {
+        p = ((uint32_t*)data) + tiff_width_ * tiff_u_height_;
+        for (y = tiff_u_height_ - 1; y >= 0; --y) {
+          for (x = tiff_width_ - 1; x >= 0; --x) {
             if (*--p >= 0xff000000) {
               right = x;
               bottom = y;
@@ -327,7 +331,7 @@ void Image::Read(void* data, bool gamma) {
 
         if (right < left) std::swap(left, right);
 
-        p = ((uint32_t*)data) + tiff_width * top;
+        p = ((uint32_t*)data) + tiff_width_ * top;
         for (y = top; y <= bottom; ++y) {
           for (x = 0; x < left; ++x) {
             if (p[x] >= 0xff000000) {
@@ -336,35 +340,35 @@ void Image::Read(void* data, bool gamma) {
             }
           }
 
-          for (x = tiff_width - 1; x > right; --x) {
+          for (x = tiff_width_ - 1; x > right; --x) {
             if (p[x] >= 0xff000000) {
               right = x;
               break;
             }
           }
 
-          p += tiff_width;
+          p += tiff_width_;
         }
       } break;
       case 16: {
         uint16_t* p = ((uint16_t*)data) + 3;
 
-        for (y = 0; y < tiff_u_height; ++y) {
-          for (x = 0; x < tiff_width; ++x) {
+        for (y = 0; y < tiff_u_height_; ++y) {
+          for (x = 0; x < tiff_width_; ++x) {
             if (p[x << 2] == 0xffff) {
               left = x;
               top = y;
-              y = tiff_u_height;
+              y = tiff_u_height_;
               break;
             }
           }
 
-          p += tiff_width << 2;
+          p += tiff_width_ << 2;
         }
 
-        p = ((uint16_t*)data) + (tiff_width << 2) * (tiff_u_height - 1) + 3;
-        for (y = tiff_u_height - 1; y >= 0; --y) {
-          for (x = tiff_width - 1; x >= 0; --x) {
+        p = ((uint16_t*)data) + (tiff_width_ << 2) * (tiff_u_height_ - 1) + 3;
+        for (y = tiff_u_height_ - 1; y >= 0; --y) {
+          for (x = tiff_width_ - 1; x >= 0; --x) {
             if (p[x << 2] == 0xffff) {
               right = x;
               bottom = y;
@@ -373,12 +377,12 @@ void Image::Read(void* data, bool gamma) {
             }
           }
 
-          p -= tiff_width << 2;
+          p -= tiff_width_ << 2;
         }
 
         if (right < left) std::swap(left, right);
 
-        p = ((uint16_t*)data) + (tiff_width << 2) * top + 3;
+        p = ((uint16_t*)data) + (tiff_width_ << 2) * top + 3;
         for (y = top; y <= bottom; ++y) {
           for (x = 0; x < left; ++x) {
             if (p[x << 2] == 0xffff) {
@@ -387,24 +391,24 @@ void Image::Read(void* data, bool gamma) {
             }
           }
 
-          for (x = tiff_width - 1; x > right; --x) {
+          for (x = tiff_width_ - 1; x > right; --x) {
             if (p[x << 2] == 0xffff) {
               right = x;
               break;
             }
           }
 
-          p += tiff_width << 2;
+          p += tiff_width_ << 2;
         }
 
       } break;
     }
 
-    width = right + 1 - left;
-    height = bottom + 1 - top;
+    width_ = right + 1 - left;
+    height_ = bottom + 1 - top;
 
-    xpos += left;
-    ypos += top;
+    xpos_ += left;
+    ypos_ += top;
 
     /***********************************************************************
      * Inpaint
@@ -415,8 +419,8 @@ void Image::Read(void* data, bool gamma) {
     uint32_t* prev_line = NULL;
     mt::Threadpool* threadpool = mt::Threadpool::GetInstance();
 
-    tiff_mask = new utils::Flex(width, height);
-    utils::Flex* dt = new utils::Flex(width, height);
+    tiff_mask_ = new utils::Flex(width_, height_);
+    utils::Flex* dt = new utils::Flex(width_, height_);
     int mc;
 
     int n_threads = (std::max)(2, threadpool->GetNThreads());
@@ -428,18 +432,18 @@ void Image::Read(void* data, bool gamma) {
     std::condition_variable* flex_cond_p = new std::condition_variable;
 
     for (int i = 0; i < n_threads; ++i) {
-      thread_lines[i] = new uint32_t[width];
-      thread_comp_lines[i] = new uint32_t[width];
+      thread_lines[i] = new uint32_t[width_];
+      thread_comp_lines[i] = new uint32_t[width_];
     }
 
     uint32_t* bitmap32 = NULL;
     uint64_t* bitmap64 = NULL;
-    if (bpp == 8)
-      bitmap32 = ((uint32_t*)data) + top * tiff_width + left;
+    if (bpp_ == 8)
+      bitmap32 = ((uint32_t*)data) + top * tiff_width_ + left;
     else
-      bitmap64 = ((uint64_t*)data) + top * tiff_width + left;
+      bitmap64 = ((uint64_t*)data) + top * tiff_width_ + left;
 
-    for (y = 0; y < height; ++y) {
+    for (y = 0; y < height_; ++y) {
       int t = y % n_threads;
       this_line = thread_lines[t];
       uint32_t* comp = thread_comp_lines[t];
@@ -450,21 +454,21 @@ void Image::Read(void* data, bool gamma) {
       {  // make sure the last compression thread to use this chunk of memory is
          // finished
         std::unique_lock<std::mutex> mlock(*flex_mutex_p);
-        flex_cond_p->wait(mlock, [=] { return dt->y > y - n_threads; });
+        flex_cond_p->wait(mlock, [=] { return dt->y_ > y - n_threads; });
       }
 
-      while (x < width) {
+      while (x < width_) {
         mc = 0;
         first = true;
 
-        while (x < width && (bpp == 8 ? (bitmap32[x] < 0xff000000)
-                                      : (bitmap64[x] < 0xffff000000000000))) {
+        while (x < width_ && (bpp_ == 8 ? (bitmap32[x] < 0xff000000)
+                                        : (bitmap64[x] < 0xffff000000000000))) {
           if (y == 0) {
             if (x == 0) {
               this_line[0] = 0x80000000;
             } else {
               this_line[x] = this_line[x - 1] + 3;
-              if (bpp == 8) {
+              if (bpp_ == 8) {
                 bitmap32[x] = bitmap32[x - 1];
               } else {
                 bitmap64[x] = bitmap64[x - 1];
@@ -477,15 +481,15 @@ void Image::Read(void* data, bool gamma) {
 
               if (b < c) {
                 d = b;
-                temp_copy = x - tiff_width;
+                temp_copy = x - tiff_width_;
               } else {
                 d = c;
-                temp_copy = x - tiff_width + 1;
+                temp_copy = x - tiff_width_ + 1;
               }
               d = b < c ? b : c;
 
               this_line[x] = d;
-              if (bpp == 8) {
+              if (bpp_ == 8) {
                 bitmap32[x] = bitmap32[temp_copy];
               } else {
                 bitmap64[x] = bitmap64[temp_copy];
@@ -502,7 +506,7 @@ void Image::Read(void* data, bool gamma) {
                 first = false;
               }
 
-              if (x < width - 1)
+              if (x < width_ - 1)
                 c = prev_line[x + 1] + 4;
               else
                 c = 0xffffffff;
@@ -510,19 +514,19 @@ void Image::Read(void* data, bool gamma) {
 
               if (a < d) {
                 d = a;
-                temp_copy = x - tiff_width - 1;
+                temp_copy = x - tiff_width_ - 1;
               }
               if (b < d) {
                 d = b;
-                temp_copy = x - tiff_width;
+                temp_copy = x - tiff_width_;
               }
               if (c < d) {
                 d = c;
-                temp_copy = x - tiff_width + 1;
+                temp_copy = x - tiff_width_ + 1;
               }
 
               this_line[x] = d;
-              if (bpp == 8) {
+              if (bpp_ == 8) {
                 bitmap32[x] = bitmap32[temp_copy];
               } else {
                 bitmap64[x] = bitmap64[temp_copy];
@@ -538,19 +542,19 @@ void Image::Read(void* data, bool gamma) {
         }
 
         if (mc) {
-          tiff_mask->Write32(mc);
+          tiff_mask_->Write32(mc);
           mc = 0;
         }
 
-        switch (bpp) {
+        switch (bpp_) {
           case 8: {
-            while (x < width && (bitmap32[x] >= 0xff000000)) {
+            while (x < width_ && (bitmap32[x] >= 0xff000000)) {
               this_line[x++] = 0;
               ++mc;
             }
           } break;
           case 16: {
-            while (x < width && (bitmap64[x] >= 0xffff000000000000)) {
+            while (x < width_ && (bitmap64[x] >= 0xffff000000000000)) {
               this_line[x++] = 0;
               ++mc;
             }
@@ -559,22 +563,22 @@ void Image::Read(void* data, bool gamma) {
         }
 
         if (mc) {
-          tiff_mask->Write32(0x80000000 | mc);
+          tiff_mask_->Write32(0x80000000 | mc);
           mc = 0;
         }
       }
 
-      if (bpp == 8)
-        bitmap32 += tiff_width;
+      if (bpp_ == 8)
+        bitmap32 += tiff_width_;
       else
-        bitmap64 += tiff_width;
+        bitmap64 += tiff_width_;
 
-      if (y < height - 1) {
+      if (y < height_ - 1) {
         threadpool->Queue([=, this] {
-          int p = utils::CompressDTLine(this_line, (uint8_t*)comp, width);
+          int p = utils::CompressDTLine(this_line, (uint8_t*)comp, width_);
           {
             std::unique_lock<std::mutex> mlock(*flex_mutex_p);
-            flex_cond_p->wait(mlock, [=] { return dt->y == y; });
+            flex_cond_p->wait(mlock, [=] { return dt->y_ == y; });
             dt->Copy((uint8_t*)comp, p);
             dt->NextLine();
           }
@@ -582,7 +586,7 @@ void Image::Read(void* data, bool gamma) {
         });
       }
 
-      tiff_mask->NextLine();
+      tiff_mask_->NextLine();
       prev_line = this_line;
     }
 
@@ -598,19 +602,19 @@ void Image::Read(void* data, bool gamma) {
     prev_line = thread_lines[(y - 2) % n_threads];
 
     // first line
-    x = width - 1;
-    if (bpp == 8)
-      bitmap32 -= tiff_width;
+    x = width_ - 1;
+    if (bpp_ == 8)
+      bitmap32 -= tiff_width_;
     else
-      bitmap64 -= tiff_width;
+      bitmap64 -= tiff_width_;
 
     while (x >= 0) {
-      mask = tiff_mask->ReadBackwards32();
+      mask = tiff_mask_->ReadBackwards32();
       if (mask & 0x80000000) {  // solid
         x -= mask & 0x7fffffff;
         d = 3;
       } else {
-        if (x == width - 1) {
+        if (x == width_ - 1) {
           d = this_line[x] + 3;
           --mask;
           --x;
@@ -619,7 +623,7 @@ void Image::Read(void* data, bool gamma) {
           uint32_t best = this_line[x];
           if (d < best) {
             this_line[x] = d;
-            if (bpp == 8)
+            if (bpp_ == 8)
               bitmap32[x] = bitmap32[x + 1];
             else
               bitmap64[x] = bitmap64[x + 1];
@@ -636,16 +640,16 @@ void Image::Read(void* data, bool gamma) {
     std::swap(this_line, prev_line);
 
     // other lines
-    for (y = height - 2; y >= 0; --y) {
-      x = width - 1;
+    for (y = height_ - 2; y >= 0; --y) {
+      x = width_ - 1;
       c = d = 0x80000000;
-      if (bpp == 8)
-        bitmap32 -= tiff_width;
+      if (bpp_ == 8)
+        bitmap32 -= tiff_width_;
       else
-        bitmap64 -= tiff_width;
+        bitmap64 -= tiff_width_;
 
       while (x >= 0) {
-        mask = tiff_mask->ReadBackwards32();
+        mask = tiff_mask_->ReadBackwards32();
 
         if (mask & 0x80000000) {  // solid
           mc = mask & 0x7fffffff;
@@ -654,7 +658,7 @@ void Image::Read(void* data, bool gamma) {
           d = 3;
         } else {
           b = prev_line[x] + 3;
-          c = (x < width - 1) ? prev_line[x + 1] + 4 : 0x80000000;
+          c = (x < width_ - 1) ? prev_line[x + 1] + 4 : 0x80000000;
           while (mask) {
             a = (x > 0) ? prev_line[x - 1] + 4 : 0x80000000;
             utils::ReadInpaintDT(dt, current_count, current_step, dt_val);
@@ -662,15 +666,15 @@ void Image::Read(void* data, bool gamma) {
             uint32_t best = dt_val;
             if (a < best) {
               best = a;
-              copy = tiff_width + x - 1;
+              copy = tiff_width_ + x - 1;
             }
             if (b < best) {
               best = b;
-              copy = tiff_width + x;
+              copy = tiff_width_ + x;
             }
             if (c < best) {
               best = c;
-              copy = tiff_width + x + 1;
+              copy = tiff_width_ + x + 1;
             }
             if (d < best) {
               best = d;
@@ -678,7 +682,7 @@ void Image::Read(void* data, bool gamma) {
             }
 
             if (copy) {
-              if (bpp == 8)
+              if (bpp_ == 8)
                 bitmap32[x] = bitmap32[copy];
               else
                 bitmap64[x] = bitmap64[copy];
@@ -707,75 +711,75 @@ void Image::Read(void* data, bool gamma) {
     delete[] thread_lines;
     delete[] thread_comp_lines;
   } else {
-    width = tiff_width;
-    height = tiff_height;
+    width_ = tiff_width_;
+    height_ = tiff_height_;
 
-    tiff_mask = new utils::Flex(width, height);
+    tiff_mask_ = new utils::Flex(width_, height_);
 
-    for (y = 0; y < height; ++y) {
-      tiff_mask->Write32(0x80000000 | width);
-      tiff_mask->NextLine();
+    for (y = 0; y < height_; ++y) {
+      tiff_mask_->Write32(0x80000000 | width_);
+      tiff_mask_->NextLine();
     }
   }
 
   /***********************************************************************
    * Extract channels
    ***********************************************************************/
-  size_t channel_bytes = ((size_t)width * height) << (bpp >> 4);
+  size_t channel_bytes = ((size_t)width_ * height_) << (bpp_ >> 4);
 
   for (int c = 0; c < 3; ++c) {
-    channels.push_back(new Channel(channel_bytes));
+    channels_.push_back(new Channel(channel_bytes));
   }
 
-  if (spp == 4) {
-    switch (bpp) {
+  if (spp_ == 4) {
+    switch (bpp_) {
       case 8: {
-        uint32_t* line = ((uint32_t*)data) + top * tiff_width + left;
+        uint32_t* line = ((uint32_t*)data) + top * tiff_width_ + left;
         int p = 0;
-        for (y = 0; y < height; ++y) {
-          for (x = 0; x < width; ++x) {
+        for (y = 0; y < height_; ++y) {
+          for (x = 0; x < width_; ++x) {
             uint32_t pixel = line[x];
-            ((uint8_t*)channels[0]->data)[p + x] = pixel & 0xff;
-            ((uint8_t*)channels[1]->data)[p + x] = (pixel >> 8) & 0xff;
-            ((uint8_t*)channels[2]->data)[p + x] = (pixel >> 16) & 0xff;
+            ((uint8_t*)channels_[0]->data_)[p + x] = pixel & 0xff;
+            ((uint8_t*)channels_[1]->data_)[p + x] = (pixel >> 8) & 0xff;
+            ((uint8_t*)channels_[2]->data_)[p + x] = (pixel >> 16) & 0xff;
           }
-          p += width;
-          line += tiff_width;
+          p += width_;
+          line += tiff_width_;
         }
       } break;
       case 16: {
-        uint64_t* line = ((uint64_t*)data) + top * tiff_width + left;
+        uint64_t* line = ((uint64_t*)data) + top * tiff_width_ + left;
         int p = 0;
-        for (y = 0; y < height; ++y) {
-          for (x = 0; x < width; ++x) {
+        for (y = 0; y < height_; ++y) {
+          for (x = 0; x < width_; ++x) {
             uint64_t pixel = line[x];
-            ((uint16_t*)channels[0]->data)[p + x] = pixel & 0xffff;
-            ((uint16_t*)channels[1]->data)[p + x] = (pixel >> 16) & 0xffff;
-            ((uint16_t*)channels[2]->data)[p + x] = (pixel >> 32) & 0xffff;
+            ((uint16_t*)channels_[0]->data_)[p + x] = pixel & 0xffff;
+            ((uint16_t*)channels_[1]->data_)[p + x] = (pixel >> 16) & 0xffff;
+            ((uint16_t*)channels_[2]->data_)[p + x] = (pixel >> 32) & 0xffff;
           }
-          p += width;
-          line += tiff_width;
+          p += width_;
+          line += tiff_width_;
         }
       } break;
     }
   } else {
-    switch (bpp) {
+    switch (bpp_) {
       case 8: {
         uint8_t byte;
         uint8_t* bytes = (uint8_t*)data;
         size_t p = 0;
-        for (y = 0; y < height; ++y) {
-          for (x = 0; x < width; ++x) {
+        for (y = 0; y < height_; ++y) {
+          for (x = 0; x < width_; ++x) {
             byte = *bytes++;
-            ((uint8_t*)channels[0]->data)[p] = byte;
+            ((uint8_t*)channels_[0]->data_)[p] = byte;
             // channel_totals[0] += gamma ? byte*byte : byte;
 
             byte = *bytes++;
-            ((uint8_t*)channels[1]->data)[p] = byte;
+            ((uint8_t*)channels_[1]->data_)[p] = byte;
             // channel_totals[1] += gamma ? byte * byte : byte;
 
             byte = *bytes++;
-            ((uint8_t*)channels[2]->data)[p] = byte;
+            ((uint8_t*)channels_[2]->data_)[p] = byte;
             // channel_totals[2] += gamma ? byte * byte : byte;
 
             ++p;
@@ -786,18 +790,18 @@ void Image::Read(void* data, bool gamma) {
         uint16_t word;
         uint16_t* words = (uint16_t*)data;
         size_t p = 0;
-        for (y = 0; y < height; ++y) {
-          for (x = 0; x < width; ++x) {
+        for (y = 0; y < height_; ++y) {
+          for (x = 0; x < width_; ++x) {
             word = *words++;
-            ((uint16_t*)channels[0]->data)[p] = word;
+            ((uint16_t*)channels_[0]->data_)[p] = word;
             // channel_totals[0] += gamma ? word * word : word;
 
             word = *words++;
-            ((uint16_t*)channels[1]->data)[p] = word;
+            ((uint16_t*)channels_[1]->data_)[p] = word;
             // channel_totals[1] += gamma ? word * word : word;
 
             word = *words++;
-            ((uint16_t*)channels[2]->data)[p] = word;
+            ((uint16_t*)channels_[2]->data_)[p] = word;
             // channel_totals[2] += gamma ? word * word : word;
 
             ++p;
@@ -819,8 +823,8 @@ void Image::MaskPng(int i) {
   char filename[256];
   sprintf_s(filename, "masks-%d.png", i);
 
-  int width = masks[0]->width;
-  int height = masks[0]->height;  // +1 + masks[1]->height;
+  int width = masks_[0]->width_;
+  int height = masks_[0]->height_;  // +1 + masks[1]->height;
 
   size_t size = (size_t)width * height;
   uint8_t* temp = (uint8_t*)malloc(size);
@@ -829,12 +833,12 @@ void Image::MaskPng(int i) {
   int px = 0, py = 0;
   uint32_t cur;
 
-  for (int l = 0; l < (int)masks.size(); ++l) {
-    uint32_t* data = (uint32_t*)masks[l]->data;
-    uint8_t* line = temp + py * masks[0]->width + px;
-    for (int y = 0; y < masks[l]->height; ++y) {
+  for (int l = 0; l < (int)masks_.size(); ++l) {
+    uint32_t* data = (uint32_t*)masks_[l]->data_;
+    uint8_t* line = temp + py * masks_[0]->width_ + px;
+    for (int y = 0; y < masks_[l]->height_; ++y) {
       int x = 0;
-      while (x < masks[l]->width) {
+      while (x < masks_[l]->width_) {
         float val;
         int count;
 
@@ -855,12 +859,12 @@ void Image::MaskPng(int i) {
         while (x < t) line[x++] = (uint8_t)(val * 255);
       }
 
-      line += masks[0]->width;
+      line += masks_[0]->width_;
     }
     if (l & 1)
-      px += masks[l]->width + 1;
+      px += masks_[l]->width_ + 1;
     else
-      py += masks[l]->height + 1;
+      py += masks_[l]->height_ + 1;
     break;
   }
 
