@@ -35,16 +35,10 @@
 #include "src/pnger.h"
 
 namespace mb = multiblend;
+namespace utils = mb::utils;
 
 int main(int argc, char* argv[]) {
-  // This is here because of a weird problem encountered during development with
-  // Visual Studio. It should never be triggered.
-  if (mb::verbosity != 1) {
-    printf("bad compile?\n");
-    exit(EXIT_FAILURE);
-  }
-
-  mb::Timer timer_all, timer;
+  mb::utils::Timer timer_all, timer;
   timer_all.Start();
 
   TIFFSetWarningHandler(NULL);
@@ -86,11 +80,11 @@ int main(int argc, char* argv[]) {
    ***********************************************************************/
   if (argc == 1 || !strcmp(argv[1], "-h") || !strcmp(argv[1], "--help") ||
       !strcmp(argv[1], "/?")) {
-    mb::Output(1, "\n");
-    mb::Output(1,
-               "Multiblend v2.0.0 (c) 2021 David Horman        "
-               "http://horman.net/multiblend/\n");
-    mb::Output(
+    utils::Output(1, "\n");
+    utils::Output(1,
+                  "Multiblend v2.0.0 (c) 2021 David Horman        "
+                  "http://horman.net/multiblend/\n");
+    utils::Output(
         1,
         "-------------------------------------------------------------------"
         "---------\n");
@@ -195,7 +189,7 @@ int main(int argc, char* argv[]) {
   }
 
   if ((int)my_argv.size() < 3) {
-    mb::die("Error: Not enough arguments (try -h for help)");
+    utils::die("Error: Not enough arguments (try -h for help)");
   }
 
   int pos;
@@ -205,10 +199,10 @@ int main(int argc, char* argv[]) {
       if (++pos < (int)my_argv.size()) {
         output_bpp = atoi(my_argv[pos]);
         if (output_bpp != 8 && output_bpp != 16) {
-          mb::die("Error: Invalid output depth specified");
+          utils::die("Error: Invalid output depth specified");
         }
       } else {
-        mb::die("Error: Missing parameter value");
+        utils::die("Error: Missing parameter value");
       }
     } else if (!strcmp(my_argv[pos], "-l") ||
                !strcmp(my_argv[pos], "--levels")) {
@@ -221,14 +215,14 @@ int main(int argc, char* argv[]) {
           if (fixed_levels == 0) fixed_levels = 1;
         }
         if (my_argv[pos][n]) {
-          mb::die("Error: Bad --levels parameter");
+          utils::die("Error: Bad --levels parameter");
         }
       } else {
-        mb::die("Error: Missing parameter value");
+        utils::die("Error: Missing parameter value");
       }
     } else if (!strcmp(my_argv[pos], "--wrap") || !strcmp(my_argv[pos], "-w")) {
       if (pos + 1 >= (int)my_argv.size()) {
-        mb::die("Error: Missing parameters");
+        utils::die("Error: Missing parameters");
       }
       if (!strcmp(my_argv[pos + 1], "none") ||
           !strcmp(my_argv[pos + 1], "open"))
@@ -249,7 +243,7 @@ int main(int argc, char* argv[]) {
         wrap = 1;
     } else if (!strcmp(my_argv[pos], "--cache-threshold")) {
       if (pos + 1 >= (int)my_argv.size()) {
-        mb::die("Error: Missing parameters");
+        utils::die("Error: Missing parameters");
       }
       ++pos;
       int shift = 0;
@@ -273,11 +267,11 @@ int main(int argc, char* argv[]) {
               shift = 30;
               break;
             default:
-              mb::die("Error: Bad --cache-threshold parameter");
+              utils::die("Error: Bad --cache-threshold parameter");
           }
           threshold <<= shift;
         } else {
-          mb::die("Error: Bad --cache-threshold parameter");
+          utils::die("Error: Bad --cache-threshold parameter");
         }
       }
       mb::MapAlloc::CacheThreshold(threshold);
@@ -303,13 +297,13 @@ int main(int argc, char* argv[]) {
     //  else if (!strcmp(my_argv[i], "--force"))     force_coverage =
     // true;
     else if (!strncmp(my_argv[pos], "-f", 2))
-      mb::Output(0, "ignoring Enblend option -f\n");
+      utils::Output(0, "ignoring Enblend option -f\n");
     else if (!strcmp(my_argv[pos], "-a"))
-      mb::Output(0, "ignoring Enblend option -a\n");
+      utils::Output(0, "ignoring Enblend option -a\n");
     else if (!strcmp(my_argv[pos], "--no-ciecam"))
-      mb::Output(0, "ignoring Enblend option --no-ciecam\n");
+      utils::Output(0, "ignoring Enblend option --no-ciecam\n");
     else if (!strcmp(my_argv[pos], "--primary-seam-generator")) {
-      mb::Output(0, "ignoring Enblend option --primary-seam-generator\n");
+      utils::Output(0, "ignoring Enblend option --primary-seam-generator\n");
       ++pos;
     }
 
@@ -328,16 +322,16 @@ int main(int argc, char* argv[]) {
         else if (_stricmp(my_argv[pos], "none") == 0) {
           compression = COMPRESSION_NONE;
         } else {
-          mb::die("Error: Unknown compression codec %s", my_argv[pos]);
+          utils::die("Error: Unknown compression codec %s", my_argv[pos]);
         }
       } else {
-        mb::die("Error: Missing parameter value");
+        utils::die("Error: Missing parameter value");
       }
     } else if (!strcmp(my_argv[pos], "-v") ||
                !strcmp(my_argv[pos], "--verbose"))
-      ++mb::verbosity;
+      ++utils::verbosity;
     else if (!strcmp(my_argv[pos], "-q") || !strcmp(my_argv[pos], "--quiet"))
-      --mb::verbosity;
+      --utils::verbosity;
     else if ((!strcmp(my_argv[pos], "--saveseams") ||
               !strcmp(my_argv[pos], "--save-seams")) &&
              pos < (int)my_argv.size() - 1)
@@ -361,7 +355,7 @@ int main(int argc, char* argv[]) {
         char* ext = strrchr(output_filename, '.');
 
         if (!ext) {
-          mb::die("Error: Unknown output filetype");
+          utils::die("Error: Unknown output filetype");
         }
 
         ++ext;
@@ -373,7 +367,7 @@ int main(int argc, char* argv[]) {
         } else if (!_stricmp(ext, "png")) {
           output_type = mb::ImageType::MB_PNG;
         } else {
-          mb::die("Error: Unknown file extension");
+          utils::die("Error: Unknown file extension");
         }
 
         ++pos;
@@ -383,13 +377,13 @@ int main(int argc, char* argv[]) {
       ++pos;
       break;
     } else {
-      mb::die("Error: Unknown argument \"%s\"", my_argv[pos]);
+      utils::die("Error: Unknown argument \"%s\"", my_argv[pos]);
     }
   }
 
   if (compression != -1) {
     if (output_type != mb::ImageType::MB_TIFF) {
-      mb::Output(
+      utils::Output(
           0, "Warning: non-TIFF output; ignoring TIFF compression setting\n");
     }
   } else if (output_type == mb::ImageType::MB_TIFF) {
@@ -398,24 +392,24 @@ int main(int argc, char* argv[]) {
 
   if (jpeg_quality != -1 && output_type != mb::ImageType::MB_JPEG &&
       output_type != mb::ImageType::MB_PNG) {
-    mb::Output(0,
-               "Warning: non-JPEG/PNG output; ignoring compression quality "
-               "setting\n");
+    utils::Output(0,
+                  "Warning: non-JPEG/PNG output; ignoring compression quality "
+                  "setting\n");
   }
 
   if ((jpeg_quality < -1 || jpeg_quality > 9) &&
       output_type == mb::ImageType::MB_PNG) {
-    mb::die("Error: Bad PNG compression quality setting\n");
+    utils::die("Error: Bad PNG compression quality setting\n");
   }
 
   if (output_type == mb::ImageType::MB_NONE && !seamsave_filename) {
-    mb::die("Error: No output file specified");
+    utils::die("Error: No output file specified");
   }
   if (seamload_filename && seamsave_filename) {
-    mb::die("Error: Cannot load and save seams at the same time");
+    utils::die("Error: Cannot load and save seams at the same time");
   }
   if (wrap == 3) {
-    mb::die("Error: Wrapping in both directions is not currently supported");
+    utils::die("Error: Wrapping in both directions is not currently supported");
   }
 
   if (!strcmp(my_argv[pos], "--")) {
@@ -444,32 +438,32 @@ int main(int argc, char* argv[]) {
   int n_images = (int)images.size();
 
   if (n_images == 0) {
-    mb::die("Error: No input files specified");
+    utils::die("Error: No input files specified");
   }
   if (seamsave_filename && n_images > 256) {
     seamsave_filename = NULL;
-    mb::Output(0,
-               "Warning: seam saving not possible with more than 256 images");
+    utils::Output(
+        0, "Warning: seam saving not possible with more than 256 images");
   }
   if (seamload_filename && n_images > 256) {
     seamload_filename = NULL;
-    mb::Output(0,
-               "Warning: seam loading not possible with more than 256 images");
+    utils::Output(
+        0, "Warning: seam loading not possible with more than 256 images");
   }
   if (xor_filename && n_images > 255) {
     xor_filename = NULL;
-    mb::Output(
+    utils::Output(
         0, "Warning: XOR map saving not possible with more than 255 images");
   }
 
   /***********************************************************************
    * Print banner
    ***********************************************************************/
-  mb::Output(1, "\n");
-  mb::Output(1,
-             "Multiblend v2.0.0 (c) 2021 David Horman        "
-             "http://horman.net/multiblend/\n");
-  mb::Output(
+  utils::Output(1, "\n");
+  utils::Output(1,
+                "Multiblend v2.0.0 (c) 2021 David Horman        "
+                "http://horman.net/multiblend/\n");
+  utils::Output(
       1,
       "---------------------------------------------------------------------"
       "-------\n");
@@ -487,22 +481,22 @@ int main(int argc, char* argv[]) {
         tiff_file = TIFFOpen(output_filename, "w8");
       }
       if (!tiff_file) {
-        mb::die("Error: Could not open output file");
+        utils::die("Error: Could not open output file");
       }
     } break;
     case mb::ImageType::MB_JPEG: {
       if (output_bpp == 16) {
-        mb::die("Error: 16bpp output is incompatible with JPEG output");
+        utils::die("Error: 16bpp output is incompatible with JPEG output");
       }
       fopen_s(&jpeg_file, output_filename, "wb");
       if (!jpeg_file) {
-        mb::die("Error: Could not open output file");
+        utils::die("Error: Could not open output file");
       }
     } break;
     case mb::ImageType::MB_PNG: {
       fopen_s(&jpeg_file, output_filename, "wb");
       if (!jpeg_file) {
-        mb::die("Error: Could not open output file");
+        utils::die("Error: Could not open output file");
       }
     } break;
   }
@@ -535,7 +529,7 @@ int main(int argc, char* argv[]) {
 #define ROWS_PER_STRIP 64
 
   if (output_type != mb::ImageType::MB_NONE) {
-    mb::Output(1, "Writing %s...\n", output_filename);
+    utils::Output(1, "Writing %s...\n", output_filename);
 
     timer.Start();
 
@@ -590,8 +584,9 @@ int main(int argc, char* argv[]) {
           mb::GeoTIFFInfo info(images[0]->geotiff);
           info.XGeoRef = result.min_xpos * images[0]->geotiff.XCellRes;
           info.YGeoRef = -result.min_ypos * images[0]->geotiff.YCellRes;
-          mb::Output(1, "Output georef: UL: %f %f, pixel size: %f %f\n",
-                     info.XGeoRef, info.YGeoRef, info.XCellRes, info.YCellRes);
+          utils::Output(1, "Output georef: UL: %f %f, pixel size: %f %f\n",
+                        info.XGeoRef, info.YGeoRef, info.XCellRes,
+                        info.YCellRes);
           mb::geotiff_write(tiff_file, &info);
         }
       } break;

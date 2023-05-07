@@ -13,11 +13,11 @@ namespace multiblend {
 class PyramidWithMasks : public Pyramid {
  public:
   using Pyramid::Pyramid;
-  std::vector<Flex*> masks;
+  std::vector<utils::Flex*> masks;
 };
 
 Result Multiblend(std::vector<Image*>& images, Options opts) {
-  Timer timer;
+  utils::Timer timer;
   timer.Start();
   TimingResult timing;
 
@@ -39,16 +39,17 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
   for (int i = 1; i < n_images; ++i) {
     if (images[i]->tiff_xres != images[0]->tiff_xres ||
         images[i]->tiff_yres != images[0]->tiff_yres) {
-      Output(0, "Warning: TIFF resolution mismatch (%f %f/%f %f)\n",
-             images[0]->tiff_xres, images[0]->tiff_yres, images[i]->tiff_xres,
-             images[i]->tiff_yres);
+      utils::Output(0, "Warning: TIFF resolution mismatch (%f %f/%f %f)\n",
+                    images[0]->tiff_xres, images[0]->tiff_yres,
+                    images[i]->tiff_xres, images[i]->tiff_yres);
     }
   }
 
   for (int i = 0; i < n_images; ++i) {
     if (opts.output_bpp == 0 && images[i]->bpp == 16) opts.output_bpp = 16;
     if (images[i]->bpp != images[0]->bpp) {
-      die("Error: mixture of 8bpp and 16bpp images detected (not currently "
+      utils::die(
+          "Error: mixture of 8bpp and 16bpp images detected (not currently "
           "handled)\n");
     }
   }
@@ -56,7 +57,7 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
   if (opts.output_bpp == 0) {
     opts.output_bpp = 8;
   } else if (opts.output_bpp == 16 && opts.output_type == ImageType::MB_JPEG) {
-    Output(0, "Warning: 8bpp output forced by JPEG output\n");
+    utils::Output(0, "Warning: 8bpp output forced by JPEG output\n");
     opts.output_bpp = 8;
   }
 
@@ -148,10 +149,10 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
 
   if (n_images == 1) {
     blend_levels = 0;
-    Output(1, "\n%d x %d, %d bpp\n\n", width, height, opts.output_bpp);
+    utils::Output(1, "\n%d x %d, %d bpp\n\n", width, height, opts.output_bpp);
   } else {
-    Output(1, "\n%d x %d, %d levels, %d bpp\n\n", width, height, blend_levels,
-           opts.output_bpp);
+    utils::Output(1, "\n%d x %d, %d levels, %d bpp\n\n", width, height,
+                  blend_levels, opts.output_bpp);
   }
 
   /***********************************************************************
@@ -161,19 +162,19 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
   ***********************************************************************/
   timer.Start();
 
-  Output(1, "Seaming");
+  utils::Output(1, "Seaming");
   switch (((!!opts.seamsave_filename) << 1) | !!opts.xor_filename) {
     case 1:
-      Output(1, " (saving XOR map)");
+      utils::Output(1, " (saving XOR map)");
       break;
     case 2:
-      Output(1, " (saving seam map)");
+      utils::Output(1, " (saving seam map)");
       break;
     case 3:
-      Output(1, " (saving XOR and seam maps)");
+      utils::Output(1, " (saving XOR and seam maps)");
       break;
   }
-  Output(1, "...\n");
+  utils::Output(1, "...\n");
 
   int min_count;
   int xor_count;
@@ -190,7 +191,7 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
   bool last_pixel = false;
   bool arbitrary_seam = false;
 
-  Flex* seam_flex = new Flex(width, height);
+  utils::Flex* seam_flex = new utils::Flex(width, height);
   int max_queue = 0;
 
   /***********************************************************************
@@ -358,7 +359,7 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
 
       if (y) {
         threadpool->Queue([=] {
-          int p = CompressSeamLine(this_line, comp, width);
+          int p = utils::CompressSeamLine(this_line, comp, width);
           if (p > width) {
             printf("bad p: %d at line %d", p, y);
             exit(0);
@@ -382,8 +383,8 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
 
     for (int i = 0; i < n_images; ++i) {
       if (!images[i]->seam_present) {
-        Output(1, "Warning: %s is fully obscured by other images\n",
-               images[i]->filename);
+        utils::Output(1, "Warning: %s is fully obscured by other images\n",
+                      images[i]->filename);
       }
     }
 
@@ -405,7 +406,7 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
 
   // create top level masks
   for (int i = 0; i < n_images; ++i) {
-    images[i]->masks.push_back(new Flex(width, height));
+    images[i]->masks.push_back(new utils::Flex(width, height));
   }
 
   Pnger* xor_map = opts.xor_filename
@@ -429,8 +430,8 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
   uint64_t total_pixels = 0;
   uint64_t channel_totals[3] = {0};
 
-  Flex full_mask(width, height);
-  Flex xor_mask(width, height);
+  utils::Flex full_mask(width, height);
+  utils::Flex xor_mask(width, height);
 
   bool alpha = false;
 
@@ -591,7 +592,7 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
           } else {
             // other rows
             if (x == 0) {
-              SEAM_DT;
+              utils::ReadSeamDT(seam_flex, current_count, current_step, dt_val);
               best = dt_val;
 
               utemp = *prev_line + 0x300000000;
@@ -647,7 +648,7 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
               utemp = prev_line[x + 1] + 0x400000000;
               c = MASKVAL(utemp);
 
-              SEAM_DT;
+              utils::ReadSeamDT(seam_flex, current_count, current_step, dt_val);
               best = dt_val;
 
               if (a < best) best = a;
@@ -677,7 +678,7 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
             }
 
             if (last_pixel) {
-              SEAM_DT;
+              utils::ReadSeamDT(seam_flex, current_count, current_step, dt_val);
               best = dt_val;
 
               if (a < best) best = a;
@@ -756,21 +757,21 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
 
     fopen_s(&f, opts.seamload_filename, "rb");
     if (!f) {
-      die("Error: Couldn't open seam file");
+      utils::die("Error: Couldn't open seam file");
     }
 
     size_t r = fread(sig, 1, 8, f);  // assignment suppresses g++ -Ofast warning
     if (!png_check_sig(sig, 8)) {
-      die("Error: Bad PNG signature");
+      utils::die("Error: Bad PNG signature");
     }
 
     png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     if (!png_ptr) {
-      die("Error: Seam PNG problem");
+      utils::die("Error: Seam PNG problem");
     }
     info_ptr = png_create_info_struct(png_ptr);
     if (!info_ptr) {
-      die("Error: Seam PNG problem");
+      utils::die("Error: Seam PNG problem");
     }
 
     png_init_io(png_ptr, f);
@@ -780,10 +781,10 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
                  &png_colour, NULL, NULL, NULL);
 
     if (png_width != width || png_height != png_height) {
-      die("Error: Seam PNG dimensions don't match workspace");
+      utils::die("Error: Seam PNG dimensions don't match workspace");
     }
     if (png_depth != 8 || png_colour != PNG_COLOR_TYPE_PALETTE) {
-      die("Error: Incorrect seam PNG format");
+      utils::die("Error: Incorrect seam PNG format");
     }
 
     png_bytep png_line = (png_bytep)malloc(width);
@@ -798,8 +799,9 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
 
       int x = 0;  // Used in the RECORD macro
       for (x = 0; x < width; ++x) {
-        if (png_line[x] > n_images)
-          die("Error: Bad pixel found in seam file: %d,%d", x, y);
+        if (png_line[x] > n_images) {
+          utils::die("Error: Bad pixel found in seam file: %d,%d", x, y);
+        }
         RECORD(png_line[x], 1);
       }
 
@@ -824,7 +826,7 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
     /***********************************************************************
      * Shrink masks
      ***********************************************************************/
-    Output(1, "Shrinking masks...\n");
+    utils::Output(1, "Shrinking masks...\n");
 
     timer.Start();
 
@@ -862,7 +864,7 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
     // masks
     for (auto& py : wrap_pyramids) {
       threadpool->Queue([=] {
-        py->masks.push_back(new Flex(width, height));
+        py->masks.push_back(new utils::Flex(width, height));
         for (int y = 0; y < height; ++y) {
           if (y < py->GetY() || y >= py->GetY() + py->GetHeight()) {
             py->masks[0]->Write32(0x80000000 | width);
@@ -955,15 +957,15 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
      ***********************************************************************/
     if (n_images == 1) {
       if (opts.wrap) {
-        Output(1, "Wrapping...\n");
+        utils::Output(1, "Wrapping...\n");
       } else {
-        Output(1, "Processing...\n");
+        utils::Output(1, "Processing...\n");
       }
     } else {
       if (opts.wrap) {
-        Output(1, "Blending/wrapping...\n");
+        utils::Output(1, "Blending/wrapping...\n");
       } else {
-        Output(1, "Blending...\n");
+        utils::Output(1, "Blending...\n");
       }
     }
 
@@ -1020,10 +1022,11 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
                   float* output_p =
                       out_level.data + (size_t)y * out_level.pitch;
 
-                  CompositeLine(input_p, output_p, i, x_offset, in_level.width,
-                                out_level.width, out_level.pitch,
-                                images[i]->masks[level]->data,
-                                images[i]->masks[level]->rows[y]);
+                  utils::CompositeLine(input_p, output_p, i, x_offset,
+                                       in_level.width, out_level.width,
+                                       out_level.pitch,
+                                       images[i]->masks[level]->data,
+                                       images[i]->masks[level]->rows[y]);
                 }
               });
             }
@@ -1064,9 +1067,9 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
         for (int w = 1; w <= 2; ++w) {
           if (opts.wrap & w) {
             if (w == 1) {
-              SwapH(output_pyramid);
+              utils::SwapH(output_pyramid);
             } else {
-              SwapV(output_pyramid);
+              utils::SwapV(output_pyramid);
             }
 
             int wrap_levels = (w == 1) ? wrap_levels_h : wrap_levels_v;
@@ -1103,11 +1106,11 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
                       float* output_p =
                           out_level.data + (size_t)y * out_level.pitch;
 
-                      CompositeLine(input_p, output_p, wp + (level == 0),
-                                    x_offset, in_level.width, out_level.width,
-                                    out_level.pitch,
-                                    wrap_pyramids[p]->masks[level]->data,
-                                    wrap_pyramids[p]->masks[level]->rows[y]);
+                      utils::CompositeLine(
+                          input_p, output_p, wp + (level == 0), x_offset,
+                          in_level.width, out_level.width, out_level.pitch,
+                          wrap_pyramids[p]->masks[level]->data,
+                          wrap_pyramids[p]->masks[level]->rows[y]);
                     }
                   });
                 }
@@ -1120,9 +1123,9 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
             output_pyramid->Collapse(wrap_levels);
 
             if (w == 1) {
-              UnswapH(output_pyramid);
+              utils::UnswapH(output_pyramid);
             } else {
-              UnswapV(output_pyramid);
+              utils::UnswapV(output_pyramid);
             }
           }  // if (wrap & w)
         }    // w loop

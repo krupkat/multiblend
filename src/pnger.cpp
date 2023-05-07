@@ -49,7 +49,9 @@ Pnger::Pnger(const char* filename, const char* name, int w, int _h, int type,
   if (!_f) {
     fopen_s(&f, filename, "wb");
     if (!f) {
-      if (name) Output(0, "WARNING: Could not save %s\n", name);
+      if (name) {
+        utils::Output(0, "WARNING: Could not save %s\n", name);
+      }
       return;
     }
   } else {
@@ -58,7 +60,9 @@ Pnger::Pnger(const char* filename, const char* name, int w, int _h, int type,
 
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   if (!png_ptr) {
-    if (name) Output(0, "WARNING: PNG create failed\n");
+    if (name) {
+      utils::Output(0, "WARNING: PNG create failed\n");
+    }
     fclose(f);
     remove(filename);
     f = NULL;
@@ -67,7 +71,9 @@ Pnger::Pnger(const char* filename, const char* name, int w, int _h, int type,
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr) {
-    if (name) Output(0, "WARNING: PNG create failed\n");
+    if (name) {
+      utils::Output(0, "WARNING: PNG create failed\n");
+    }
     png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
     fclose(f);
     remove(filename);

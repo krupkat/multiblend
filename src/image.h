@@ -51,13 +51,13 @@ class Image {
   void Read(void* data, bool gamma);
   // size_t untrimmed_pixels;
   size_t untrimmed_bytes;
-  Flex* tiff_mask;
+  utils::Flex* tiff_mask;
   float tiff_xres, tiff_yres;
   uint64_t mask_state;
   int mask_count;
   int mask_limit;
   bool seam_present;
-  std::vector<Flex*> masks;
+  std::vector<utils::Flex*> masks;
   void MaskPng(int i);
 
  private:

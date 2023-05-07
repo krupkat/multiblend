@@ -7,7 +7,7 @@
 
 #include "src/pyramid.h"
 
-namespace multiblend {
+namespace multiblend::utils {
 
 extern int verbosity;
 
@@ -216,9 +216,6 @@ void ReadInpaintDT(Flex* flex, int& current_count, int& current_step,
 void ReadSeamDT(Flex* flex, int& current_count, int64_t& current_step,
                 uint64_t& dt_val);
 
-#define SEAM_DT ReadSeamDT(seam_flex, current_count, current_step, dt_val);
-#define INPAINT_DT ReadInpaintDT(dt, current_count, current_step, dt_val);
-
 int CompressDTLine(uint32_t* input, uint8_t* output, int width);
 
 int CompressSeamLine(uint64_t* input, uint8_t* output, int width);
@@ -231,4 +228,4 @@ void SwapV(Pyramid* py);
 
 void UnswapV(Pyramid* py);
 
-}  // namespace multiblend
+}  // namespace multiblend::utils

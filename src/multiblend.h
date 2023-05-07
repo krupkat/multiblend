@@ -48,7 +48,7 @@ struct Result {
   int min_xpos = 0x7fffffff;
   int min_ypos = 0x7fffffff;
 
-  Flex full_mask;
+  utils::Flex full_mask;
   TimingResult timing = {};
 };
 

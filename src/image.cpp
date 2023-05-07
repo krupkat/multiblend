@@ -38,7 +38,7 @@ void Image::Open() {
 
   char* ext = strrchr(filename, '.');
   if (!ext) {
-    die("Could not identify file extension: %s", filename);
+    utils::die("Could not identify file extension: %s", filename);
   }
   ++ext;
 
@@ -49,13 +49,15 @@ void Image::Open() {
   } else if (!_stricmp(ext, "png")) {
     type = ImageType::MB_PNG;
   } else {
-    die("Unknown file extension: %s", filename);
+    utils::die("Unknown file extension: %s", filename);
   }
 
   switch (type) {
     case ImageType::MB_TIFF: {
       tiff = TIFFOpen(filename, "r");
-      if (!tiff) die("Could not open %s", filename);
+      if (!tiff) {
+        utils::die("Could not open %s", filename);
+      }
 
       if (!TIFFGetField(tiff, TIFFTAG_XPOSITION, &tiff_xpos)) tiff_xpos = -1;
       if (!TIFFGetField(tiff, TIFFTAG_YPOSITION, &tiff_ypos)) tiff_ypos = -1;
@@ -72,7 +74,9 @@ void Image::Open() {
         printf("Invalid bpp %d (%s)", bpp, filename);
         printf("%d, %d\n", tiff_width, tiff_height);
         TIFFGetField(tiff, TIFFTAG_BITSPERSAMPLE, &bpp);
-        if (bpp != 8 && bpp != 16) die("Invalid bpp %d (%s)", bpp, filename);
+        if (bpp != 8 && bpp != 16) {
+          utils::die("Invalid bpp %d (%s)", bpp, filename);
+        }
       }
       //   if (spp != 4) die("Images must be RGBA (%s)",
       // filename);
@@ -160,7 +164,9 @@ void Image::Open() {
     } break;
     case ImageType::MB_JPEG: {
       fopen_s(&file, filename, "rb");
-      if (!file) die("Could not open %s", filename);
+      if (!file) {
+        utils::die("Could not open %s", filename);
+      }
 
       cinfo.err = jpeg_std_error(&jerr);
       jpeg_create_decompress(&cinfo);
@@ -169,11 +175,11 @@ void Image::Open() {
       jpeg_start_decompress(&cinfo);
 
       if (!cinfo.output_width || !cinfo.output_height) {
-        die("Unknown JPEG format (%s)", filename);
+        utils::die("Unknown JPEG format (%s)", filename);
       }
 
       if (cinfo.out_color_components != 3) {
-        die("Unknown JPEG format (%s)", filename);
+        utils::die("Unknown JPEG format (%s)", filename);
       }
 
       tiff_width = cinfo.output_width;
@@ -188,17 +194,25 @@ void Image::Open() {
     } break;
     case ImageType::MB_PNG: {
       fopen_s(&file, filename, "rb");
-      if (!file) die("Could not open %s", filename);
+      if (!file) {
+        utils::die("Could not open %s", filename);
+      }
 
       uint8_t sig[8];
       size_t r =
           fread(sig, 1, 8, file);  // assignment suppresses g++ -Ofast warning
-      if (!png_check_sig(sig, 8)) die("Bad PNG signature (%s)", filename);
+      if (!png_check_sig(sig, 8)) {
+        utils::die("Bad PNG signature (%s)", filename);
+      }
 
       png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-      if (!png_ptr) die("Error: libpng problem");
+      if (!png_ptr) {
+        utils::die("Error: libpng problem");
+      }
       png_infop info_ptr = png_create_info_struct(png_ptr);
-      if (!info_ptr) die("Error: libpng problem");
+      if (!info_ptr) {
+        utils::die("Error: libpng problem");
+      }
 
       png_init_io(png_ptr, file);
       png_set_sig_bytes(png_ptr, 8);
@@ -221,11 +235,11 @@ void Image::Open() {
           spp = 4;
           break;
         default:
-          die("Bad PNG colour type (%s)", filename);
+          utils::die("Bad PNG colour type (%s)", filename);
       }
 
       if (bpp != 8 && bpp != 16) {
-        die("Bad bit depth (%s)", filename);
+        utils::die("Bad bit depth (%s)", filename);
       }
 
       xpos = ypos = 0;
@@ -247,7 +261,7 @@ void Image::Open() {
 ************************************************************************
 ***********************************************************************/
 void Image::Read(void* data, bool gamma) {
-  Output(1, "Processing %s...", filename);
+  utils::Output(1, "Processing %s...", filename);
 
   switch (type) {
     case ImageType::MB_TIFF: {
@@ -401,8 +415,8 @@ void Image::Read(void* data, bool gamma) {
     uint32_t* prev_line = NULL;
     Threadpool* threadpool = Threadpool::GetInstance();
 
-    tiff_mask = new Flex(width, height);
-    Flex* dt = new Flex(width, height);
+    tiff_mask = new utils::Flex(width, height);
+    utils::Flex* dt = new utils::Flex(width, height);
     int mc;
 
     int n_threads = (std::max)(2, threadpool->GetNThreads());
@@ -557,7 +571,7 @@ void Image::Read(void* data, bool gamma) {
 
       if (y < height - 1) {
         threadpool->Queue([=] {
-          int p = CompressDTLine(this_line, (uint8_t*)comp, width);
+          int p = utils::CompressDTLine(this_line, (uint8_t*)comp, width);
           {
             std::unique_lock<std::mutex> mlock(*flex_mutex_p);
             flex_cond_p->wait(mlock, [=] { return dt->y == y; });
@@ -643,7 +657,7 @@ void Image::Read(void* data, bool gamma) {
           c = (x < width - 1) ? prev_line[x + 1] + 4 : 0x80000000;
           while (mask) {
             a = (x > 0) ? prev_line[x - 1] + 4 : 0x80000000;
-            INPAINT_DT;
+            utils::ReadInpaintDT(dt, current_count, current_step, dt_val);
             int copy = 0;
             uint32_t best = dt_val;
             if (a < best) {
@@ -696,7 +710,7 @@ void Image::Read(void* data, bool gamma) {
     width = tiff_width;
     height = tiff_height;
 
-    tiff_mask = new Flex(width, height);
+    tiff_mask = new utils::Flex(width, height);
 
     for (y = 0; y < height; ++y) {
       tiff_mask->Write32(0x80000000 | width);
@@ -795,7 +809,7 @@ void Image::Read(void* data, bool gamma) {
     //  total_pixels += width * height;
   }
 
-  Output(1, "\n");
+  utils::Output(1, "\n");
 }
 
 /***********************************************************************
