@@ -7,6 +7,10 @@
 
 #include "src/pyramid.h"
 
+namespace multiblend {
+
+extern int verbosity;
+
 /***********************************************************************
  * Flexible data class
  ***********************************************************************/
@@ -226,3 +230,5 @@ void UnswapH(Pyramid* py);
 void SwapV(Pyramid* py);
 
 void UnswapV(Pyramid* py);
+
+}  // namespace multiblend

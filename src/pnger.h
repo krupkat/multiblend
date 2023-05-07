@@ -4,6 +4,8 @@
 
 #include <png.h>
 
+namespace multiblend {
+
 class Pnger {
  public:
   Pnger(const char* filename, const char* name, int w, int _h, int type,
@@ -24,3 +26,5 @@ class Pnger {
   int y;
   int h;
 };
+
+}  // namespace multiblend

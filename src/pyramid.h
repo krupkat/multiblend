@@ -6,6 +6,8 @@
 
 #include "src/threadpool.h"
 
+namespace multiblend {
+
 class Pyramid {
  public:
   class Level {
@@ -744,3 +746,5 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
 #undef CG
 #undef CD
 #undef CDG
+
+}  // namespace multiblend

@@ -9,6 +9,8 @@
 #include "src/functions.h"
 #include "src/linux_overrides.h"
 
+namespace multiblend {
+
 png_color* Pnger::palette = NULL;
 
 Pnger::Pnger(const char* filename, const char* name, int w, int _h, int type,
@@ -132,3 +134,5 @@ Pnger::~Pnger() {
   delete line;
   if (f) fclose(f);
 }
+
+}  // namespace multiblend

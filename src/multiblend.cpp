@@ -5,6 +5,8 @@
 #include "src/linux_overrides.h"
 #include "src/pnger.h"
 
+namespace multiblend {
+
 #define MASKVAL(X) \
   (((X)&0x7fffffffffffffff) | images[(X)&0xffffffff]->mask_state)
 
@@ -1211,3 +1213,5 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
       .timing = timing,
   };
 }
+
+}  // namespace multiblend

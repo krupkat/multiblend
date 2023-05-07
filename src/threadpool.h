@@ -10,6 +10,8 @@
 #include <Windows.h>
 #endif
 
+namespace multiblend {
+
 #ifndef _WIN32
 void* TP_Thread(void* param);
 #endif
@@ -55,3 +57,5 @@ class Threadpool {
   std::condition_variable main_cond;
   std::condition_variable return_cond;
 };
+
+}  // namespace multiblend

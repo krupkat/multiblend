@@ -12,6 +12,8 @@
 
 #include "src/linux_overrides.h"
 
+namespace multiblend {
+
 std::vector<MapAlloc::MapAllocObject*> MapAlloc::objects;
 char MapAlloc::tmpdir[256] = "";
 char MapAlloc::filename[512];
@@ -177,3 +179,5 @@ MapAlloc::MapAllocObject::~MapAllocObject() {
 void* MapAlloc::MapAllocObject::GetPointer() { return pointer; }
 
 bool MapAlloc::MapAllocObject::IsFile() { return !!file; }
+
+}  // namespace multiblend

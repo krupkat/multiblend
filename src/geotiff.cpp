@@ -4,6 +4,8 @@
 
 #include <tiffio.h>
 
+namespace multiblend {
+
 // some defintions for geotiff
 
 #define TIFFTAG_GEOPIXELSCALE 33550
@@ -94,3 +96,5 @@ int geotiff_write(TIFF* tiff, GeoTIFFInfo* info) {
   TIFFSetField(tiff, TIFFTAG_GDAL_NODATA, nodata);
   return 1;
 }
+
+}  // namespace multiblend

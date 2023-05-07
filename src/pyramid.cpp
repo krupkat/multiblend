@@ -11,6 +11,8 @@
 #include "src/pnger.h"
 #include "src/threadpool.h"
 
+namespace multiblend {
+
 /***********************************************************************
  * Constructor/destructor
  ***********************************************************************/
@@ -1445,3 +1447,5 @@ void Pyramid::Png(const char* filename) {
 
   free(temp);
 }
+
+}  // namespace multiblend

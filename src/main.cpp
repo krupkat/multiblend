@@ -27,8 +27,6 @@
 #include <jpeglib.h>
 #include <tiffio.h>
 
-extern int verbosity;
-
 #include "src/functions.h"
 #include "src/image.h"
 #include "src/linux_overrides.h"
@@ -36,15 +34,17 @@ extern int verbosity;
 #include "src/multiblend.h"
 #include "src/pnger.h"
 
+namespace mb = multiblend;
+
 int main(int argc, char* argv[]) {
   // This is here because of a weird problem encountered during development with
   // Visual Studio. It should never be triggered.
-  if (verbosity != 1) {
+  if (mb::verbosity != 1) {
     printf("bad compile?\n");
     exit(EXIT_FAILURE);
   }
 
-  Timer timer_all, timer;
+  mb::Timer timer_all, timer;
   timer_all.Start();
 
   TIFFSetWarningHandler(NULL);
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
   /***********************************************************************
    * Variables
    ***********************************************************************/
-  std::vector<Image*> images;
+  std::vector<mb::Image*> images;
   int fixed_levels = 0;
   int add_levels = 0;
 
@@ -69,8 +69,8 @@ int main(int argc, char* argv[]) {
 
   TIFF* tiff_file = NULL;
   FILE* jpeg_file = NULL;
-  Pnger* png_file = NULL;
-  ImageType output_type = ImageType::MB_NONE;
+  mb::Pnger* png_file = NULL;
+  mb::ImageType output_type = mb::ImageType::MB_NONE;
   int jpeg_quality = -1;
   int compression = -1;
   char* seamsave_filename = NULL;
@@ -86,13 +86,14 @@ int main(int argc, char* argv[]) {
    ***********************************************************************/
   if (argc == 1 || !strcmp(argv[1], "-h") || !strcmp(argv[1], "--help") ||
       !strcmp(argv[1], "/?")) {
-    Output(1, "\n");
-    Output(1,
-           "Multiblend v2.0.0 (c) 2021 David Horman        "
-           "http://horman.net/multiblend/\n");
-    Output(1,
-           "-------------------------------------------------------------------"
-           "---------\n");
+    mb::Output(1, "\n");
+    mb::Output(1,
+               "Multiblend v2.0.0 (c) 2021 David Horman        "
+               "http://horman.net/multiblend/\n");
+    mb::Output(
+        1,
+        "-------------------------------------------------------------------"
+        "---------\n");
 
     printf(
         "Usage: multiblend [options] [-o OUTPUT] INPUT [X,Y] [INPUT] [X,Y] "
@@ -193,8 +194,9 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  if ((int)my_argv.size() < 3)
-    die("Error: Not enough arguments (try -h for help)");
+  if ((int)my_argv.size() < 3) {
+    mb::die("Error: Not enough arguments (try -h for help)");
+  }
 
   int pos;
   for (pos = 0; pos < (int)my_argv.size(); ++pos) {
@@ -203,10 +205,10 @@ int main(int argc, char* argv[]) {
       if (++pos < (int)my_argv.size()) {
         output_bpp = atoi(my_argv[pos]);
         if (output_bpp != 8 && output_bpp != 16) {
-          die("Error: Invalid output depth specified");
+          mb::die("Error: Invalid output depth specified");
         }
       } else {
-        die("Error: Missing parameter value");
+        mb::die("Error: Missing parameter value");
       }
     } else if (!strcmp(my_argv[pos], "-l") ||
                !strcmp(my_argv[pos], "--levels")) {
@@ -218,13 +220,15 @@ int main(int argc, char* argv[]) {
           sscanf_s(my_argv[pos], "%d%n", &fixed_levels, &n);
           if (fixed_levels == 0) fixed_levels = 1;
         }
-        if (my_argv[pos][n]) die("Error: Bad --levels parameter");
+        if (my_argv[pos][n]) {
+          mb::die("Error: Bad --levels parameter");
+        }
       } else {
-        die("Error: Missing parameter value");
+        mb::die("Error: Missing parameter value");
       }
     } else if (!strcmp(my_argv[pos], "--wrap") || !strcmp(my_argv[pos], "-w")) {
       if (pos + 1 >= (int)my_argv.size()) {
-        die("Error: Missing parameters");
+        mb::die("Error: Missing parameters");
       }
       if (!strcmp(my_argv[pos + 1], "none") ||
           !strcmp(my_argv[pos + 1], "open"))
@@ -245,7 +249,7 @@ int main(int argc, char* argv[]) {
         wrap = 1;
     } else if (!strcmp(my_argv[pos], "--cache-threshold")) {
       if (pos + 1 >= (int)my_argv.size()) {
-        die("Error: Missing parameters");
+        mb::die("Error: Missing parameters");
       }
       ++pos;
       int shift = 0;
@@ -269,14 +273,14 @@ int main(int argc, char* argv[]) {
               shift = 30;
               break;
             default:
-              die("Error: Bad --cache-threshold parameter");
+              mb::die("Error: Bad --cache-threshold parameter");
           }
           threshold <<= shift;
         } else {
-          die("Error: Bad --cache-threshold parameter");
+          mb::die("Error: Bad --cache-threshold parameter");
         }
       }
-      MapAlloc::CacheThreshold(threshold);
+      mb::MapAlloc::CacheThreshold(threshold);
     } else if (!strcmp(my_argv[pos], "--nomask") ||
                !strcmp(my_argv[pos], "--no-mask"))
       no_mask = true;
@@ -299,13 +303,13 @@ int main(int argc, char* argv[]) {
     //  else if (!strcmp(my_argv[i], "--force"))     force_coverage =
     // true;
     else if (!strncmp(my_argv[pos], "-f", 2))
-      Output(0, "ignoring Enblend option -f\n");
+      mb::Output(0, "ignoring Enblend option -f\n");
     else if (!strcmp(my_argv[pos], "-a"))
-      Output(0, "ignoring Enblend option -a\n");
+      mb::Output(0, "ignoring Enblend option -a\n");
     else if (!strcmp(my_argv[pos], "--no-ciecam"))
-      Output(0, "ignoring Enblend option --no-ciecam\n");
+      mb::Output(0, "ignoring Enblend option --no-ciecam\n");
     else if (!strcmp(my_argv[pos], "--primary-seam-generator")) {
-      Output(0, "ignoring Enblend option --primary-seam-generator\n");
+      mb::Output(0, "ignoring Enblend option --primary-seam-generator\n");
       ++pos;
     }
 
@@ -321,18 +325,19 @@ int main(int argc, char* argv[]) {
           compression = COMPRESSION_PACKBITS;
         //    else if (_stricmp(my_argv[i], "deflate")
         //== 0) compression = COMPRESSION_DEFLATE;
-        else if (_stricmp(my_argv[pos], "none") == 0)
+        else if (_stricmp(my_argv[pos], "none") == 0) {
           compression = COMPRESSION_NONE;
-        else
-          die("Error: Unknown compression codec %s", my_argv[pos]);
+        } else {
+          mb::die("Error: Unknown compression codec %s", my_argv[pos]);
+        }
       } else {
-        die("Error: Missing parameter value");
+        mb::die("Error: Missing parameter value");
       }
     } else if (!strcmp(my_argv[pos], "-v") ||
                !strcmp(my_argv[pos], "--verbose"))
-      ++verbosity;
+      ++mb::verbosity;
     else if (!strcmp(my_argv[pos], "-q") || !strcmp(my_argv[pos], "--quiet"))
-      --verbosity;
+      --mb::verbosity;
     else if ((!strcmp(my_argv[pos], "--saveseams") ||
               !strcmp(my_argv[pos], "--save-seams")) &&
              pos < (int)my_argv.size() - 1)
@@ -347,7 +352,7 @@ int main(int argc, char* argv[]) {
       xor_filename = my_argv[++pos];
     else if (!strcmp(my_argv[pos], "--tempdir") ||
              !strcmp(my_argv[pos], "--tmpdir") && pos < (int)my_argv.size() - 1)
-      MapAlloc::SetTmpdir(my_argv[++pos]);
+      mb::MapAlloc::SetTmpdir(my_argv[++pos]);
     else if (!strcmp(my_argv[pos], "--all-threads"))
       all_threads = true;
     else if (!strcmp(my_argv[pos], "-o") || !strcmp(my_argv[pos], "--output")) {
@@ -356,19 +361,19 @@ int main(int argc, char* argv[]) {
         char* ext = strrchr(output_filename, '.');
 
         if (!ext) {
-          die("Error: Unknown output filetype");
+          mb::die("Error: Unknown output filetype");
         }
 
         ++ext;
         if (!(_stricmp(ext, "jpg") && _stricmp(ext, "jpeg"))) {
-          output_type = ImageType::MB_JPEG;
+          output_type = mb::ImageType::MB_JPEG;
           if (jpeg_quality == -1) jpeg_quality = 75;
         } else if (!(_stricmp(ext, "tif") && _stricmp(ext, "tiff"))) {
-          output_type = ImageType::MB_TIFF;
+          output_type = mb::ImageType::MB_TIFF;
         } else if (!_stricmp(ext, "png")) {
-          output_type = ImageType::MB_PNG;
+          output_type = mb::ImageType::MB_PNG;
         } else {
-          die("Error: Unknown file extension");
+          mb::die("Error: Unknown file extension");
         }
 
         ++pos;
@@ -378,37 +383,40 @@ int main(int argc, char* argv[]) {
       ++pos;
       break;
     } else {
-      die("Error: Unknown argument \"%s\"", my_argv[pos]);
+      mb::die("Error: Unknown argument \"%s\"", my_argv[pos]);
     }
   }
 
   if (compression != -1) {
-    if (output_type != ImageType::MB_TIFF) {
-      Output(0,
-             "Warning: non-TIFF output; ignoring TIFF compression setting\n");
+    if (output_type != mb::ImageType::MB_TIFF) {
+      mb::Output(
+          0, "Warning: non-TIFF output; ignoring TIFF compression setting\n");
     }
-  } else if (output_type == ImageType::MB_TIFF) {
+  } else if (output_type == mb::ImageType::MB_TIFF) {
     compression = COMPRESSION_LZW;
   }
 
-  if (jpeg_quality != -1 && output_type != ImageType::MB_JPEG &&
-      output_type != ImageType::MB_PNG) {
-    Output(0,
-           "Warning: non-JPEG/PNG output; ignoring compression quality "
-           "setting\n");
+  if (jpeg_quality != -1 && output_type != mb::ImageType::MB_JPEG &&
+      output_type != mb::ImageType::MB_PNG) {
+    mb::Output(0,
+               "Warning: non-JPEG/PNG output; ignoring compression quality "
+               "setting\n");
   }
 
   if ((jpeg_quality < -1 || jpeg_quality > 9) &&
-      output_type == ImageType::MB_PNG) {
-    die("Error: Bad PNG compression quality setting\n");
+      output_type == mb::ImageType::MB_PNG) {
+    mb::die("Error: Bad PNG compression quality setting\n");
   }
 
-  if (output_type == ImageType::MB_NONE && !seamsave_filename)
-    die("Error: No output file specified");
-  if (seamload_filename && seamsave_filename)
-    die("Error: Cannot load and save seams at the same time");
-  if (wrap == 3)
-    die("Error: Wrapping in both directions is not currently supported");
+  if (output_type == mb::ImageType::MB_NONE && !seamsave_filename) {
+    mb::die("Error: No output file specified");
+  }
+  if (seamload_filename && seamsave_filename) {
+    mb::die("Error: Cannot load and save seams at the same time");
+  }
+  if (wrap == 3) {
+    mb::die("Error: Wrapping in both directions is not currently supported");
+  }
 
   if (!strcmp(my_argv[pos], "--")) {
     ++pos;
@@ -430,35 +438,41 @@ int main(int argc, char* argv[]) {
         continue;
       }
     }
-    images.push_back(new Image(my_argv[pos++]));
+    images.push_back(new mb::Image(my_argv[pos++]));
   }
 
   int n_images = (int)images.size();
 
-  if (n_images == 0) die("Error: No input files specified");
+  if (n_images == 0) {
+    mb::die("Error: No input files specified");
+  }
   if (seamsave_filename && n_images > 256) {
     seamsave_filename = NULL;
-    Output(0, "Warning: seam saving not possible with more than 256 images");
+    mb::Output(0,
+               "Warning: seam saving not possible with more than 256 images");
   }
   if (seamload_filename && n_images > 256) {
     seamload_filename = NULL;
-    Output(0, "Warning: seam loading not possible with more than 256 images");
+    mb::Output(0,
+               "Warning: seam loading not possible with more than 256 images");
   }
   if (xor_filename && n_images > 255) {
     xor_filename = NULL;
-    Output(0, "Warning: XOR map saving not possible with more than 255 images");
+    mb::Output(
+        0, "Warning: XOR map saving not possible with more than 255 images");
   }
 
   /***********************************************************************
    * Print banner
    ***********************************************************************/
-  Output(1, "\n");
-  Output(1,
-         "Multiblend v2.0.0 (c) 2021 David Horman        "
-         "http://horman.net/multiblend/\n");
-  Output(1,
-         "---------------------------------------------------------------------"
-         "-------\n");
+  mb::Output(1, "\n");
+  mb::Output(1,
+             "Multiblend v2.0.0 (c) 2021 David Horman        "
+             "http://horman.net/multiblend/\n");
+  mb::Output(
+      1,
+      "---------------------------------------------------------------------"
+      "-------\n");
 
   /***********************************************************************
   ************************************************************************
@@ -466,22 +480,30 @@ int main(int argc, char* argv[]) {
   ************************************************************************
   ***********************************************************************/
   switch (output_type) {
-    case ImageType::MB_TIFF: {
-      if (!big_tiff)
+    case mb::ImageType::MB_TIFF: {
+      if (!big_tiff) {
         tiff_file = TIFFOpen(output_filename, "w");
-      else
+      } else {
         tiff_file = TIFFOpen(output_filename, "w8");
-      if (!tiff_file) die("Error: Could not open output file");
+      }
+      if (!tiff_file) {
+        mb::die("Error: Could not open output file");
+      }
     } break;
-    case ImageType::MB_JPEG: {
-      if (output_bpp == 16)
-        die("Error: 16bpp output is incompatible with JPEG output");
+    case mb::ImageType::MB_JPEG: {
+      if (output_bpp == 16) {
+        mb::die("Error: 16bpp output is incompatible with JPEG output");
+      }
       fopen_s(&jpeg_file, output_filename, "wb");
-      if (!jpeg_file) die("Error: Could not open output file");
+      if (!jpeg_file) {
+        mb::die("Error: Could not open output file");
+      }
     } break;
-    case ImageType::MB_PNG: {
+    case mb::ImageType::MB_PNG: {
       fopen_s(&jpeg_file, output_filename, "wb");
-      if (!jpeg_file) die("Error: Could not open output file");
+      if (!jpeg_file) {
+        mb::die("Error: Could not open output file");
+      }
     } break;
   }
 
@@ -512,8 +534,8 @@ int main(int argc, char* argv[]) {
  ***********************************************************************/
 #define ROWS_PER_STRIP 64
 
-  if (output_type != ImageType::MB_NONE) {
-    Output(1, "Writing %s...\n", output_filename);
+  if (output_type != mb::ImageType::MB_NONE) {
+    mb::Output(1, "Writing %s...\n", output_filename);
 
     timer.Start();
 
@@ -536,7 +558,7 @@ int main(int argc, char* argv[]) {
     if (bgr) std::swap(oc_p[0], oc_p[2]);
 
     switch (output_type) {
-      case ImageType::MB_TIFF: {
+      case mb::ImageType::MB_TIFF: {
         TIFFSetField(tiff_file, TIFFTAG_IMAGEWIDTH, result.width);
         TIFFSetField(tiff_file, TIFFTAG_IMAGELENGTH, result.height);
         TIFFSetField(tiff_file, TIFFTAG_COMPRESSION, compression);
@@ -565,15 +587,15 @@ int main(int argc, char* argv[]) {
 
         if (images[0]->geotiff.set) {
           // if we got a georeferenced input, store the geotags in the output
-          GeoTIFFInfo info(images[0]->geotiff);
+          mb::GeoTIFFInfo info(images[0]->geotiff);
           info.XGeoRef = result.min_xpos * images[0]->geotiff.XCellRes;
           info.YGeoRef = -result.min_ypos * images[0]->geotiff.YCellRes;
-          Output(1, "Output georef: UL: %f %f, pixel size: %f %f\n",
-                 info.XGeoRef, info.YGeoRef, info.XCellRes, info.YCellRes);
-          geotiff_write(tiff_file, &info);
+          mb::Output(1, "Output georef: UL: %f %f, pixel size: %f %f\n",
+                     info.XGeoRef, info.YGeoRef, info.XCellRes, info.YCellRes);
+          mb::geotiff_write(tiff_file, &info);
         }
       } break;
-      case ImageType::MB_JPEG: {
+      case mb::ImageType::MB_JPEG: {
         cinfo.err = jpeg_std_error(&jerr);
         jpeg_create_compress(&cinfo);
         jpeg_stdio_dest(&cinfo, jpeg_file);
@@ -587,15 +609,16 @@ int main(int argc, char* argv[]) {
         jpeg_set_quality(&cinfo, jpeg_quality, true);
         jpeg_start_compress(&cinfo, true);
       } break;
-      case ImageType::MB_PNG: {
-        png_file = new Pnger(
+      case mb::ImageType::MB_PNG: {
+        png_file = new mb::Pnger(
             output_filename, NULL, result.width, result.height,
             result.no_mask ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA,
             result.output_bpp, jpeg_file, jpeg_quality);
       } break;
     }
 
-    if (output_type == ImageType::MB_PNG || output_type == ImageType::MB_JPEG) {
+    if (output_type == mb::ImageType::MB_PNG ||
+        output_type == mb::ImageType::MB_JPEG) {
       scanlines = new JSAMPROW[ROWS_PER_STRIP];
       for (int i = 0; i < ROWS_PER_STRIP; ++i) {
         scanlines[i] = (JSAMPROW) & ((uint8_t*)strip)[i * bytes_per_row];
@@ -664,14 +687,14 @@ int main(int argc, char* argv[]) {
       }
 
       switch (output_type) {
-        case ImageType::MB_TIFF: {
+        case mb::ImageType::MB_TIFF: {
           TIFFWriteEncodedStrip(tiff_file, s, strip,
                                 rows * (int64_t)bytes_per_row);
         } break;
-        case ImageType::MB_JPEG: {
+        case mb::ImageType::MB_JPEG: {
           jpeg_write_scanlines(&cinfo, scanlines, rows);
         } break;
-        case ImageType::MB_PNG: {
+        case mb::ImageType::MB_PNG: {
           png_file->WriteRows(scanlines, rows);
         } break;
       }
@@ -680,10 +703,10 @@ int main(int argc, char* argv[]) {
     }
 
     switch (output_type) {
-      case ImageType::MB_TIFF: {
+      case mb::ImageType::MB_TIFF: {
         TIFFClose(tiff_file);
       } break;
-      case ImageType::MB_JPEG: {
+      case mb::ImageType::MB_JPEG: {
         jpeg_finish_compress(&cinfo);
         jpeg_destroy_compress(&cinfo);
         fclose(jpeg_file);
@@ -700,7 +723,7 @@ int main(int argc, char* argv[]) {
     printf("\n");
     printf("Images:   %.3fs\n", result.timing.images_time);
     printf("Seaming:  %.3fs\n", result.timing.seam_time);
-    if (output_type != ImageType::MB_NONE) {
+    if (output_type != mb::ImageType::MB_NONE) {
       printf("Masks:    %.3fs\n", result.timing.shrink_mask_time);
       printf("Copy:     %.3fs\n", result.timing.copy_time);
       printf("Shrink:   %.3fs\n", result.timing.shrink_time);
@@ -719,7 +742,7 @@ int main(int argc, char* argv[]) {
    * Clean up
    ***********************************************************************/
   if (timing) {
-    if (output_type == ImageType::MB_NONE) {
+    if (output_type == mb::ImageType::MB_NONE) {
       timer_all.Report("\nExecution complete. Total execution time");
     } else {
       timer_all.Report("\nBlend complete. Total execution time");

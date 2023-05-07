@@ -5,6 +5,8 @@
 #include "src/functions.h"
 #include "src/image.h"
 
+namespace multiblend {
+
 struct TimingResult {
   double images_time = 0;
   double copy_time = 0;
@@ -51,3 +53,5 @@ struct Result {
 };
 
 Result Multiblend(std::vector<Image*>& images, Options opts);
+
+}  // namespace multiblend

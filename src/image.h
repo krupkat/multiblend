@@ -11,6 +11,8 @@
 #include "src/mapalloc.h"
 #include "src/pyramid.h"
 
+namespace multiblend {
+
 enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG };
 
 class Channel {
@@ -65,3 +67,5 @@ class Image {
   struct jpeg_error_mgr jerr;
   png_structp png_ptr;
 };
+
+}  // namespace multiblend
