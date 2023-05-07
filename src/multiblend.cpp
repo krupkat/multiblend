@@ -47,11 +47,29 @@ class PyramidWithMasks : public Pyramid {
 #define MASKVAL(X) \
   (((X)&0x7fffffffffffffff) | images[(X)&0xffffffff]->mask_state)
 
+struct Options {
+  ImageType output_type = ImageType::MB_NONE;
+  int output_bpp = 0;
+  int fixed_levels = 0;
+  bool wideblend = false;
+  int add_levels = 0;
+  bool all_threads = true;
+  bool reverse = false;
+  int wrap = 0;
+  bool dither = true;
+  bool gamma = false;
+  bool no_mask = false;
+
+  char* seamsave_filename = NULL;
+  char* seamload_filename = NULL;
+  char* xor_filename = NULL;
+};
+
 struct Result {
-  // int output_bpp = 0;
-  // int width = 0;
-  // int height = 0;
-  // bool no_mask = false;
+  int output_bpp = 0;
+  int width = 0;
+  int height = 0;
+  bool no_mask = false;
 
   std::array<void*, 3> output_channels = {NULL, NULL, NULL};
   int min_xpos = 0x7fffffff;
@@ -498,8 +516,6 @@ int main(int argc, char* argv[]) {
          "---------------------------------------------------------------------"
          "-------\n");
 
-  Threadpool* threadpool = Threadpool::GetInstance(all_threads ? 2 : 0);
-
   /***********************************************************************
   ************************************************************************
   * Open output
@@ -531,6 +547,24 @@ int main(int argc, char* argv[]) {
   ************************************************************************
   ***********************************************************************/
   Result result;
+
+  Options opts{
+      .output_type = output_type,
+      .output_bpp = output_bpp,
+      .fixed_levels = fixed_levels,
+      .wideblend = wideblend,
+      .add_levels = add_levels,
+      .all_threads = all_threads,
+      .reverse = reverse,
+      .wrap = wrap,
+      .dither = dither,
+      .gamma = gamma,
+      .no_mask = no_mask,
+      .seamsave_filename = seamsave_filename,
+      .seamload_filename = seamload_filename,
+      .xor_filename = xor_filename,
+  };
+
   {
     timer.Start();
 
@@ -557,18 +591,19 @@ int main(int argc, char* argv[]) {
     }
 
     for (int i = 0; i < n_images; ++i) {
-      if (output_bpp == 0 && images[i]->bpp == 16) output_bpp = 16;
+      if (opts.output_bpp == 0 && images[i]->bpp == 16) opts.output_bpp = 16;
       if (images[i]->bpp != images[0]->bpp) {
         die("Error: mixture of 8bpp and 16bpp images detected (not currently "
             "handled)\n");
       }
     }
 
-    if (output_bpp == 0) {
-      output_bpp = 8;
-    } else if (output_bpp == 16 && output_type == ImageType::MB_JPEG) {
+    if (opts.output_bpp == 0) {
+      opts.output_bpp = 8;
+    } else if (opts.output_bpp == 16 &&
+               opts.output_type == ImageType::MB_JPEG) {
       Output(0, "Warning: 8bpp output forced by JPEG output\n");
-      output_bpp = 8;
+      opts.output_bpp = 8;
     }
 
     /***********************************************************************
@@ -581,7 +616,7 @@ int main(int argc, char* argv[]) {
      ***********************************************************************/
     for (int i = 0; i < n_images; ++i) {
       try {
-        images[i]->Read(untrimmed_data, gamma);
+        images[i]->Read(untrimmed_data, opts.gamma);
       } catch (char* e) {
         printf("\n\n");
         printf("%s\n", e);
@@ -622,8 +657,8 @@ int main(int argc, char* argv[]) {
     int blend_wh;
     int blend_levels;
 
-    if (!fixed_levels) {
-      if (!wideblend) {
+    if (!opts.fixed_levels) {
+      if (!opts.wideblend) {
         std::vector<int> widths;
         std::vector<int> heights;
 
@@ -649,21 +684,21 @@ int main(int argc, char* argv[]) {
       }
 
       blend_levels = (int)floor(log2(blend_wh + 4.0f) - 1);
-      if (wideblend) {
+      if (opts.wideblend) {
         blend_levels++;
       }
     } else {
-      blend_levels = fixed_levels;
+      blend_levels = opts.fixed_levels;
     }
 
-    blend_levels += add_levels;
+    blend_levels += opts.add_levels;
 
     if (n_images == 1) {
       blend_levels = 0;
-      Output(1, "\n%d x %d, %d bpp\n\n", width, height, output_bpp);
+      Output(1, "\n%d x %d, %d bpp\n\n", width, height, opts.output_bpp);
     } else {
       Output(1, "\n%d x %d, %d levels, %d bpp\n\n", width, height, blend_levels,
-             output_bpp);
+             opts.output_bpp);
     }
 
     /***********************************************************************
@@ -674,7 +709,7 @@ int main(int argc, char* argv[]) {
     timer.Start();
 
     Output(1, "Seaming");
-    switch (((!!seamsave_filename) << 1) | !!xor_filename) {
+    switch (((!!opts.seamsave_filename) << 1) | !!opts.xor_filename) {
       case 1:
         Output(1, " (saving XOR map)");
         break;
@@ -708,10 +743,12 @@ int main(int argc, char* argv[]) {
     /***********************************************************************
      * Backward distance transform
      ***********************************************************************/
+    Threadpool* threadpool = Threadpool::GetInstance(opts.all_threads ? 2 : 0);
+
     int n_threads = std::max(2, threadpool->GetNThreads());
     uint64_t** thread_lines = new uint64_t*[n_threads];
 
-    if (!seamload_filename) {
+    if (!opts.seamload_filename) {
       std::mutex* flex_mutex_p = new std::mutex;
       std::condition_variable* flex_cond_p = new std::condition_variable;
 
@@ -920,11 +957,12 @@ int main(int argc, char* argv[]) {
       images[i]->masks.push_back(new Flex(width, height));
     }
 
-    Pnger* xor_map = xor_filename ? new Pnger(xor_filename, "XOR map", width,
-                                              height, PNG_COLOR_TYPE_PALETTE)
-                                  : NULL;
-    Pnger* seam_map = seamsave_filename
-                          ? new Pnger(seamsave_filename, "Seam map", width,
+    Pnger* xor_map = opts.xor_filename
+                         ? new Pnger(opts.xor_filename, "XOR map", width,
+                                     height, PNG_COLOR_TYPE_PALETTE)
+                         : NULL;
+    Pnger* seam_map = opts.seamsave_filename
+                          ? new Pnger(opts.seamsave_filename, "Seam map", width,
                                       height, PNG_COLOR_TYPE_PALETTE)
                           : NULL;
 
@@ -1003,7 +1041,7 @@ int main(int argc, char* argv[]) {
 
           int total_count = min_count;
           total_pixels += total_count;
-          if (gamma) {
+          if (opts.gamma) {
             switch (images[xor_image]->bpp) {
               case 8: {
                 uint16_t v;
@@ -1057,7 +1095,7 @@ int main(int argc, char* argv[]) {
             }
           }
 
-          if (!seamload_filename) {
+          if (!opts.seamload_filename) {
             RECORD(xor_image, min_count);
             while (x < stop) {
               this_line[x++] = xor_image;
@@ -1070,7 +1108,7 @@ int main(int argc, char* argv[]) {
         } else {
           if (xor_map) memset(&xor_map->line[x], 0xff, min_count);
 
-          if (!seamload_filename) {
+          if (!opts.seamload_filename) {
             if (y == 0) {
               // top row
               while (x < stop) {
@@ -1088,7 +1126,7 @@ int main(int argc, char* argv[]) {
                   for (int i = 0; i < n_images; ++i) {
                     if (!images[i]->mask_state) {
                       best = 0x8000000000000000 | i;
-                      if (!reverse) {
+                      if (!opts.reverse) {
                         break;
                       }
                     }
@@ -1118,7 +1156,7 @@ int main(int argc, char* argv[]) {
                   for (int i = 0; i < n_images; ++i) {
                     if (!images[i]->mask_state) {
                       best = 0x8000000000000000 | i;
-                      if (!reverse) {
+                      if (!opts.reverse) {
                         break;
                       }
                     }
@@ -1171,7 +1209,7 @@ int main(int argc, char* argv[]) {
                   for (int i = 0; i < n_images; ++i) {
                     if (!images[i]->mask_state) {
                       best = 0x8000000000000000 | i;
-                      if (!reverse) {
+                      if (!opts.reverse) {
                         break;
                       }
                     }
@@ -1200,7 +1238,7 @@ int main(int argc, char* argv[]) {
                   for (int i = 0; i < n_images; ++i) {
                     if (!images[i]->mask_state) {
                       best = 0x8000000000000000 | i;
-                      if (!reverse) {
+                      if (!opts.reverse) {
                         break;
                       }
                     }
@@ -1224,7 +1262,7 @@ int main(int argc, char* argv[]) {
         }
       }
 
-      if (!seamload_filename) {
+      if (!opts.seamload_filename) {
         RECORD(-1, 0);
 
         for (int i = 0; i < n_images; ++i) {
@@ -1241,7 +1279,7 @@ int main(int argc, char* argv[]) {
       std::swap(this_line, prev_line);
     }
 
-    if (!seamload_filename) {
+    if (!opts.seamload_filename) {
       delete[] thread_lines[0];
       delete[] thread_lines[1];
       delete[] thread_lines;
@@ -1250,14 +1288,14 @@ int main(int argc, char* argv[]) {
     delete xor_map;
     delete seam_map;
 
-    if (!alpha || output_type == ImageType::MB_JPEG) {
-      no_mask = true;
+    if (!alpha || opts.output_type == ImageType::MB_JPEG) {
+      opts.no_mask = true;
     }
 
     /***********************************************************************
      * Seam load
      ***********************************************************************/
-    if (seamload_filename) {
+    if (opts.seamload_filename) {
       int png_depth, png_colour;
       png_uint_32 png_width, png_height;
       uint8_t sig[8];
@@ -1265,7 +1303,7 @@ int main(int argc, char* argv[]) {
       png_infop info_ptr;
       FILE* f;
 
-      fopen_s(&f, seamload_filename, "rb");
+      fopen_s(&f, opts.seamload_filename, "rb");
       if (!f) {
         die("Error: Couldn't open seam file");
       }
@@ -1332,7 +1370,7 @@ int main(int argc, char* argv[]) {
      ***********************************************************************/
     std::array<void*, 3> output_channels = {NULL, NULL, NULL};
 
-    if (output_type != ImageType::MB_NONE) {
+    if (opts.output_type != ImageType::MB_NONE) {
       /***********************************************************************
        * Shrink masks
        ***********************************************************************/
@@ -1355,7 +1393,7 @@ int main(int argc, char* argv[]) {
       int wrap_levels_h = 0;
       int wrap_levels_v = 0;
 
-      if (wrap & 1) {
+      if (opts.wrap & 1) {
         wrap_levels_h = (int)floor(log2((width >> 1) + 4.0f) - 1);
         wrap_pyramids.push_back(new PyramidWithMasks(
             width >> 1, height, wrap_levels_h, 0, 0, true));
@@ -1363,7 +1401,7 @@ int main(int argc, char* argv[]) {
             (width + 1) >> 1, height, wrap_levels_h, width >> 1, 0, true));
       }
 
-      if (wrap & 2) {
+      if (opts.wrap & 2) {
         wrap_levels_v = (int)floor(log2((height >> 1) + 4.0f) - 1);
         wrap_pyramids.push_back(new PyramidWithMasks(
             width, height >> 1, wrap_levels_v, 0, 0, true));
@@ -1466,13 +1504,13 @@ int main(int argc, char* argv[]) {
        * Blend
        ***********************************************************************/
       if (n_images == 1) {
-        if (wrap) {
+        if (opts.wrap) {
           Output(1, "Wrapping...\n");
         } else {
           Output(1, "Processing...\n");
         }
       } else {
-        if (wrap) {
+        if (opts.wrap) {
           Output(1, "Blending/wrapping...\n");
         } else {
           Output(1, "Blending...\n");
@@ -1485,11 +1523,12 @@ int main(int argc, char* argv[]) {
             timer.Start();
 
             images[i]->pyramid->Copy((uint8_t*)images[i]->channels[c]->data, 1,
-                                     images[i]->width, gamma, images[i]->bpp);
-            if (output_bpp != images[i]->bpp)
+                                     images[i]->width, opts.gamma,
+                                     images[i]->bpp);
+            if (opts.output_bpp != images[i]->bpp)
               images[i]->pyramid->Multiply(
-                  0, gamma ? (output_bpp == 8 ? 1.0f / 66049 : 66049)
-                           : (output_bpp == 8 ? 1.0f / 257 : 257));
+                  0, opts.gamma ? (opts.output_bpp == 8 ? 1.0f / 66049 : 66049)
+                                : (opts.output_bpp == 8 ? 1.0f / 257 : 257));
 
             delete images[i]->channels[c];
             images[i]->channels[c] = NULL;
@@ -1553,11 +1592,11 @@ int main(int argc, char* argv[]) {
           timer.Start();
 
           output_pyramid->Copy((uint8_t*)images[0]->channels[c]->data, 1,
-                               images[0]->width, gamma, images[0]->bpp);
-          if (output_bpp != images[0]->bpp)
+                               images[0]->width, opts.gamma, images[0]->bpp);
+          if (opts.output_bpp != images[0]->bpp)
             output_pyramid->Multiply(
-                0, gamma ? (output_bpp == 8 ? 1.0f / 66049 : 66049)
-                         : (output_bpp == 8 ? 1.0f / 257 : 257));
+                0, opts.gamma ? (opts.output_bpp == 8 ? 1.0f / 66049 : 66049)
+                              : (opts.output_bpp == 8 ? 1.0f / 257 : 257));
 
           delete images[0]->channels[c];
           images[0]->channels[c] = NULL;
@@ -1568,13 +1607,13 @@ int main(int argc, char* argv[]) {
         /***********************************************************************
          * Wrapping
          ***********************************************************************/
-        if (wrap) {
+        if (opts.wrap) {
           timer.Start();
 
           int p = 0;
 
           for (int w = 1; w <= 2; ++w) {
-            if (wrap & w) {
+            if (opts.wrap & w) {
               if (w == 1) {
                 SwapH(output_pyramid);
               } else {
@@ -1669,8 +1708,8 @@ int main(int argc, char* argv[]) {
           }
 
           float avg = (float)channel_totals[c] / total_pixels;
-          if (output_bpp != images[0]->bpp) {
-            switch (output_bpp) {
+          if (opts.output_bpp != images[0]->bpp) {
+            switch (opts.output_bpp) {
               case 8:
                 avg /= 256;
                 break;
@@ -1689,21 +1728,21 @@ int main(int argc, char* argv[]) {
         timer.Start();
 
         try {
-          output_channels[c] =
-              MapAlloc::Alloc(((size_t)width * height) << (output_bpp >> 4));
+          output_channels[c] = MapAlloc::Alloc(((size_t)width * height)
+                                               << (opts.output_bpp >> 4));
         } catch (char* e) {
           printf("%s\n", e);
           exit(EXIT_FAILURE);
         }
 
-        switch (output_bpp) {
+        switch (opts.output_bpp) {
           case 8:
-            output_pyramid->Out((uint8_t*)output_channels[c], width, gamma,
-                                dither, true);
+            output_pyramid->Out((uint8_t*)output_channels[c], width, opts.gamma,
+                                opts.dither, true);
             break;
           case 16:
-            output_pyramid->Out((uint16_t*)output_channels[c], width, gamma,
-                                dither, true);
+            output_pyramid->Out((uint16_t*)output_channels[c], width,
+                                opts.gamma, opts.dither, true);
             break;
         }
 
@@ -1712,6 +1751,11 @@ int main(int argc, char* argv[]) {
     }
 
     result = Result{
+        .output_bpp = opts.output_bpp,
+        .width = width,
+        .height = height,
+        .no_mask = opts.no_mask,
+
         .output_channels = output_channels,
         .min_xpos = min_xpos,
         .min_ypos = min_ypos,
@@ -1733,27 +1777,28 @@ int main(int argc, char* argv[]) {
 
     JSAMPARRAY scanlines = NULL;
 
-    int spp = no_mask ? 3 : 4;
+    int spp = result.no_mask ? 3 : 4;
 
-    int bytes_per_pixel = spp << (output_bpp >> 4);
-    int bytes_per_row = bytes_per_pixel * width;
+    int bytes_per_pixel = spp << (result.output_bpp >> 4);
+    int bytes_per_row = bytes_per_pixel * result.width;
 
-    int n_strips = (int)((height + ROWS_PER_STRIP - 1) / ROWS_PER_STRIP);
-    int remaining = height;
-    void* strip = malloc((ROWS_PER_STRIP * (int64_t)width) * bytes_per_pixel);
+    int n_strips = (int)((result.height + ROWS_PER_STRIP - 1) / ROWS_PER_STRIP);
+    int remaining = result.height;
+    void* strip =
+        malloc((ROWS_PER_STRIP * (int64_t)result.width) * bytes_per_pixel);
     void* oc_p[3] = {result.output_channels[0], result.output_channels[1],
                      result.output_channels[2]};
     if (bgr) std::swap(oc_p[0], oc_p[2]);
 
     switch (output_type) {
       case ImageType::MB_TIFF: {
-        TIFFSetField(tiff_file, TIFFTAG_IMAGEWIDTH, width);
-        TIFFSetField(tiff_file, TIFFTAG_IMAGELENGTH, height);
+        TIFFSetField(tiff_file, TIFFTAG_IMAGEWIDTH, result.width);
+        TIFFSetField(tiff_file, TIFFTAG_IMAGELENGTH, result.height);
         TIFFSetField(tiff_file, TIFFTAG_COMPRESSION, compression);
         TIFFSetField(tiff_file, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
         TIFFSetField(tiff_file, TIFFTAG_ROWSPERSTRIP, ROWS_PER_STRIP);
-        TIFFSetField(tiff_file, TIFFTAG_BITSPERSAMPLE, output_bpp);
-        if (no_mask) {
+        TIFFSetField(tiff_file, TIFFTAG_BITSPERSAMPLE, result.output_bpp);
+        if (result.no_mask) {
           TIFFSetField(tiff_file, TIFFTAG_SAMPLESPERPIXEL, 3);
         } else {
           TIFFSetField(tiff_file, TIFFTAG_SAMPLESPERPIXEL, 4);
@@ -1788,8 +1833,8 @@ int main(int argc, char* argv[]) {
         jpeg_create_compress(&cinfo);
         jpeg_stdio_dest(&cinfo, jpeg_file);
 
-        cinfo.image_width = width;
-        cinfo.image_height = height;
+        cinfo.image_width = result.width;
+        cinfo.image_height = result.height;
         cinfo.input_components = 3;
         cinfo.in_color_space = JCS_RGB;
 
@@ -1798,10 +1843,10 @@ int main(int argc, char* argv[]) {
         jpeg_start_compress(&cinfo, true);
       } break;
       case ImageType::MB_PNG: {
-        png_file =
-            new Pnger(output_filename, NULL, width, height,
-                      no_mask ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA,
-                      output_bpp, jpeg_file, jpeg_quality);
+        png_file = new Pnger(
+            output_filename, NULL, result.width, result.height,
+            result.no_mask ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA,
+            result.output_bpp, jpeg_file, jpeg_quality);
       } break;
     }
 
@@ -1820,17 +1865,17 @@ int main(int argc, char* argv[]) {
 
       for (int strip_y = 0; strip_y < rows; ++strip_y) {
         int x = 0;
-        while (x < width) {
+        while (x < result.width) {
           uint32_t cur = result.full_mask.ReadForwards32();
           if (cur & 0x80000000) {
             int lim = x + (cur & 0x7fffffff);
-            switch (output_bpp) {
+            switch (result.output_bpp) {
               case 8: {
                 while (x < lim) {
                   ((uint8_t*)strip)[strip_p++] = ((uint8_t*)(oc_p[0]))[x];
                   ((uint8_t*)strip)[strip_p++] = ((uint8_t*)(oc_p[1]))[x];
                   ((uint8_t*)strip)[strip_p++] = ((uint8_t*)(oc_p[2]))[x];
-                  if (!no_mask) ((uint8_t*)strip)[strip_p++] = 0xff;
+                  if (!result.no_mask) ((uint8_t*)strip)[strip_p++] = 0xff;
                   ++x;
                 }
               } break;
@@ -1839,14 +1884,14 @@ int main(int argc, char* argv[]) {
                   ((uint16_t*)strip)[strip_p++] = ((uint16_t*)(oc_p[0]))[x];
                   ((uint16_t*)strip)[strip_p++] = ((uint16_t*)(oc_p[1]))[x];
                   ((uint16_t*)strip)[strip_p++] = ((uint16_t*)(oc_p[2]))[x];
-                  if (!no_mask) ((uint16_t*)strip)[strip_p++] = 0xffff;
+                  if (!result.no_mask) ((uint16_t*)strip)[strip_p++] = 0xffff;
                   ++x;
                 }
               } break;
             }
           } else {
             size_t t = (size_t)cur * bytes_per_pixel;
-            switch (output_bpp) {
+            switch (result.output_bpp) {
               case 8: {
                 ZeroMemory(&((uint8_t*)strip)[strip_p], t);
               } break;
@@ -1859,16 +1904,16 @@ int main(int argc, char* argv[]) {
           }
         }
 
-        switch (output_bpp) {
+        switch (result.output_bpp) {
           case 8: {
-            oc_p[0] = &((uint8_t*)(oc_p[0]))[width];
-            oc_p[1] = &((uint8_t*)(oc_p[1]))[width];
-            oc_p[2] = &((uint8_t*)(oc_p[2]))[width];
+            oc_p[0] = &((uint8_t*)(oc_p[0]))[result.width];
+            oc_p[1] = &((uint8_t*)(oc_p[1]))[result.width];
+            oc_p[2] = &((uint8_t*)(oc_p[2]))[result.width];
           } break;
           case 16: {
-            oc_p[0] = &((uint16_t*)(oc_p[0]))[width];
-            oc_p[1] = &((uint16_t*)(oc_p[1]))[width];
-            oc_p[2] = &((uint16_t*)(oc_p[2]))[width];
+            oc_p[0] = &((uint16_t*)(oc_p[0]))[result.width];
+            oc_p[1] = &((uint16_t*)(oc_p[1]))[result.width];
+            oc_p[2] = &((uint16_t*)(oc_p[2]))[result.width];
           } break;
         }
       }
