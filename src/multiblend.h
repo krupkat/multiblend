@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include "src/functions.h"
 #include "src/image.h"
 
