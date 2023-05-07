@@ -150,13 +150,13 @@ void Pyramid::Copy(uint8_t* src_p, int step, int pitch, bool gamma, int bits) {
     for (int t = 0; t < (int)levels[0].bands.size() - 1; ++t) {
       switch (bits) {
         case 8:
-          threadpool->Queue([=] {
+          threadpool->Queue([=, this] {
             CopyInterleavedThread_8bit(src_p, step, pitch, levels[0].bands[t],
                                        levels[0].bands[t + 1]);
           });
           break;
         case 16:
-          threadpool->Queue([=] {
+          threadpool->Queue([=, this] {
             CopyInterleavedThread_16bit((uint16_t*)src_p, step, pitch,
                                         levels[0].bands[t],
                                         levels[0].bands[t + 1]);
@@ -172,7 +172,7 @@ void Pyramid::Copy(uint8_t* src_p, int step, int pitch, bool gamma, int bits) {
       // planar (only slight improvement with MT, but increases CPU usage)
       switch (bits) {
         case 8:
-          threadpool->Queue([=] {
+          threadpool->Queue([=, this] {
             CopyPlanarThread_8bit(src_p, pitch, gamma, levels[0].bands[t],
                                   levels[0].bands[t + 1]);
           });
@@ -181,13 +181,13 @@ void Pyramid::Copy(uint8_t* src_p, int step, int pitch, bool gamma, int bits) {
         case 12:
         case 14:
         case 16:
-          threadpool->Queue([=] {
+          threadpool->Queue([=, this] {
             CopyPlanarThread_16bit((uint16_t*)src_p, pitch, gamma,
                                    levels[0].bands[t], levels[0].bands[t + 1]);
           });
           break;
         case 32:
-          threadpool->Queue([=] {
+          threadpool->Queue([=, this] {
             CopyPlanarThread_32bit((__m128*)src_p, pitch, gamma,
                                    levels[0].bands[t], levels[0].bands[t + 1]);
           });
@@ -592,7 +592,7 @@ void Pyramid::Shrink() {
     int first_bad_line = levels[l + 1].height - (3 - height_odd);
 
     for (int t = 0; t < (int)levels[l + 1].bands.size() - 1; ++t) {
-      threadpool->Queue([=] {
+      threadpool->Queue([=, this] {
         ShrinkThread(lines[t], hi, lo, levels[l].m128_pitch,
                      levels[l + 1].m128_pitch, first_bad_line, height_odd,
                      levels[l + 1].bands[t], levels[l + 1].bands[t + 1],
@@ -798,7 +798,7 @@ void Pyramid::LaplaceCollapse(int n_levels, bool Collapse) {
       l = j;
 
     for (int t = 0; t < (int)levels[l].bands.size() - 1; ++t) {
-      threadpool->Queue([=] {
+      threadpool->Queue([=, this] {
         LaplaceThreadWrapper(&levels[l], &levels[l + 1], levels[l].bands[t],
                              levels[l].bands[t + 1]);
       });
@@ -1034,7 +1034,7 @@ void Pyramid::Add(float add, int _levels) {
     __m128* data = (__m128*)levels[l].data;
 
     for (int t = 0; t < (int)levels[l].bands.size() - 1; ++t) {
-      threadpool->Queue([=]() {
+      threadpool->Queue([=, this]() {
         __m128* data =
             (__m128*)levels[l].data + levels[l].bands[t] * levels[l].m128_pitch;
         for (int y = levels[l].bands[t]; y < levels[l].bands[t + 1]; ++y) {
@@ -1161,7 +1161,7 @@ void Pyramid::Fuse(Pyramid* _b, Pyramid* mask, bool pre = false,
     // reference
 
     for (int t = 0; t < (int)levels[l].bands.size() - 1; ++t) {
-      threadpool->Queue([=] {
+      threadpool->Queue([=, this] {
         FuseThread((__m128*)levels[l].data, (__m128*)_b->levels[l].data,
                    (__m128*)mask->levels[l].data, levels[l].m128_pitch,
                    levels[l].bands[t], levels[l].bands[t + 1], pre, black);
@@ -1288,7 +1288,7 @@ void Pyramid::Blend(Pyramid* b) {
 
 void Pyramid::BlurX(float radius, Pyramid* transpose) {
   for (int i = 0; i < (int)levels[0].bands.size() - 1; ++i) {
-    threadpool->Queue([=] {
+    threadpool->Queue([=, this] {
       BlurXThread(radius, transpose, levels[0].bands[i],
                   levels[0].bands[i + 1]);
     });

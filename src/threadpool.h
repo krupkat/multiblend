@@ -25,6 +25,7 @@ class Threadpool {
   void Queue(std::function<void()> function);
   int GetNThreads() { return n_threads; };
   void Wait();
+
   struct tp_struct {
 #ifdef _WIN32
     HANDLE handle;

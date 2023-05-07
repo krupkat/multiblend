@@ -104,8 +104,10 @@ void Threadpool::Wait() {
 
   {
     std::unique_lock<std::mutex> rlock(return_mutex);
-    return_cond.wait(rlock, [=] {
-      if (queue.size()) return false;
+    return_cond.wait(rlock, [this] {
+      if (queue.size()) {
+        return false;
+      }
       for (int i = 0; i < n_threads; ++i) {
         if (!threads[i].free) {
           return false;

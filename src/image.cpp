@@ -570,7 +570,7 @@ void Image::Read(void* data, bool gamma) {
         bitmap64 += tiff_width;
 
       if (y < height - 1) {
-        threadpool->Queue([=] {
+        threadpool->Queue([=, this] {
           int p = utils::CompressDTLine(this_line, (uint8_t*)comp, width);
           {
             std::unique_lock<std::mutex> mlock(*flex_mutex_p);

@@ -534,56 +534,56 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
     for (int b = 0; b < eb; ++b) {
       switch (s) {
         case 0:
-          threadpool->Queue([=] {
+          threadpool->Queue([=, this] {
             OutInterleaved((Type)dst_p, PLL(N), pitch, levels[level].bands[b],
                            levels[level].bands[b + 1], level, chroma, step,
                            offset);
           });
           break;
         case 1:
-          threadpool->Queue([=] {
+          threadpool->Queue([=, this] {
             OutInterleaved((Type)dst_p, PLL(G), pitch, levels[level].bands[b],
                            levels[level].bands[b + 1], level, chroma, step,
                            offset);
           });
           break;
         case 2:
-          threadpool->Queue([=] {
+          threadpool->Queue([=, this] {
             OutInterleaved((Type)dst_p, PLL(D), pitch, levels[level].bands[b],
                            levels[level].bands[b + 1], level, chroma, step,
                            offset);
           });
           break;
         case 3:
-          threadpool->Queue([=] {
+          threadpool->Queue([=, this] {
             OutInterleaved((Type)dst_p, PLL(DG), pitch, levels[level].bands[b],
                            levels[level].bands[b + 1], level, chroma, step,
                            offset);
           });
           break;
         case 4:
-          threadpool->Queue([=] {
+          threadpool->Queue([=, this] {
             OutInterleaved((Type)dst_p, PLL(C), pitch, levels[level].bands[b],
                            levels[level].bands[b + 1], level, chroma, step,
                            offset);
           });
           break;
         case 5:
-          threadpool->Queue([=] {
+          threadpool->Queue([=, this] {
             OutInterleaved((Type)dst_p, PLL(CG), pitch, levels[level].bands[b],
                            levels[level].bands[b + 1], level, chroma, step,
                            offset);
           });
           break;
         case 6:
-          threadpool->Queue([=] {
+          threadpool->Queue([=, this] {
             OutInterleaved((Type)dst_p, PLL(CD), pitch, levels[level].bands[b],
                            levels[level].bands[b + 1], level, chroma, step,
                            offset);
           });
           break;
         case 7:
-          threadpool->Queue([=] {
+          threadpool->Queue([=, this] {
             OutInterleaved((Type)dst_p, PLL(CDG), pitch, levels[level].bands[b],
                            levels[level].bands[b + 1], level, chroma, step,
                            offset);
@@ -597,49 +597,49 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
         for (int b = 0; b < eb; ++b) {
           switch (s) {
             case 0:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar8(dst_p, PLL(N), pitch, levels[level].bands[b],
                            levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 1:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar8(dst_p, PLL(G), pitch, levels[level].bands[b],
                            levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 2:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar8(dst_p, PLL(D), pitch, levels[level].bands[b],
                            levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 3:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar8(dst_p, PLL(DG), pitch, levels[level].bands[b],
                            levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 4:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar8(dst_p, PLL(C), pitch, levels[level].bands[b],
                            levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 5:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar8(dst_p, PLL(CG), pitch, levels[level].bands[b],
                            levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 6:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar8(dst_p, PLL(CD), pitch, levels[level].bands[b],
                            levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 7:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar8(dst_p, PLL(CDG), pitch, levels[level].bands[b],
                            levels[level].bands[b + 1], level, chroma);
               });
@@ -651,49 +651,49 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
         for (int b = 0; b < eb; ++b) {
           switch (s) {
             case 0:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar16(dst_p, PLL(N), pitch, levels[level].bands[b],
                             levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 1:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar16(dst_p, PLL(G), pitch, levels[level].bands[b],
                             levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 2:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar16(dst_p, PLL(D), pitch, levels[level].bands[b],
                             levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 3:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar16(dst_p, PLL(DG), pitch, levels[level].bands[b],
                             levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 4:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar16(dst_p, PLL(C), pitch, levels[level].bands[b],
                             levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 5:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar16(dst_p, PLL(CG), pitch, levels[level].bands[b],
                             levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 6:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar16(dst_p, PLL(CD), pitch, levels[level].bands[b],
                             levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 7:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar16(dst_p, PLL(CDG), pitch, levels[level].bands[b],
                             levels[level].bands[b + 1], level, chroma);
               });
@@ -705,25 +705,25 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
         for (int b = 0; b < eb; ++b) {
           switch (s) {
             case 0:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar32(dst_p, PLL(N), pitch, levels[level].bands[b],
                             levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 1:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar32(dst_p, PLL(G), pitch, levels[level].bands[b],
                             levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 4:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar32(dst_p, PLL(C), pitch, levels[level].bands[b],
                             levels[level].bands[b + 1], level, chroma);
               });
               break;
             case 5:
-              threadpool->Queue([=] {
+              threadpool->Queue([=, this] {
                 OutPlanar32(dst_p, PLL(CG), pitch, levels[level].bands[b],
                             levels[level].bands[b + 1], level, chroma);
               });
