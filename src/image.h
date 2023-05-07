@@ -11,12 +11,16 @@
 #include "src/mapalloc.h"
 #include "src/pyramid.h"
 
+namespace multiblend::io {
+
 enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG };
 
 class Channel {
  public:
-  Channel(size_t _bytes) : bytes(_bytes) { data = MapAlloc::Alloc(bytes); };
-  ~Channel() { MapAlloc::Free(data); };
+  Channel(size_t _bytes) : bytes(_bytes) {
+    data = memory::MapAlloc::Alloc(bytes);
+  };
+  ~Channel() { memory::MapAlloc::Free(data); };
   void* data;
   size_t bytes;
   FILE* file = NULL;
@@ -36,7 +40,7 @@ class Image {
   int ypos_add = 0;
   std::vector<Channel*> channels;
   Pyramid* pyramid = NULL;
-  GeoTIFFInfo geotiff;
+  tiff::GeoTIFFInfo geotiff;
   int tiff_width;
   int tiff_height;
   int tiff_u_height;
@@ -49,13 +53,13 @@ class Image {
   void Read(void* data, bool gamma);
   // size_t untrimmed_pixels;
   size_t untrimmed_bytes;
-  Flex* tiff_mask;
+  utils::Flex* tiff_mask;
   float tiff_xres, tiff_yres;
   uint64_t mask_state;
   int mask_count;
   int mask_limit;
   bool seam_present;
-  std::vector<Flex*> masks;
+  std::vector<utils::Flex*> masks;
   void MaskPng(int i);
 
  private:
@@ -65,3 +69,5 @@ class Image {
   struct jpeg_error_mgr jerr;
   png_structp png_ptr;
 };
+
+}  // namespace multiblend::io

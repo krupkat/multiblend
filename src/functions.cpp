@@ -8,6 +8,8 @@
 
 #include "src/pyramid.h"
 
+namespace multiblend::utils {
+
 int verbosity = 1;
 
 /***********************************************************************
@@ -706,3 +708,5 @@ void SwapUnswapV(Pyramid* py, bool unswap) {
 void SwapV(Pyramid* py) { SwapUnswapV(py, false); }
 
 void UnswapV(Pyramid* py) { SwapUnswapV(py, true); }
+
+}  // namespace multiblend::utils

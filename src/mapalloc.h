@@ -7,7 +7,7 @@
 #include <Windows.h>
 #endif
 
-#define _MAPALLOC_
+namespace multiblend::memory {
 
 class MapAlloc {
  private:
@@ -45,3 +45,5 @@ class MapAlloc {
   static bool LastFile() { return objects.back()->IsFile(); }
   // static bool last_mapped;
 };
+
+}  // namespace multiblend::memory

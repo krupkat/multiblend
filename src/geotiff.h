@@ -2,6 +2,8 @@
 
 #include <tiffio.h>
 
+namespace multiblend::io::tiff {
+
 struct GeoTIFFInfo {
   double XGeoRef, YGeoRef;
   double XCellRes, YCellRes;
@@ -13,3 +15,5 @@ struct GeoTIFFInfo {
 int geotiff_read(TIFF* tiff, GeoTIFFInfo* info);
 
 int geotiff_write(TIFF* tiff, GeoTIFFInfo* info);
+
+}  // namespace multiblend::io::tiff

@@ -5,6 +5,8 @@
 #include "src/functions.h"
 #include "src/image.h"
 
+namespace multiblend {
+
 struct TimingResult {
   double images_time = 0;
   double copy_time = 0;
@@ -19,7 +21,7 @@ struct TimingResult {
 };
 
 struct Options {
-  ImageType output_type = ImageType::MB_NONE;
+  io::ImageType output_type = io::ImageType::MB_NONE;
   int output_bpp = 0;
   int fixed_levels = 0;
   bool wideblend = false;
@@ -46,8 +48,10 @@ struct Result {
   int min_xpos = 0x7fffffff;
   int min_ypos = 0x7fffffff;
 
-  Flex full_mask;
+  utils::Flex full_mask;
   TimingResult timing = {};
 };
 
-Result Multiblend(std::vector<Image*>& images, Options opts);
+Result Multiblend(std::vector<io::Image*>& images, Options opts);
+
+}  // namespace multiblend
