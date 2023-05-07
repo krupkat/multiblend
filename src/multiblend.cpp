@@ -14,7 +14,7 @@ class PyramidWithMasks : public Pyramid {
   std::vector<Flex*> masks;
 };
 
-Result DoWork(std::vector<Image*>& images, Options opts) {
+Result Multiblend(std::vector<Image*>& images, Options opts) {
   Timer timer;
   timer.Start();
   TimingResult timing;

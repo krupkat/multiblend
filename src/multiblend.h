@@ -48,4 +48,4 @@ struct Result {
   TimingResult timing = {};
 };
 
-Result DoWork(std::vector<Image*>& images, Options opts);
+Result Multiblend(std::vector<Image*>& images, Options opts);

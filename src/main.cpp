@@ -56,9 +56,6 @@ int main(int argc, char* argv[]) {
   int fixed_levels = 0;
   int add_levels = 0;
 
-  int width = 0;
-  int height = 0;
-
   bool no_mask = false;
   bool big_tiff = false;
   bool bgr = false;
@@ -82,16 +79,6 @@ int main(int argc, char* argv[]) {
   char* output_filename = NULL;
   int output_bpp = 0;
 
-  double images_time = 0;
-  double copy_time = 0;
-  double seam_time = 0;
-  double shrink_mask_time = 0;
-  double shrink_time = 0;
-  double laplace_time = 0;
-  double blend_time = 0;
-  double collapse_time = 0;
-  double wrap_time = 0;
-  double out_time = 0;
   double write_time = 0;
 
   /***********************************************************************
@@ -503,22 +490,22 @@ int main(int argc, char* argv[]) {
   * Process images
   ************************************************************************
   ***********************************************************************/
-  auto result = DoWork(images, {
-                                   .output_type = output_type,
-                                   .output_bpp = output_bpp,
-                                   .fixed_levels = fixed_levels,
-                                   .wideblend = wideblend,
-                                   .add_levels = add_levels,
-                                   .all_threads = all_threads,
-                                   .reverse = reverse,
-                                   .wrap = wrap,
-                                   .dither = dither,
-                                   .gamma = gamma,
-                                   .no_mask = no_mask,
-                                   .seamsave_filename = seamsave_filename,
-                                   .seamload_filename = seamload_filename,
-                                   .xor_filename = xor_filename,
-                               });
+  auto result = Multiblend(images, {
+                                       .output_type = output_type,
+                                       .output_bpp = output_bpp,
+                                       .fixed_levels = fixed_levels,
+                                       .wideblend = wideblend,
+                                       .add_levels = add_levels,
+                                       .all_threads = all_threads,
+                                       .reverse = reverse,
+                                       .wrap = wrap,
+                                       .dither = dither,
+                                       .gamma = gamma,
+                                       .no_mask = no_mask,
+                                       .seamsave_filename = seamsave_filename,
+                                       .seamload_filename = seamload_filename,
+                                       .xor_filename = xor_filename,
+                                   });
 
 /***********************************************************************
  * Write
@@ -711,17 +698,19 @@ int main(int argc, char* argv[]) {
    ***********************************************************************/
   if (timing) {
     printf("\n");
-    printf("Images:   %.3fs\n", images_time);
-    printf("Seaming:  %.3fs\n", seam_time);
+    printf("Images:   %.3fs\n", result.timing.images_time);
+    printf("Seaming:  %.3fs\n", result.timing.seam_time);
     if (output_type != ImageType::MB_NONE) {
-      printf("Masks:    %.3fs\n", shrink_mask_time);
-      printf("Copy:     %.3fs\n", copy_time);
-      printf("Shrink:   %.3fs\n", shrink_time);
-      printf("Laplace:  %.3fs\n", laplace_time);
-      printf("Blend:    %.3fs\n", blend_time);
-      printf("Collapse: %.3fs\n", collapse_time);
-      if (wrap) printf("Wrapping: %.3fs\n", wrap_time);
-      printf("Output:   %.3fs\n", out_time);
+      printf("Masks:    %.3fs\n", result.timing.shrink_mask_time);
+      printf("Copy:     %.3fs\n", result.timing.copy_time);
+      printf("Shrink:   %.3fs\n", result.timing.shrink_time);
+      printf("Laplace:  %.3fs\n", result.timing.laplace_time);
+      printf("Blend:    %.3fs\n", result.timing.blend_time);
+      printf("Collapse: %.3fs\n", result.timing.collapse_time);
+      if (wrap) {
+        printf("Wrapping: %.3fs\n", result.timing.wrap_time);
+      }
+      printf("Output:   %.3fs\n", result.timing.out_time);
       printf("Write:    %.3fs\n", write_time);
     }
   }
