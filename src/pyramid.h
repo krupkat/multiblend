@@ -37,7 +37,7 @@ class Pyramid {
   int lut_bits = 0;
   bool lut_gamma = false;
   int out_max;
-  Threadpool* threadpool;
+  mt::Threadpool* threadpool;
   void set_lut(int bits, bool gamma);
   void CopyInterleavedThread_8bit(uint8_t* src_p, int step, int pitch, int sy,
                                   int ey);

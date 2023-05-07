@@ -10,7 +10,7 @@
 #include "src/pyramid.h"
 #include "src/threadpool.h"
 
-namespace multiblend {
+namespace multiblend::io {
 
 int hist_red[256];
 int hist_grn[256];
@@ -85,7 +85,7 @@ void Image::Open() {
 
       if (tiff_xpos == -1 && tiff_ypos == -1) {
         // try to read geotiff tags
-        if (geotiff_read(tiff, &geotiff)) {
+        if (tiff::geotiff_read(tiff, &geotiff)) {
           xpos = (int)(geotiff.XGeoRef / geotiff.XCellRes);
           ypos = (int)(geotiff.YGeoRef / geotiff.YCellRes);
         } else {
@@ -413,7 +413,7 @@ void Image::Read(void* data, bool gamma) {
     uint32_t a, b, c, d;
     uint32_t* this_line = NULL;
     uint32_t* prev_line = NULL;
-    Threadpool* threadpool = Threadpool::GetInstance();
+    mt::Threadpool* threadpool = mt::Threadpool::GetInstance();
 
     tiff_mask = new utils::Flex(width, height);
     utils::Flex* dt = new utils::Flex(width, height);
@@ -864,7 +864,8 @@ void Image::MaskPng(int i) {
     break;
   }
 
-  Pnger::Quick(filename, temp, width, height, width, PNG_COLOR_TYPE_GRAY);
+  io::png::Pnger::Quick(filename, temp, width, height, width,
+                        PNG_COLOR_TYPE_GRAY);
 }
 
-}  // namespace multiblend
+}  // namespace multiblend::io

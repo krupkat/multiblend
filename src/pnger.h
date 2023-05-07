@@ -4,7 +4,7 @@
 
 #include <png.h>
 
-namespace multiblend {
+namespace multiblend::io::png {
 
 class Pnger {
  public:
@@ -27,4 +27,4 @@ class Pnger {
   int h;
 };
 
-}  // namespace multiblend
+}  // namespace multiblend::io::png

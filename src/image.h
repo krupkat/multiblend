@@ -11,14 +11,16 @@
 #include "src/mapalloc.h"
 #include "src/pyramid.h"
 
-namespace multiblend {
+namespace multiblend::io {
 
 enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG };
 
 class Channel {
  public:
-  Channel(size_t _bytes) : bytes(_bytes) { data = MapAlloc::Alloc(bytes); };
-  ~Channel() { MapAlloc::Free(data); };
+  Channel(size_t _bytes) : bytes(_bytes) {
+    data = memory::MapAlloc::Alloc(bytes);
+  };
+  ~Channel() { memory::MapAlloc::Free(data); };
   void* data;
   size_t bytes;
   FILE* file = NULL;
@@ -38,7 +40,7 @@ class Image {
   int ypos_add = 0;
   std::vector<Channel*> channels;
   Pyramid* pyramid = NULL;
-  GeoTIFFInfo geotiff;
+  tiff::GeoTIFFInfo geotiff;
   int tiff_width;
   int tiff_height;
   int tiff_u_height;
@@ -68,4 +70,4 @@ class Image {
   png_structp png_ptr;
 };
 
-}  // namespace multiblend
+}  // namespace multiblend::io

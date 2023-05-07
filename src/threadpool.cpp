@@ -2,7 +2,7 @@
 
 #include <thread>
 
-namespace multiblend {
+namespace multiblend::mt {
 
 Threadpool* Threadpool::instance;
 
@@ -125,4 +125,4 @@ void Threadpool::Queue(std::function<void()> function) {
   main_cond.notify_one();  // changed from notify_all()
 }
 
-}  // namespace multiblend
+}  // namespace multiblend::mt

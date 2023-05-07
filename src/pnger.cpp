@@ -9,7 +9,7 @@
 #include "src/functions.h"
 #include "src/linux_overrides.h"
 
-namespace multiblend {
+namespace multiblend::io::png {
 
 png_color* Pnger::palette = NULL;
 
@@ -141,4 +141,4 @@ Pnger::~Pnger() {
   if (f) fclose(f);
 }
 
-}  // namespace multiblend
+}  // namespace multiblend::io::png

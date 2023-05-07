@@ -21,7 +21,7 @@ struct TimingResult {
 };
 
 struct Options {
-  ImageType output_type = ImageType::MB_NONE;
+  io::ImageType output_type = io::ImageType::MB_NONE;
   int output_bpp = 0;
   int fixed_levels = 0;
   bool wideblend = false;
@@ -52,6 +52,6 @@ struct Result {
   TimingResult timing = {};
 };
 
-Result Multiblend(std::vector<Image*>& images, Options opts);
+Result Multiblend(std::vector<io::Image*>& images, Options opts);
 
 }  // namespace multiblend

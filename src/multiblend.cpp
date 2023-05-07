@@ -16,7 +16,7 @@ class PyramidWithMasks : public Pyramid {
   std::vector<utils::Flex*> masks;
 };
 
-Result Multiblend(std::vector<Image*>& images, Options opts) {
+Result Multiblend(std::vector<io::Image*>& images, Options opts) {
   utils::Timer timer;
   timer.Start();
   TimingResult timing;
@@ -56,7 +56,8 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
 
   if (opts.output_bpp == 0) {
     opts.output_bpp = 8;
-  } else if (opts.output_bpp == 16 && opts.output_type == ImageType::MB_JPEG) {
+  } else if (opts.output_bpp == 16 &&
+             opts.output_type == io::ImageType::MB_JPEG) {
     utils::Output(0, "Warning: 8bpp output forced by JPEG output\n");
     opts.output_bpp = 8;
   }
@@ -64,7 +65,7 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
   /***********************************************************************
    * Allocate working space for reading/trimming/extraction
    ***********************************************************************/
-  void* untrimmed_data = MapAlloc::Alloc(untrimmed_bytes);
+  void* untrimmed_data = memory::MapAlloc::Alloc(untrimmed_bytes);
 
   /***********************************************************************
    * Read/trim/extract
@@ -82,7 +83,7 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
   /***********************************************************************
    * Clean up
    ***********************************************************************/
-  MapAlloc::Free(untrimmed_data);
+  memory::MapAlloc::Free(untrimmed_data);
 
   /***********************************************************************
    * Tighten
@@ -197,7 +198,8 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
   /***********************************************************************
    * Backward distance transform
    ***********************************************************************/
-  Threadpool* threadpool = Threadpool::GetInstance(opts.all_threads ? 2 : 0);
+  mt::Threadpool* threadpool =
+      mt::Threadpool::GetInstance(opts.all_threads ? 2 : 0);
 
   int n_threads = std::max(2, threadpool->GetNThreads());
   uint64_t** thread_lines = new uint64_t*[n_threads];
@@ -409,14 +411,16 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
     images[i]->masks.push_back(new utils::Flex(width, height));
   }
 
-  Pnger* xor_map = opts.xor_filename
-                       ? new Pnger(opts.xor_filename, "XOR map", width, height,
-                                   PNG_COLOR_TYPE_PALETTE)
-                       : NULL;
-  Pnger* seam_map = opts.seamsave_filename
-                        ? new Pnger(opts.seamsave_filename, "Seam map", width,
-                                    height, PNG_COLOR_TYPE_PALETTE)
-                        : NULL;
+  io::png::Pnger* xor_map =
+      opts.xor_filename
+          ? new io::png::Pnger(opts.xor_filename, "XOR map", width, height,
+                               PNG_COLOR_TYPE_PALETTE)
+          : NULL;
+  io::png::Pnger* seam_map =
+      opts.seamsave_filename
+          ? new io::png::Pnger(opts.seamsave_filename, "Seam map", width,
+                               height, PNG_COLOR_TYPE_PALETTE)
+          : NULL;
 
   /***********************************************************************
    * Forward distance transform
@@ -740,7 +744,7 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
   delete xor_map;
   delete seam_map;
 
-  if (!alpha || opts.output_type == ImageType::MB_JPEG) {
+  if (!alpha || opts.output_type == io::ImageType::MB_JPEG) {
     opts.no_mask = true;
   }
 
@@ -822,7 +826,7 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
    ***********************************************************************/
   std::array<void*, 3> output_channels = {NULL, NULL, NULL};
 
-  if (opts.output_type != ImageType::MB_NONE) {
+  if (opts.output_type != io::ImageType::MB_NONE) {
     /***********************************************************************
      * Shrink masks
      ***********************************************************************/
@@ -915,7 +919,7 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
       float* temp;
 
       try {
-        temp = (float*)MapAlloc::Alloc(max_bytes);
+        temp = (float*)memory::MapAlloc::Alloc(max_bytes);
       } catch (char* e) {
         printf("%s\n", e);
         exit(EXIT_FAILURE);
@@ -943,7 +947,8 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
       float* temp;
 
       try {
-        temp = (float*)MapAlloc::Alloc(output_pyramid->GetLevel(level).bytes);
+        temp = (float*)memory::MapAlloc::Alloc(
+            output_pyramid->GetLevel(level).bytes);
       } catch (char* e) {
         printf("%s\n", e);
         exit(EXIT_FAILURE);
@@ -1180,8 +1185,8 @@ Result Multiblend(std::vector<Image*>& images, Options opts) {
       timer.Start();
 
       try {
-        output_channels[c] =
-            MapAlloc::Alloc(((size_t)width * height) << (opts.output_bpp >> 4));
+        output_channels[c] = memory::MapAlloc::Alloc(((size_t)width * height)
+                                                     << (opts.output_bpp >> 4));
       } catch (char* e) {
         printf("%s\n", e);
         exit(EXIT_FAILURE);

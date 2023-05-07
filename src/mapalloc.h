@@ -7,9 +7,7 @@
 #include <Windows.h>
 #endif
 
-namespace multiblend {
-
-#define _MAPALLOC_
+namespace multiblend::memory {
 
 class MapAlloc {
  private:
@@ -48,4 +46,4 @@ class MapAlloc {
   // static bool last_mapped;
 };
 
-}  // namespace multiblend
+}  // namespace multiblend::memory

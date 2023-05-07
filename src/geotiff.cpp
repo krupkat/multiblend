@@ -4,7 +4,7 @@
 
 #include <tiffio.h>
 
-namespace multiblend {
+namespace multiblend::io::tiff {
 
 // some defintions for geotiff
 
@@ -97,4 +97,4 @@ int geotiff_write(TIFF* tiff, GeoTIFFInfo* info) {
   return 1;
 }
 
-}  // namespace multiblend
+}  // namespace multiblend::io::tiff

@@ -36,6 +36,8 @@
 
 namespace mb = multiblend;
 namespace utils = mb::utils;
+namespace io = mb::io;
+namespace memory = mb::memory;
 
 int main(int argc, char* argv[]) {
   mb::utils::Timer timer_all, timer;
@@ -46,7 +48,7 @@ int main(int argc, char* argv[]) {
   /***********************************************************************
    * Variables
    ***********************************************************************/
-  std::vector<mb::Image*> images;
+  std::vector<io::Image*> images;
   int fixed_levels = 0;
   int add_levels = 0;
 
@@ -63,8 +65,8 @@ int main(int argc, char* argv[]) {
 
   TIFF* tiff_file = NULL;
   FILE* jpeg_file = NULL;
-  mb::Pnger* png_file = NULL;
-  mb::ImageType output_type = mb::ImageType::MB_NONE;
+  io::png::Pnger* png_file = NULL;
+  io::ImageType output_type = io::ImageType::MB_NONE;
   int jpeg_quality = -1;
   int compression = -1;
   char* seamsave_filename = NULL;
@@ -274,7 +276,7 @@ int main(int argc, char* argv[]) {
           utils::die("Error: Bad --cache-threshold parameter");
         }
       }
-      mb::MapAlloc::CacheThreshold(threshold);
+      memory::MapAlloc::CacheThreshold(threshold);
     } else if (!strcmp(my_argv[pos], "--nomask") ||
                !strcmp(my_argv[pos], "--no-mask"))
       no_mask = true;
@@ -346,7 +348,7 @@ int main(int argc, char* argv[]) {
       xor_filename = my_argv[++pos];
     else if (!strcmp(my_argv[pos], "--tempdir") ||
              !strcmp(my_argv[pos], "--tmpdir") && pos < (int)my_argv.size() - 1)
-      mb::MapAlloc::SetTmpdir(my_argv[++pos]);
+      memory::MapAlloc::SetTmpdir(my_argv[++pos]);
     else if (!strcmp(my_argv[pos], "--all-threads"))
       all_threads = true;
     else if (!strcmp(my_argv[pos], "-o") || !strcmp(my_argv[pos], "--output")) {
@@ -360,12 +362,12 @@ int main(int argc, char* argv[]) {
 
         ++ext;
         if (!(_stricmp(ext, "jpg") && _stricmp(ext, "jpeg"))) {
-          output_type = mb::ImageType::MB_JPEG;
+          output_type = io::ImageType::MB_JPEG;
           if (jpeg_quality == -1) jpeg_quality = 75;
         } else if (!(_stricmp(ext, "tif") && _stricmp(ext, "tiff"))) {
-          output_type = mb::ImageType::MB_TIFF;
+          output_type = io::ImageType::MB_TIFF;
         } else if (!_stricmp(ext, "png")) {
-          output_type = mb::ImageType::MB_PNG;
+          output_type = io::ImageType::MB_PNG;
         } else {
           utils::die("Error: Unknown file extension");
         }
@@ -382,27 +384,27 @@ int main(int argc, char* argv[]) {
   }
 
   if (compression != -1) {
-    if (output_type != mb::ImageType::MB_TIFF) {
+    if (output_type != io::ImageType::MB_TIFF) {
       utils::Output(
           0, "Warning: non-TIFF output; ignoring TIFF compression setting\n");
     }
-  } else if (output_type == mb::ImageType::MB_TIFF) {
+  } else if (output_type == io::ImageType::MB_TIFF) {
     compression = COMPRESSION_LZW;
   }
 
-  if (jpeg_quality != -1 && output_type != mb::ImageType::MB_JPEG &&
-      output_type != mb::ImageType::MB_PNG) {
+  if (jpeg_quality != -1 && output_type != io::ImageType::MB_JPEG &&
+      output_type != io::ImageType::MB_PNG) {
     utils::Output(0,
                   "Warning: non-JPEG/PNG output; ignoring compression quality "
                   "setting\n");
   }
 
   if ((jpeg_quality < -1 || jpeg_quality > 9) &&
-      output_type == mb::ImageType::MB_PNG) {
+      output_type == io::ImageType::MB_PNG) {
     utils::die("Error: Bad PNG compression quality setting\n");
   }
 
-  if (output_type == mb::ImageType::MB_NONE && !seamsave_filename) {
+  if (output_type == io::ImageType::MB_NONE && !seamsave_filename) {
     utils::die("Error: No output file specified");
   }
   if (seamload_filename && seamsave_filename) {
@@ -432,7 +434,7 @@ int main(int argc, char* argv[]) {
         continue;
       }
     }
-    images.push_back(new mb::Image(my_argv[pos++]));
+    images.push_back(new io::Image(my_argv[pos++]));
   }
 
   int n_images = (int)images.size();
@@ -474,7 +476,7 @@ int main(int argc, char* argv[]) {
   ************************************************************************
   ***********************************************************************/
   switch (output_type) {
-    case mb::ImageType::MB_TIFF: {
+    case io::ImageType::MB_TIFF: {
       if (!big_tiff) {
         tiff_file = TIFFOpen(output_filename, "w");
       } else {
@@ -484,7 +486,7 @@ int main(int argc, char* argv[]) {
         utils::die("Error: Could not open output file");
       }
     } break;
-    case mb::ImageType::MB_JPEG: {
+    case io::ImageType::MB_JPEG: {
       if (output_bpp == 16) {
         utils::die("Error: 16bpp output is incompatible with JPEG output");
       }
@@ -493,7 +495,7 @@ int main(int argc, char* argv[]) {
         utils::die("Error: Could not open output file");
       }
     } break;
-    case mb::ImageType::MB_PNG: {
+    case io::ImageType::MB_PNG: {
       fopen_s(&jpeg_file, output_filename, "wb");
       if (!jpeg_file) {
         utils::die("Error: Could not open output file");
@@ -506,29 +508,30 @@ int main(int argc, char* argv[]) {
   * Process images
   ************************************************************************
   ***********************************************************************/
-  auto result = Multiblend(images, {
-                                       .output_type = output_type,
-                                       .output_bpp = output_bpp,
-                                       .fixed_levels = fixed_levels,
-                                       .wideblend = wideblend,
-                                       .add_levels = add_levels,
-                                       .all_threads = all_threads,
-                                       .reverse = reverse,
-                                       .wrap = wrap,
-                                       .dither = dither,
-                                       .gamma = gamma,
-                                       .no_mask = no_mask,
-                                       .seamsave_filename = seamsave_filename,
-                                       .seamload_filename = seamload_filename,
-                                       .xor_filename = xor_filename,
-                                   });
+  auto result =
+      mb::Multiblend(images, {
+                                 .output_type = output_type,
+                                 .output_bpp = output_bpp,
+                                 .fixed_levels = fixed_levels,
+                                 .wideblend = wideblend,
+                                 .add_levels = add_levels,
+                                 .all_threads = all_threads,
+                                 .reverse = reverse,
+                                 .wrap = wrap,
+                                 .dither = dither,
+                                 .gamma = gamma,
+                                 .no_mask = no_mask,
+                                 .seamsave_filename = seamsave_filename,
+                                 .seamload_filename = seamload_filename,
+                                 .xor_filename = xor_filename,
+                             });
 
 /***********************************************************************
  * Write
  ***********************************************************************/
 #define ROWS_PER_STRIP 64
 
-  if (output_type != mb::ImageType::MB_NONE) {
+  if (output_type != io::ImageType::MB_NONE) {
     utils::Output(1, "Writing %s...\n", output_filename);
 
     timer.Start();
@@ -552,7 +555,7 @@ int main(int argc, char* argv[]) {
     if (bgr) std::swap(oc_p[0], oc_p[2]);
 
     switch (output_type) {
-      case mb::ImageType::MB_TIFF: {
+      case io::ImageType::MB_TIFF: {
         TIFFSetField(tiff_file, TIFFTAG_IMAGEWIDTH, result.width);
         TIFFSetField(tiff_file, TIFFTAG_IMAGELENGTH, result.height);
         TIFFSetField(tiff_file, TIFFTAG_COMPRESSION, compression);
@@ -581,16 +584,16 @@ int main(int argc, char* argv[]) {
 
         if (images[0]->geotiff.set) {
           // if we got a georeferenced input, store the geotags in the output
-          mb::GeoTIFFInfo info(images[0]->geotiff);
+          io::tiff::GeoTIFFInfo info(images[0]->geotiff);
           info.XGeoRef = result.min_xpos * images[0]->geotiff.XCellRes;
           info.YGeoRef = -result.min_ypos * images[0]->geotiff.YCellRes;
           utils::Output(1, "Output georef: UL: %f %f, pixel size: %f %f\n",
                         info.XGeoRef, info.YGeoRef, info.XCellRes,
                         info.YCellRes);
-          mb::geotiff_write(tiff_file, &info);
+          io::tiff::geotiff_write(tiff_file, &info);
         }
       } break;
-      case mb::ImageType::MB_JPEG: {
+      case io::ImageType::MB_JPEG: {
         cinfo.err = jpeg_std_error(&jerr);
         jpeg_create_compress(&cinfo);
         jpeg_stdio_dest(&cinfo, jpeg_file);
@@ -604,16 +607,16 @@ int main(int argc, char* argv[]) {
         jpeg_set_quality(&cinfo, jpeg_quality, true);
         jpeg_start_compress(&cinfo, true);
       } break;
-      case mb::ImageType::MB_PNG: {
-        png_file = new mb::Pnger(
+      case io::ImageType::MB_PNG: {
+        png_file = new io::png::Pnger(
             output_filename, NULL, result.width, result.height,
             result.no_mask ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA,
             result.output_bpp, jpeg_file, jpeg_quality);
       } break;
     }
 
-    if (output_type == mb::ImageType::MB_PNG ||
-        output_type == mb::ImageType::MB_JPEG) {
+    if (output_type == io::ImageType::MB_PNG ||
+        output_type == io::ImageType::MB_JPEG) {
       scanlines = new JSAMPROW[ROWS_PER_STRIP];
       for (int i = 0; i < ROWS_PER_STRIP; ++i) {
         scanlines[i] = (JSAMPROW) & ((uint8_t*)strip)[i * bytes_per_row];
@@ -682,14 +685,14 @@ int main(int argc, char* argv[]) {
       }
 
       switch (output_type) {
-        case mb::ImageType::MB_TIFF: {
+        case io::ImageType::MB_TIFF: {
           TIFFWriteEncodedStrip(tiff_file, s, strip,
                                 rows * (int64_t)bytes_per_row);
         } break;
-        case mb::ImageType::MB_JPEG: {
+        case io::ImageType::MB_JPEG: {
           jpeg_write_scanlines(&cinfo, scanlines, rows);
         } break;
-        case mb::ImageType::MB_PNG: {
+        case io::ImageType::MB_PNG: {
           png_file->WriteRows(scanlines, rows);
         } break;
       }
@@ -698,10 +701,10 @@ int main(int argc, char* argv[]) {
     }
 
     switch (output_type) {
-      case mb::ImageType::MB_TIFF: {
+      case io::ImageType::MB_TIFF: {
         TIFFClose(tiff_file);
       } break;
-      case mb::ImageType::MB_JPEG: {
+      case io::ImageType::MB_JPEG: {
         jpeg_finish_compress(&cinfo);
         jpeg_destroy_compress(&cinfo);
         fclose(jpeg_file);
@@ -718,7 +721,7 @@ int main(int argc, char* argv[]) {
     printf("\n");
     printf("Images:   %.3fs\n", result.timing.images_time);
     printf("Seaming:  %.3fs\n", result.timing.seam_time);
-    if (output_type != mb::ImageType::MB_NONE) {
+    if (output_type != io::ImageType::MB_NONE) {
       printf("Masks:    %.3fs\n", result.timing.shrink_mask_time);
       printf("Copy:     %.3fs\n", result.timing.copy_time);
       printf("Shrink:   %.3fs\n", result.timing.shrink_time);
@@ -737,7 +740,7 @@ int main(int argc, char* argv[]) {
    * Clean up
    ***********************************************************************/
   if (timing) {
-    if (output_type == mb::ImageType::MB_NONE) {
+    if (output_type == io::ImageType::MB_NONE) {
       timer_all.Report("\nExecution complete. Total execution time");
     } else {
       timer_all.Report("\nBlend complete. Total execution time");

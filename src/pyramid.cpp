@@ -77,7 +77,7 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
     height = (height + y_shift + 6) >> 1;
   }
 
-  threadpool = Threadpool::GetInstance();
+  threadpool = mt::Threadpool::GetInstance();
 
   for (auto level = levels.begin(); level < levels.end(); ++level) {
     level->bands.push_back(0);
@@ -1442,8 +1442,8 @@ void Pyramid::Png(const char* filename) {
       py += levels[l].height + 1;
   }
 
-  Pnger::Quick((char*)filename, temp, width, height, width,
-               PNG_COLOR_TYPE_GRAY);
+  io::png::Pnger::Quick((char*)filename, temp, width, height, width,
+                        PNG_COLOR_TYPE_GRAY);
 
   free(temp);
 }
