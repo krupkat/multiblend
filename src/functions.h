@@ -144,7 +144,7 @@ class Flex {
     }
   }
 
-  uint8_t* data_ = NULL;
+  uint8_t* data_ = nullptr;
   int width_;
   int height_;
   int* rows_ = nullptr;

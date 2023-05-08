@@ -191,8 +191,8 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
   uint64_t a, b, c, d;
 
 #define DT_MAX 0x9000000000000000
-  uint64_t* prev_line = NULL;
-  uint64_t* this_line = NULL;
+  uint64_t* prev_line = nullptr;
+  uint64_t* this_line = nullptr;
   bool last_pixel = false;
   bool arbitrary_seam = false;
 
@@ -437,12 +437,12 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       opts.xor_filename != nullptr
           ? new io::png::Pnger(opts.xor_filename, "XOR map", width, height,
                                PNG_COLOR_TYPE_PALETTE)
-          : NULL;
+          : nullptr;
   io::png::Pnger* seam_map =
       opts.seamsave_filename != nullptr
           ? new io::png::Pnger(opts.seamsave_filename, "Seam map", width,
                                height, PNG_COLOR_TYPE_PALETTE)
-          : NULL;
+          : nullptr;
 
   /***********************************************************************
    * Forward distance transform
@@ -820,7 +820,8 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       utils::die("Error: Bad PNG signature");
     }
 
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr,
+                                     nullptr);
     if (png_ptr == nullptr) {
       utils::die("Error: Seam PNG problem");
     }
@@ -833,7 +834,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
     png_set_sig_bytes(png_ptr, 8);
     png_read_info(png_ptr, info_ptr);
     png_get_IHDR(png_ptr, info_ptr, &png_width, &png_height, &png_depth,
-                 &png_colour, NULL, NULL, NULL);
+                 &png_colour, nullptr, nullptr, nullptr);
 
     if (png_width != width || png_height != png_height) {
       utils::die("Error: Seam PNG dimensions don't match workspace");
@@ -845,7 +846,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
     png_bytep png_line = (png_bytep)malloc(width);
 
     for (int y = 0; y < height; ++y) {
-      png_read_row(png_ptr, png_line, NULL);
+      png_read_row(png_ptr, png_line, nullptr);
 
       int ms = 0;
       int mc = 0;
@@ -994,7 +995,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
     /***********************************************************************
      * Create output pyramid
      ***********************************************************************/
-    Pyramid* output_pyramid = NULL;
+    Pyramid* output_pyramid = nullptr;
 
     output_pyramid = new Pyramid(width, height, total_levels, 0, 0, true);
 
@@ -1044,7 +1045,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
           }
 
           delete images[i]->channels_[c];
-          images[i]->channels_[c] = NULL;
+          images[i]->channels_[c] = nullptr;
 
           timing.copy_time += timer.Read();
 
@@ -1114,7 +1115,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
         }
 
         delete images[0]->channels_[c];
-        images[0]->channels_[c] = NULL;
+        images[0]->channels_[c] = nullptr;
 
         timing.copy_time += timer.Read();
       }

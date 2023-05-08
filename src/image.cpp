@@ -227,8 +227,8 @@ void Image::Open() {
         utils::die("Bad PNG signature (%s)", filename_);
       }
 
-      png_ptr_ =
-          png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+      png_ptr_ = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr,
+                                        nullptr);
       if (png_ptr_ == nullptr) {
         utils::die("Error: libpng problem");
       }
@@ -245,7 +245,7 @@ void Image::Open() {
       uint32_t png_width, png_height;
       int _bpp;
       png_get_IHDR(png_ptr_, info_ptr, &png_width, &png_height, &_bpp,
-                   &png_colour, NULL, NULL, NULL);
+                   &png_colour, nullptr, nullptr, nullptr);
       bpp_ = _bpp;
       tiff_width_ = png_width;
       tiff_u_height_ = tiff_height_ = png_height;
@@ -307,7 +307,7 @@ void Image::Read(void* data, bool gamma) {
       uint8_t* pointer = (uint8_t*)data;
 
       for (int y = 0; y < tiff_height_; ++y) {
-        png_read_row(png_ptr_, pointer, NULL);
+        png_read_row(png_ptr_, pointer, nullptr);
         pointer += (tiff_width_ * spp_) << (bpp_ >> 4);
       }
     } break;
@@ -438,8 +438,8 @@ void Image::Read(void* data, bool gamma) {
      ***********************************************************************/
     int temp_copy;
     uint32_t a, b, c, d;
-    uint32_t* this_line = NULL;
-    uint32_t* prev_line = NULL;
+    uint32_t* this_line = nullptr;
+    uint32_t* prev_line = nullptr;
     mt::Threadpool* threadpool = mt::Threadpool::GetInstance();
 
     tiff_mask_ = new utils::Flex(width_, height_);
@@ -459,8 +459,8 @@ void Image::Read(void* data, bool gamma) {
       thread_comp_lines[i] = new uint32_t[width_];
     }
 
-    uint32_t* bitmap32 = NULL;
-    uint64_t* bitmap64 = NULL;
+    uint32_t* bitmap32 = nullptr;
+    uint64_t* bitmap64 = nullptr;
     if (bpp_ == 8) {
       bitmap32 = ((uint32_t*)data) + top * tiff_width_ + left;
     } else {

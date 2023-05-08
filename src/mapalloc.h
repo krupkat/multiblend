@@ -26,7 +26,7 @@ class MapAlloc {
 #else
     int file_ = 0;
 #endif
-    void* pointer_ = NULL;
+    void* pointer_ = nullptr;
     size_t size_;
   };
 

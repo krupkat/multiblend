@@ -9,7 +9,7 @@ namespace multiblend::io::png {
 class Pnger {
  public:
   Pnger(const char* filename, const char* name, int width, int height, int type,
-        int bpp = 8, FILE* file = NULL, int compression = -1);
+        int bpp = 8, FILE* file = nullptr, int compression = -1);
   ~Pnger();
 
   bool Ready() { return !(file_ == nullptr); };

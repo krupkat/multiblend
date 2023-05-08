@@ -20,7 +20,7 @@ Threadpool::Threadpool(int threads) {
     threads_[i].handle = CreateThread(NULL, 1, (LPTHREAD_START_ROUTINE)Thread,
                                       &threads_[i], 0, NULL);
 #else
-    pthread_create(&threads_[i].handle, NULL, TP_Thread, &threads_[i]);
+    pthread_create(&threads_[i].handle, nullptr, TP_Thread, &threads_[i]);
 #endif
     threads_[i].main_mutex = &main_mutex_;
     threads_[i].return_mutex = &return_mutex_;
@@ -51,7 +51,7 @@ Threadpool::~Threadpool() {
 #ifdef _WIN32
     WaitForSingleObject(threads_[i].handle, INFINITE);
 #else
-    pthread_join(threads_[i].handle, NULL);
+    pthread_join(threads_[i].handle, nullptr);
 #endif
   }
 }
@@ -89,7 +89,7 @@ void* TP_Thread(void* param) {
     P->return_cond->notify_all();
   }
 
-  return 0;
+  return nullptr;
 }
 
 /**********************************************************************

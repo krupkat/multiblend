@@ -143,10 +143,11 @@ MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
       throw(filename_);
     }
 
-    pointer_ = mmap(NULL, size_, PROT_READ | PROT_WRITE, MAP_PRIVATE, file_, 0);
+    pointer_ =
+        mmap(nullptr, size_, PROT_READ | PROT_WRITE, MAP_PRIVATE, file_, 0);
     if (pointer_ == MAP_FAILED) {
       unlink(filename_);
-      pointer_ = NULL;
+      pointer_ = nullptr;
       sprintf(filename_, "Could not mmap temporary file");
       throw(filename_);
     }

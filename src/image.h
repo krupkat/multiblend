@@ -25,7 +25,7 @@ class Channel {
 
   void* data_;
   size_t bytes_;
-  FILE* file_ = NULL;
+  FILE* file_ = nullptr;
 };
 
 class Image {
@@ -42,7 +42,7 @@ class Image {
   int xpos_add_ = 0;
   int ypos_add_ = 0;
   std::vector<Channel*> channels_;
-  Pyramid* pyramid_ = NULL;
+  Pyramid* pyramid_ = nullptr;
   tiff::GeoTIFFInfo geotiff_;
   int tiff_width_;
   int tiff_height_;

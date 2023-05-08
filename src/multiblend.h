@@ -33,9 +33,9 @@ struct Options {
   bool gamma = false;
   bool no_mask = false;
 
-  char* seamsave_filename = NULL;
-  char* seamload_filename = NULL;
-  char* xor_filename = NULL;
+  char* seamsave_filename = nullptr;
+  char* seamload_filename = nullptr;
+  char* xor_filename = nullptr;
 };
 
 struct Result {

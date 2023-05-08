@@ -11,7 +11,7 @@
 
 namespace multiblend::io::png {
 
-png_color* Pnger::palette_ = NULL;
+png_color* Pnger::palette_ = nullptr;
 
 Pnger::Pnger(const char* filename, const char* name, int width, int height,
              int type, int bpp, FILE* file, int compression) {
@@ -64,14 +64,15 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
     file_ = file;
   }
 
-  png_ptr_ = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+  png_ptr_ =
+      png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
   if (png_ptr_ == nullptr) {
     if (name != nullptr) {
       utils::Output(0, "WARNING: PNG create failed\n");
     }
     fclose(file_);
     remove(filename);
-    file_ = NULL;
+    file_ = nullptr;
     return;
   }
 
@@ -80,10 +81,10 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
     if (name != nullptr) {
       utils::Output(0, "WARNING: PNG create failed\n");
     }
-    png_destroy_write_struct(&png_ptr_, (png_infopp)NULL);
+    png_destroy_write_struct(&png_ptr_, (png_infopp) nullptr);
     fclose(file_);
     remove(filename);
-    file_ = NULL;
+    file_ = nullptr;
     return;
   }
 
@@ -107,7 +108,7 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
                              : type == PNG_COLOR_TYPE_RGB     ? width * 3
                                                               : width)
                             << (bpp >> 4)]
-              : NULL;
+              : nullptr;
 };
 
 void Pnger::Write() {
@@ -119,10 +120,10 @@ void Pnger::Write() {
 
   if (++y_ == height_) {
     //  printf("png close\n");
-    png_write_end(png_ptr_, NULL);
+    png_write_end(png_ptr_, nullptr);
     png_destroy_write_struct(&png_ptr_, &info_ptr_);
     fclose(file_);
-    file_ = NULL;
+    file_ = nullptr;
   }
 }
 
@@ -134,16 +135,16 @@ void Pnger::WriteRows(uint8_t** rows, int num_rows) {
   png_write_rows(png_ptr_, rows, num_rows);
 
   if ((y_ += num_rows) == height_) {
-    png_write_end(png_ptr_, NULL);
+    png_write_end(png_ptr_, nullptr);
     png_destroy_write_struct(&png_ptr_, &info_ptr_);
     fclose(file_);
-    file_ = NULL;
+    file_ = nullptr;
   }
 }
 
 void Pnger::Quick(char* filename, uint8_t* data, int width, int height,
                   int pitch, int type) {
-  Pnger temp(filename, NULL, width, height, type);
+  Pnger temp(filename, nullptr, width, height, type);
 
   for (int y = 0; y < height; ++y) {
     temp.WriteRows(&data, 1);

@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
   mb::utils::Timer timer_all, timer;
   timer_all.Start();
 
-  TIFFSetWarningHandler(NULL);
+  TIFFSetWarningHandler(nullptr);
 
   /***********************************************************************
    * Variables
@@ -63,16 +63,16 @@ int main(int argc, char* argv[]) {
   bool all_threads = true;
   int wrap = 0;
 
-  TIFF* tiff_file = NULL;
-  FILE* jpeg_file = NULL;
-  io::png::Pnger* png_file = NULL;
+  TIFF* tiff_file = nullptr;
+  FILE* jpeg_file = nullptr;
+  io::png::Pnger* png_file = nullptr;
   io::ImageType output_type = io::ImageType::MB_NONE;
   int jpeg_quality = -1;
   int compression = -1;
-  char* seamsave_filename = NULL;
-  char* seamload_filename = NULL;
-  char* xor_filename = NULL;
-  char* output_filename = NULL;
+  char* seamsave_filename = nullptr;
+  char* seamload_filename = nullptr;
+  char* xor_filename = nullptr;
+  char* output_filename = nullptr;
   int output_bpp = 0;
 
   double write_time = 0;
@@ -455,17 +455,17 @@ int main(int argc, char* argv[]) {
     utils::die("Error: No input files specified");
   }
   if ((seamsave_filename != nullptr) && n_images > 256) {
-    seamsave_filename = NULL;
+    seamsave_filename = nullptr;
     utils::Output(
         0, "Warning: seam saving not possible with more than 256 images");
   }
   if ((seamload_filename != nullptr) && n_images > 256) {
-    seamload_filename = NULL;
+    seamload_filename = nullptr;
     utils::Output(
         0, "Warning: seam loading not possible with more than 256 images");
   }
   if ((xor_filename != nullptr) && n_images > 255) {
-    xor_filename = NULL;
+    xor_filename = nullptr;
     utils::Output(
         0, "Warning: XOR map saving not possible with more than 255 images");
   }
@@ -551,7 +551,7 @@ int main(int argc, char* argv[]) {
     struct jpeg_compress_struct cinfo;
     struct jpeg_error_mgr jerr;
 
-    JSAMPARRAY scanlines = NULL;
+    JSAMPARRAY scanlines = nullptr;
 
     int spp = result.no_mask ? 3 : 4;
 
@@ -623,7 +623,7 @@ int main(int argc, char* argv[]) {
       } break;
       case io::ImageType::MB_PNG: {
         png_file = new io::png::Pnger(
-            output_filename, NULL, result.width, result.height,
+            output_filename, nullptr, result.width, result.height,
             result.no_mask ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA,
             result.output_bpp, jpeg_file, jpeg_quality);
       } break;

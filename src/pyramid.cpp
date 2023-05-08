@@ -21,7 +21,7 @@ Pyramid::Pyramid(int width, int height, int _levels, Pyramid* share)
 
 Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
                  bool _no_alloc, Pyramid* share)
-    : shared_(share != NULL), no_alloc_(_no_alloc) {
+    : shared_(share != nullptr), no_alloc_(_no_alloc) {
   float* data;
 
   int n_levels = DefaultNumLevels(width, height);
@@ -59,7 +59,7 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
           throw(bytes);
         }
       } else {
-        data = NULL;
+        data = nullptr;
       }
     }
 
@@ -525,7 +525,7 @@ void Pyramid::Subsample(int sub_w, int sub_h, Pyramid* source) {
     }
     switch (sub_w) {
       case 2:
-        Subsample_Squeeze(line, line, m128_pitch_in, mid_pitch, NULL);
+        Subsample_Squeeze(line, line, m128_pitch_in, mid_pitch, nullptr);
       case 1:
         Subsample_Squeeze(line, out, mid_pitch, m128_pitch_out, &mul);
     }

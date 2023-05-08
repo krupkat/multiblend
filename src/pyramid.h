@@ -30,7 +30,7 @@ class Pyramid {
   __m128** lines_;
   bool shared_;
   bool no_alloc_;
-  float* lut_ = NULL;
+  float* lut_ = nullptr;
   int lut_bits_ = 0;
   bool lut_gamma_ = false;
   int out_max_;
@@ -91,9 +91,9 @@ class Pyramid {
                       bool chroma, int step, int offset);
 
  public:
-  Pyramid(int width, int height, int _levels = 0, Pyramid* share = NULL);
+  Pyramid(int width, int height, int _levels = 0, Pyramid* share = nullptr);
   Pyramid(int width, int height, int _levels, int x, int y, bool no_alloc,
-          Pyramid* share = NULL);
+          Pyramid* share = nullptr);
   ~Pyramid();
   static int DefaultNumLevels(int width, int height) {
     return 8; /* (int)ceil(log2(max(width, height))); */
