@@ -184,6 +184,12 @@ MapAlloc::MapAllocObject::~MapAllocObject() {
 
 void* MapAlloc::MapAllocObject::GetPointer() { return pointer_; }
 
-bool MapAlloc::MapAllocObject::IsFile() const { return !(file_ == nullptr); }
+bool MapAlloc::MapAllocObject::IsFile() const {
+#ifdef _WIN32
+  return file_ != nullptr;
+#else
+  return file_ != 0;
+#endif
+}
 
 }  // namespace multiblend::memory
