@@ -47,7 +47,7 @@ class Threadpool {
 
  private:
   static Threadpool* instance_;
-  Threadpool(int threads = 0);  // constructor is private
+  explicit Threadpool(int threads = 0);  // constructor is private
   ~Threadpool();
 #ifdef _WIN32
   static DWORD WINAPI Thread(void* param);

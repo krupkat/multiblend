@@ -68,15 +68,15 @@ int geotiff_read(TIFF* tiff, GeoTIFFInfo* info) {
   }
   info->XGeoRef = tiepoints[3] - tiepoints[0] * (geo_scale[0]);
   info->YGeoRef = tiepoints[4] - tiepoints[1] * (geo_scale[1]);
-  // TODO: check if tiepoints refer to center of upper left pixel or upper left
-  // edge of upper left pixel
+  // TODO(dh): check if tiepoints refer to center of upper left pixel or upper
+  // left edge of upper left pixel
   char* nodata;
 
   if (TIFFGetField(tiff, TIFFTAG_GDAL_NODATA, &nCount, &nodata) != 0) {
     info->nodata = std::atoi(nodata);
   }
 
-  // TODO: read coordinate system definitions...
+  // TODO(dh): read coordinate system definitions...
   info->set = true;
   return 1;
 }

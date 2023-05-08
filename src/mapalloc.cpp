@@ -5,6 +5,7 @@
 #ifndef _WIN32
 #include <cerrno>
 #include <cstdlib>
+#include <stdexcept>
 #include <unistd.h>
 
 #include <sys/mman.h>
@@ -94,13 +95,13 @@ MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
             sizeof(buf), NULL);
         sprintf_s(filename_, "Could not create temp file in %s\\: %s", tmpdir_,
                   buf);
-        throw(filename_);
+        throw(std::runtime_error(filename_));
       }
       if (suffix_ == 65536) {
         sprintf_s(filename_,
                   "Could not create temp file in %s\\: suffixes exhausted",
                   tmpdir_);
-        throw(filename_);
+        throw(std::runtime_error(filename_));
       }
     }
 
@@ -109,13 +110,13 @@ MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
     if (!map_) {
       sprintf_s(filename_, "Could not allocate %zu temporary bytes in %s", size,
                 tmpdir_);
-      throw(filename_);
+      throw(std::runtime_error(filename_));
     }
 
     pointer_ = MapViewOfFile(map_, FILE_MAP_ALL_ACCESS, 0, 0, 0);
     if (!pointer_) {
       sprintf_s(filename_, "Could not map view of temporary file");
-      throw(filename_);
+      throw(std::runtime_error(filename_));
     }
 #else
     if (tmpdir_[0] == 0) {
@@ -133,14 +134,14 @@ MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
     if (file_ <= 0) {
       sprintf(filename_, "Could not create temp file in %s/: %s", tmpdir_,
               strerror(errno));
-      throw(filename_);
+      throw(std::runtime_error(filename_));
     }
 
     if (ftruncate(file_, size_) != 0) {
       unlink(filename_);
       sprintf(filename_, "Could not allocate %zu temporary bytes in %s: %s",
               size_, tmpdir_, strerror(errno));
-      throw(filename_);
+      throw(std::runtime_error(filename_));
     }
 
     pointer_ =
@@ -149,7 +150,7 @@ MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
       unlink(filename_);
       pointer_ = nullptr;
       sprintf(filename_, "Could not mmap temporary file");
-      throw(filename_);
+      throw(std::runtime_error(filename_));
     }
 
     unlink(filename_);

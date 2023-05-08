@@ -12,6 +12,11 @@ Checks: >
   readability-container-size-empty,
   readability-make-member-function-const,
   readability-convert-member-functions-to-static,
-  readability-non-const-parameter
+  readability-non-const-parameter,
+  google-explicit-constructor,
+  misc-throw-by-value-catch-by-reference,
+  bugprone-suspicious-string-compare,
+  google-readability-todo,
+  modernize-use-bool-literals
 
 HeaderFilterRegex: ".*multiblend.*src.*"

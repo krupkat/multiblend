@@ -17,7 +17,7 @@ enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG };
 
 class Channel {
  public:
-  Channel(size_t bytes) : bytes_(bytes) {
+  explicit Channel(size_t bytes) : bytes_(bytes) {
     data_ = memory::MapAlloc::Alloc(bytes_);
   };
 
@@ -30,7 +30,7 @@ class Channel {
 
 class Image {
  public:
-  Image(char* filename);
+  explicit Image(char* filename);
   ~Image();
 
   char* filename_;
