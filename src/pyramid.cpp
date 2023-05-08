@@ -5,7 +5,7 @@
 #include "sse_mathfun.h"
 #endif
 
-#include <math.h>
+#include <cmath>
 
 #include "src/linux_overrides.h"
 #include "src/pnger.h"

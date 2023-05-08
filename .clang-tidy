@@ -6,6 +6,7 @@ Checks: >
   modernize-use-nullptr,
   modernize-use-auto,
   bugprone-implicit-widening-of-multiplication-result,
-  readability-isolate-declaration
+  readability-isolate-declaration,
+  modernize-deprecated-headers
 
 HeaderFilterRegex: ".*multiblend.*src.*"

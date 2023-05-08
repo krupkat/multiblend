@@ -3,8 +3,8 @@
 #include <cstring>
 
 #ifndef _WIN32
+#include <cerrno>
 #include <cstdlib>
-#include <errno.h>
 #include <unistd.h>
 
 #include <sys/mman.h>

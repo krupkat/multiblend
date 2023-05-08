@@ -1,6 +1,6 @@
 #include "src/image.h"
 
-#include <stdio.h>
+#include <cstdio>
 
 #include "src/functions.h"
 #include "src/geotiff.h"

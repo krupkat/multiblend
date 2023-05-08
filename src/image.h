@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdio.h>
+#include <cstdio>
 
 #include <jpeglib.h>
 #include <png.h>

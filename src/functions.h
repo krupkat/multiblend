@@ -1,8 +1,8 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 #include <cstring>
-#include <stdint.h>
 #include <vector>
 
 #include "src/pyramid.h"

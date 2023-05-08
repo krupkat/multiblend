@@ -8,7 +8,7 @@
 
 #ifndef _WIN32
 
-#include <string.h>   // memset
+#include <cstring>    // memset
 #include <strings.h>  // strcasecmp
 
 inline int _stricmp(const char* a, const char* b) { return strcasecmp(a, b); }

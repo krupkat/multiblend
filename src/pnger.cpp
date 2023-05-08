@@ -1,8 +1,8 @@
 #include "src/pnger.h"
 
 #include <algorithm>
-#include <math.h>
-#include <stdint.h>
+#include <cmath>
+#include <cstdint>
 
 #include <png.h>
 

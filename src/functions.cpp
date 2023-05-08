@@ -1,9 +1,9 @@
 #include "src/functions.h"
 
 #include <chrono>
+#include <cstdarg>
+#include <cstdint>
 #include <cstring>
-#include <stdarg.h>
-#include <stdint.h>
 #include <vector>
 
 #include "src/pyramid.h"

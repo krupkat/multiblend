@@ -1,6 +1,6 @@
 #include "src/multiblend.h"
 
-#include <math.h>
+#include <cmath>
 
 #include "src/linux_overrides.h"
 #include "src/pnger.h"

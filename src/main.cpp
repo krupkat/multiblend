@@ -19,9 +19,9 @@
 
 #include <algorithm>
 #include <array>
-#include <math.h>
-#include <stdint.h>
-#include <stdio.h>
+#include <cmath>
+#include <cstdint>
+#include <cstdio>
 #include <vector>
 
 #include <jpeglib.h>
