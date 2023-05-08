@@ -181,6 +181,6 @@ MapAlloc::MapAllocObject::~MapAllocObject() {
 
 void* MapAlloc::MapAllocObject::GetPointer() { return pointer_; }
 
-bool MapAlloc::MapAllocObject::IsFile() { return !(file_ == 0); }
+bool MapAlloc::MapAllocObject::IsFile() const { return !(file_ == 0); }
 
 }  // namespace multiblend::memory

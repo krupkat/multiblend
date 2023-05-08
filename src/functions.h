@@ -113,7 +113,7 @@ class Flex {
     }
   }
 
-  void IncrementLast32(int inc) { *((uint32_t*)&data_[p_ - 4]) += inc; }
+  void IncrementLast32(int inc) const { *((uint32_t*)&data_[p_ - 4]) += inc; }
 
   uint8_t ReadBackwards8() { return data_[--p_]; }
   uint16_t ReadBackwards16() { return *((uint16_t*)&data_[p_ -= 2]); }
@@ -184,7 +184,7 @@ void die(const char* error, ...);
 
 void ShrinkMasks(std::vector<Flex*>& masks, int n_levels);
 
-void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
+void CompositeLine(const float* input_p, float* output_p, int i, int x_offset,
                    int in_level_width, int out_level_width, int out_level_pitch,
                    uint8_t* _mask, size_t mask_p);
 
@@ -220,9 +220,9 @@ void ReadInpaintDT(Flex* flex, int& current_count, int& current_step,
 void ReadSeamDT(Flex* flex, int& current_count, int64_t& current_step,
                 uint64_t& dt_val);
 
-int CompressDTLine(uint32_t* input, uint8_t* output, int width);
+int CompressDTLine(const uint32_t* input, uint8_t* output, int width);
 
-int CompressSeamLine(uint64_t* input, uint8_t* output, int width);
+int CompressSeamLine(const uint64_t* input, uint8_t* output, int width);
 
 void SwapH(Pyramid* py);
 

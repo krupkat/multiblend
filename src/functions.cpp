@@ -43,7 +43,7 @@ void die(const char* error, ...) {
 /***********************************************************************
  * ShrinkMasks
  ***********************************************************************/
-int Squish(uint32_t* in, uint32_t* out, int in_width, int out_width) {
+int Squish(const uint32_t* in, uint32_t* out, int in_width, int out_width) {
   float current_val;
   uint32_t cur;
   float a;
@@ -342,7 +342,7 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
 /***********************************************************************
  * Composite line
  ***********************************************************************/
-void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
+void CompositeLine(const float* input_p, float* output_p, int i, int x_offset,
                    int in_level_width, int out_level_width, int out_level_pitch,
                    uint8_t* _mask, size_t mask_p) {
   int x = 0;
@@ -521,7 +521,7 @@ void cwrite(int current_count, int current_step, uint8_t* output, int& p) {
 
 #define CWRITE cwrite(current_count, current_step, output, p);
 
-int CompressDTLine(uint32_t* input, uint8_t* output, int width) {
+int CompressDTLine(const uint32_t* input, uint8_t* output, int width) {
   int current_step = -100;
   int current_count = 0;
 
@@ -582,7 +582,7 @@ int CompressDTLine(uint32_t* input, uint8_t* output, int width) {
   return p;
 }
 
-int CompressSeamLine(uint64_t* input, uint8_t* output, int width) {
+int CompressSeamLine(const uint64_t* input, uint8_t* output, int width) {
   int current_step = -100;
   int current_count = 0;
 

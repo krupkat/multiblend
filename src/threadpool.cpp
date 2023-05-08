@@ -69,8 +69,8 @@ void* TP_Thread(void* param) {
   while (true) {
     {
       std::unique_lock<std::mutex> mlock(*P->main_mutex);
-      P->main_cond->wait(mlock, [=] { return P->queue->size() || P->stop; });
-      if (P->queue->size()) {
+      P->main_cond->wait(mlock, [=] { return !P->queue->empty() || P->stop; });
+      if (!P->queue->empty()) {
         P->function = P->queue->front();
         P->queue->pop_front();
         P->free = false;
@@ -96,7 +96,7 @@ void* TP_Thread(void* param) {
  * Wait
  **********************************************************************/
 void Threadpool::Wait() {
-  if (queue_.size() == 0u) {
+  if (queue_.empty()) {
     int i;
     for (i = 0; i < n_threads_; ++i) {
       if (!threads_[i].free) {
@@ -111,7 +111,7 @@ void Threadpool::Wait() {
   {
     std::unique_lock<std::mutex> rlock(return_mutex_);
     return_cond_.wait(rlock, [this] {
-      if (queue_.size() != 0u) {
+      if (!queue_.empty()) {
         return false;
       }
       for (int i = 0; i < n_threads_; ++i) {

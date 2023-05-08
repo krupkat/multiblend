@@ -47,20 +47,23 @@ class Pyramid {
                               int ey);
   void CopyPlanarThread_32bit(__m128* src_p, int pitch, bool gamma, int sy,
                               int ey);
-  void Subsample_Squeeze(__m128* in, __m128* Out, int m128_pitch_in,
-                         int m128_pitch_out, __m128* mul);
-  void ShrinkThread(__m128* line, __m128* hi, __m128* lo, int m128_pitch_hi,
-                    int m128_pitch_lo, int first_bad_line, int height_odd,
-                    int sy, int ey, const bool x_shift, const bool y_shift);
+  static void Subsample_Squeeze(__m128* in, __m128* Out, int m128_pitch_in,
+                                int m128_pitch_out, __m128* mul);
+  static void ShrinkThread(__m128* line, __m128* hi, __m128* lo,
+                           int m128_pitch_hi, int m128_pitch_lo,
+                           int first_bad_line, int height_odd, int sy, int ey,
+                           const bool x_shift, const bool y_shift);
 
-  void Squeeze(__m128* line, __m128* lo, int m128_pitch_lo, int m128_pitch_hi,
-               __m128 final_mul, bool x_shift);  // was __forceinline
-  void LaplaceThreadWrapper(Level* upper_level, Level* lower_level, int sy,
-                            int ey);
-  void LaplaceThread(Level* upper_level, Level* lower_evel, int sy, int ey,
-                     __m128* temp1, __m128* temp2, __m128* temp3);
-  void FuseThread(__m128* a, __m128* b, __m128* m, int m128_pitch, int sy,
-                  int ey, bool pre, int black);
+  static void Squeeze(__m128* line, __m128* lo, int m128_pitch_lo,
+                      int m128_pitch_hi, __m128 final_mul,
+                      bool x_shift);  // was __forceinline
+  static void LaplaceThreadWrapper(Level* upper_level, Level* lower_level,
+                                   int sy, int ey);
+  static void LaplaceThread(Level* upper_level, Level* lower_evel, int sy,
+                            int ey, __m128* temp1, __m128* temp2,
+                            __m128* temp3);
+  static void FuseThread(__m128* a, __m128* b, __m128* m, int m128_pitch,
+                         int sy, int ey, bool pre, int black);
   void LaplaceCollapse(int n_levels, bool Collapse);
 
   size_t total_bytes_ = 0;
@@ -134,7 +137,7 @@ class Pyramid {
                             int m128_pitch_lo);
   static void LaplaceExpandShifted(__m128* hi, __m128* lo, int m128_pitch_hi,
                                    int m128_pitch_lo);
-  size_t GetTotalBytes() { return total_bytes_; }
+  size_t GetTotalBytes() const { return total_bytes_; }
   std::vector<Level>& GetLevels() { return levels_; };
   Level& GetLevel(int level) { return levels_[level]; };
   void Png(const char* filename);

@@ -436,7 +436,7 @@ int main(int argc, char* argv[]) {
    ***********************************************************************/
 
   while (pos < (int)my_argv.size()) {
-    if (images.size() != 0u) {
+    if (!images.empty()) {
       int x;
       int y;
       int n = 0;

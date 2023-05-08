@@ -8,6 +8,10 @@ Checks: >
   bugprone-implicit-widening-of-multiplication-result,
   readability-isolate-declaration,
   modernize-deprecated-headers,
-  bugprone-incorrect-roundings
+  bugprone-incorrect-roundings,
+  readability-container-size-empty,
+  readability-make-member-function-const,
+  readability-convert-member-functions-to-static,
+  readability-non-const-parameter
 
 HeaderFilterRegex: ".*multiblend.*src.*"
