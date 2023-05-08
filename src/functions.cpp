@@ -57,9 +57,9 @@ int Squish(uint32_t* in, uint32_t* out, int in_width, int out_width) {
   int out_count;
 
   cur = in[in_p++];
-  if (cur & 0x80000000) {
+  if ((cur & 0x80000000) != 0u) {
     in_count = cur & 0x00ffffff;
-    if (cur & 0x20000000) {
+    if ((cur & 0x20000000) != 0u) {
       current_val = ((float*)in)[in_p++];
     } else {
       last_int = (cur >> 30) & 1;
@@ -104,12 +104,12 @@ int Squish(uint32_t* in, uint32_t* out, int in_width, int out_width) {
     // loop always starts needing to read two more pixels
 
     // read d
-    if (!in_count && read < in_width) {
+    if ((in_count == 0) && read < in_width) {
       cur = in[in_p++];
-      if (cur & 0x80000000) {  // float
+      if ((cur & 0x80000000) != 0u) {  // float
         in_count = cur & 0x00ffffff;
         read += in_count;
-        if (cur & 0x20000000) {  // repeated float
+        if ((cur & 0x20000000) != 0u) {  // repeated float
           last_int = -1;
           current_val = *((float*)&in[in_p++]);
         } else {
@@ -134,10 +134,10 @@ int Squish(uint32_t* in, uint32_t* out, int in_width, int out_width) {
       d = current_val;
 
       cur = in[in_p++];
-      if (cur & 0x80000000) {
+      if ((cur & 0x80000000) != 0u) {
         in_count = cur & 0x00ffffff;
         read += in_count;
-        if (cur & 0x20000000) {
+        if ((cur & 0x20000000) != 0u) {
           last_int = -1;
           current_val = ((float*)in)[in_p++];
         } else {
@@ -213,10 +213,10 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
     while (wrote < out_width) {
       cur = real_lines[0][pointer[0]++];
       masks[l]->Write32(cur);
-      if (!(cur & 0x80000000)) {
+      if ((cur & 0x80000000) == 0u) {
         ++wrote;
       } else {
-        if (cur & 0x20000000) {
+        if ((cur & 0x20000000) != 0u) {
           masks[l]->Write32(real_lines[0][pointer[0]++]);
         }
         wrote += cur & 0x00ffffff;
@@ -247,13 +247,13 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
       while (wrote < out_width) {
         min_count = 0x7fffffff;
         for (i = 0; i < 5; ++i) {
-          if (!count[i]) {
+          if (count[i] == 0) {
             cur = lines[i][pointer[i]++];
-            if (!(cur & 0x80000000)) {
+            if ((cur & 0x80000000) == 0u) {
               vals[i] = *((float*)&cur);
               count[i] = 1;
             } else {
-              if (cur & 0x20000000) {
+              if ((cur & 0x20000000) != 0u) {
                 vals[i] = ((float*)lines[i])[pointer[i]++];
               } else {
                 last_int = (cur >> 30) & 1;
@@ -338,9 +338,9 @@ void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
   while (x < out_level_width) {
     uint32_t cur = mask[mask_p++];
     last_int = -1;
-    if (cur & 0x80000000) {
+    if ((cur & 0x80000000) != 0u) {
       mask_count = cur & 0x0fffffff;
-      if (cur & 0x20000000) {
+      if ((cur & 0x20000000) != 0u) {
         current_val = ((float*)mask)[mask_p++];
       } else {
         last_int = (cur >> 30) & 1;
@@ -418,7 +418,7 @@ void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
  ***********************************************************************/
 void ReadInpaintDT(Flex* flex, int& current_count, int& current_step,
                    uint32_t& dt_val) {
-  if (current_count) {
+  if (current_count != 0) {
     --current_count;
     dt_val += current_step;
   } else {
@@ -428,14 +428,14 @@ void ReadInpaintDT(Flex* flex, int& current_count, int& current_step,
       return;
     } else {
       current_step = ((_byte & 7) - 3);
-      if (!(_byte & 0x80)) {  // 0b0ccccsss
+      if ((_byte & 0x80) == 0) {  // 0b0ccccsss
         current_count = _byte >> 3;
-      } else if (!(_byte & 0x40)) {  // 0b10ssssss
+      } else if ((_byte & 0x40) == 0) {  // 0b10ssssss
         current_step = (_byte & 0x3f);
         current_count = 0;
-      } else if (!(_byte & 0x20)) {  // 0b11000000
+      } else if ((_byte & 0x20) == 0) {  // 0b11000000
         current_count = flex->ReadBackwards8();
-      } else if (!(_byte & 0x10)) {  // 0b11100000
+      } else if ((_byte & 0x10) == 0) {  // 0b11100000
         current_count = flex->ReadBackwards16();
       } else {  // if (!(_byte & 0x08)) {
         current_count = flex->ReadBackwards32();
@@ -447,7 +447,7 @@ void ReadInpaintDT(Flex* flex, int& current_count, int& current_step,
 
 void ReadSeamDT(Flex* flex, int& current_count, int64_t& current_step,
                 uint64_t& dt_val) {
-  if (current_count) {
+  if (current_count != 0) {
     --current_count;
     dt_val += current_step;
   } else {
@@ -457,14 +457,14 @@ void ReadSeamDT(Flex* flex, int& current_count, int64_t& current_step,
       return;
     } else {
       current_step = ((int64_t)(_byte & 7) - 3) << 32;
-      if (!(_byte & 0x80)) {  // 0b0ccccsss
+      if ((_byte & 0x80) == 0) {  // 0b0ccccsss
         current_count = _byte >> 3;
-      } else if (!(_byte & 0x40)) {  // 0b10ssssss
+      } else if ((_byte & 0x40) == 0) {  // 0b10ssssss
         current_step = (int64_t)(_byte & 0x3f) << 32;
         current_count = 0;
-      } else if (!(_byte & 0x20)) {  // 0b11000000
+      } else if ((_byte & 0x20) == 0) {  // 0b11000000
         current_count = flex->ReadBackwards8();
-      } else if (!(_byte & 0x10)) {  // 0b11100000
+      } else if ((_byte & 0x10) == 0) {  // 0b11100000
         current_count = flex->ReadBackwards16();
       } else {  // if (!(_byte & 0x08)) {
         current_count = flex->ReadBackwards32();
@@ -478,7 +478,7 @@ void ReadSeamDT(Flex* flex, int& current_count, int64_t& current_step,
  * Seam line compress
  ***********************************************************************/
 void cwrite(int current_count, int current_step, uint8_t* output, int& p) {
-  if (current_count) {
+  if (current_count != 0) {
     if (--current_count < 16) {
       output[p++] = current_count << 3 | current_step;
     } else if (current_count < 256) {
@@ -508,14 +508,14 @@ int CompressDTLine(uint32_t* input, uint8_t* output, int width) {
   uint32_t left_val;
   uint32_t right_val;
 
-  while (!(left_val = input[x++]) && x < width)
+  while (((left_val = input[x++]) == 0u) && x < width)
     ;
-  if (!left_val) return p;
+  if (left_val == 0u) return p;
 
   while (x < width) {
-    while (!(right_val = input[x++]) && x < width)
+    while (((right_val = input[x++]) == 0u) && x < width)
       ;
-    if (!right_val) break;
+    if (right_val == 0u) break;
 
     if ((step = (int)(left_val - right_val) + 3) < 67 && step >= 0) {
       if (step <= 7) {
@@ -563,16 +563,16 @@ int CompressSeamLine(uint64_t* input, uint8_t* output, int width) {
   uint64_t left_val;
   uint64_t right_val;
 
-  while (!((right_val = input[--x]) & 0xffffffff00000000) && x > 0)
+  while ((((right_val = input[--x]) & 0xffffffff00000000) == 0u) && x > 0)
     ;
-  if (!(right_val & 0xffffffff00000000)) return p;
+  if ((right_val & 0xffffffff00000000) == 0u) return p;
 
   while (x > 0) {
-    while (!((left_val = input[--x]) & 0xffffffff00000000) && x > 0)
+    while ((((left_val = input[--x]) & 0xffffffff00000000) == 0u) && x > 0)
       ;
-    if (!(left_val & 0xffffffff00000000)) break;
+    if ((left_val & 0xffffffff00000000) == 0u) break;
 
-    if (!((right_val ^ left_val) & 0xffffffff) &&
+    if ((((right_val ^ left_val) & 0xffffffff) == 0u) &&
         (step = ((int64_t)(right_val - left_val) >> 32) + 3) < 67 &&
         step >= 0) {  // was <= 7
       if (step <= 7) {
@@ -649,7 +649,7 @@ void SwapUnswapV(Pyramid* py, bool unswap) {
   uint8_t* temp = (uint8_t*)malloc(byte_pitch);
   int half_height = height >> 1;
 
-  if (height & 1) {
+  if ((height & 1) != 0) {
     uint8_t* temp2 = (uint8_t*)malloc(byte_pitch);
     if (unswap) {
       uint8_t* upper =

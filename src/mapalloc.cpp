@@ -68,7 +68,7 @@ MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
     pointer_ = _aligned_malloc(size_, alignment);
   }
 
-  if (!pointer_) {
+  if (pointer_ == nullptr) {
 #ifdef _WIN32
     if (!tmpdir_[0]) {
       GetTempPath(256, tmpdir_);
@@ -117,9 +117,9 @@ MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
       throw(filename_);
     }
 #else
-    if (!tmpdir_[0]) {
+    if (tmpdir_[0] == 0) {
       char* td = getenv("TMPDIR");
-      if (td) {
+      if (td != nullptr) {
         strcpy(tmpdir_, td);
       } else {
         strcpy(tmpdir_, "/tmp");
@@ -135,7 +135,7 @@ MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
       throw(filename_);
     }
 
-    if (ftruncate(file_, size_)) {
+    if (ftruncate(file_, size_) != 0) {
       unlink(filename_);
       sprintf(filename_, "Could not allocate %zu temporary bytes in %s: %s",
               size_, tmpdir_, strerror(errno));
@@ -168,7 +168,7 @@ MapAlloc::MapAllocObject::~MapAllocObject() {
     CloseHandle(file_);
   }
 #else
-  if (!file_) {
+  if (file_ == 0) {
     free(pointer_);
   } else {
     munmap(pointer_, size_);
@@ -179,6 +179,6 @@ MapAlloc::MapAllocObject::~MapAllocObject() {
 
 void* MapAlloc::MapAllocObject::GetPointer() { return pointer_; }
 
-bool MapAlloc::MapAllocObject::IsFile() { return !!file_; }
+bool MapAlloc::MapAllocObject::IsFile() { return !(file_ == 0); }
 
 }  // namespace multiblend::memory

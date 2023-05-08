@@ -19,7 +19,7 @@ void* TP_Thread(void* param);
 class Threadpool {
  public:
   static Threadpool* GetInstance(int threads = 0) {
-    if (!instance_) instance_ = new Threadpool(threads);
+    if (instance_ == nullptr) instance_ = new Threadpool(threads);
     return instance_;
   }
   void Queue(std::function<void()> function);

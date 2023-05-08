@@ -28,10 +28,10 @@ class Flex {
   Flex(Flex&& other) { *this = std::move(other); }
   Flex& operator=(Flex&& other) {
     if (this != &other) {
-      if (data_) {
+      if (data_ != nullptr) {
         free(data_);
       }
-      if (rows_) {
+      if (rows_ != nullptr) {
         delete[] rows_;
       }
 
@@ -98,7 +98,7 @@ class Flex {
       if (white == mask_white_) {
         mask_count_ += count;
       } else {
-        Write32((mask_white_ << 31) | mask_count_);
+        Write32((static_cast<int>(mask_white_) << 31) | mask_count_);
         mask_count_ = count;
         mask_white_ = white;
       }
@@ -106,7 +106,8 @@ class Flex {
   }
 
   void MaskFinalise() {
-    if (mask_count_) Write32((mask_white_ << 31) | mask_count_);
+    if (mask_count_ != 0)
+      Write32((static_cast<int>(mask_white_) << 31) | mask_count_);
   }
 
   void IncrementLast32(int inc) { *((uint32_t*)&data_[p_ - 4]) += inc; }
@@ -132,10 +133,10 @@ class Flex {
   void End() { p_ = end_p_; }
 
   ~Flex() {
-    if (data_) {
+    if (data_ != nullptr) {
       free(data_);
     }
-    if (rows_) {
+    if (rows_ != nullptr) {
       delete[] rows_;
     }
   }

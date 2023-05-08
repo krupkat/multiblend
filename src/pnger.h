@@ -12,7 +12,7 @@ class Pnger {
         int bpp = 8, FILE* file = NULL, int compression = -1);
   ~Pnger();
 
-  bool Ready() { return !!file_; };
+  bool Ready() { return !(file_ == nullptr); };
   void WriteRows(uint8_t** rows, int num_rows);
   void Write();
   static void Quick(char* filename, uint8_t* data, int width, int height,

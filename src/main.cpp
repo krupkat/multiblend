@@ -80,8 +80,8 @@ int main(int argc, char* argv[]) {
   /***********************************************************************
    * Help
    ***********************************************************************/
-  if (argc == 1 || !strcmp(argv[1], "-h") || !strcmp(argv[1], "--help") ||
-      !strcmp(argv[1], "/?")) {
+  if (argc == 1 || (strcmp(argv[1], "-h") == 0) ||
+      (strcmp(argv[1], "--help") == 0) || (strcmp(argv[1], "/?") == 0)) {
     utils::Output(1, "\n");
     utils::Output(1,
                   "Multiblend v2.0.0 (c) 2021 David Horman        "
@@ -173,10 +173,10 @@ int main(int argc, char* argv[]) {
     if (!skip) {
       int c = 0;
 
-      while (argv[i][c]) {
+      while (argv[i][c] != 0) {
         if (argv[i][c] == '=') {
           argv[i][c++] = 0;
-          if (argv[i][c]) {
+          if (argv[i][c] != 0) {
             my_argv.push_back(&argv[i][c]);
           }
           break;
@@ -184,7 +184,7 @@ int main(int argc, char* argv[]) {
         ++c;
       }
 
-      if (!strcmp(argv[i], "-o") || !strcmp(argv[i], "--output")) {
+      if ((strcmp(argv[i], "-o") == 0) || (strcmp(argv[i], "--output") == 0)) {
         skip = true;
       }
     }
@@ -196,8 +196,10 @@ int main(int argc, char* argv[]) {
 
   int pos;
   for (pos = 0; pos < (int)my_argv.size(); ++pos) {
-    if (!strcmp(my_argv[pos], "-d") || !strcmp(my_argv[pos], "--d") ||
-        !strcmp(my_argv[pos], "--depth") || !strcmp(my_argv[pos], "--bpp")) {
+    if ((strcmp(my_argv[pos], "-d") == 0) ||
+        (strcmp(my_argv[pos], "--d") == 0) ||
+        (strcmp(my_argv[pos], "--depth") == 0) ||
+        (strcmp(my_argv[pos], "--bpp") == 0)) {
       if (++pos < (int)my_argv.size()) {
         output_bpp = atoi(my_argv[pos]);
         if (output_bpp != 8 && output_bpp != 16) {
@@ -206,8 +208,8 @@ int main(int argc, char* argv[]) {
       } else {
         utils::die("Error: Missing parameter value");
       }
-    } else if (!strcmp(my_argv[pos], "-l") ||
-               !strcmp(my_argv[pos], "--levels")) {
+    } else if ((strcmp(my_argv[pos], "-l") == 0) ||
+               (strcmp(my_argv[pos], "--levels") == 0)) {
       if (++pos < (int)my_argv.size()) {
         int n;
         if (my_argv[pos][0] == '+' || my_argv[pos][0] == '-') {
@@ -216,34 +218,35 @@ int main(int argc, char* argv[]) {
           sscanf_s(my_argv[pos], "%d%n", &fixed_levels, &n);
           if (fixed_levels == 0) fixed_levels = 1;
         }
-        if (my_argv[pos][n]) {
+        if (my_argv[pos][n] != 0) {
           utils::die("Error: Bad --levels parameter");
         }
       } else {
         utils::die("Error: Missing parameter value");
       }
-    } else if (!strcmp(my_argv[pos], "--wrap") || !strcmp(my_argv[pos], "-w")) {
+    } else if ((strcmp(my_argv[pos], "--wrap") == 0) ||
+               (strcmp(my_argv[pos], "-w") == 0)) {
       if (pos + 1 >= (int)my_argv.size()) {
         utils::die("Error: Missing parameters");
       }
-      if (!strcmp(my_argv[pos + 1], "none") ||
-          !strcmp(my_argv[pos + 1], "open"))
+      if ((strcmp(my_argv[pos + 1], "none") == 0) ||
+          (strcmp(my_argv[pos + 1], "open") == 0))
         ++pos;
-      else if (!strcmp(my_argv[pos + 1], "horizontal") ||
-               !strcmp(my_argv[pos + 1], "h")) {
+      else if ((strcmp(my_argv[pos + 1], "horizontal") == 0) ||
+               (strcmp(my_argv[pos + 1], "h") == 0)) {
         wrap = 1;
         ++pos;
-      } else if (!strcmp(my_argv[pos + 1], "vertical") ||
-                 !strcmp(my_argv[pos + 1], "v")) {
+      } else if ((strcmp(my_argv[pos + 1], "vertical") == 0) ||
+                 (strcmp(my_argv[pos + 1], "v") == 0)) {
         wrap = 2;
         ++pos;
-      } else if (!strcmp(my_argv[pos + 1], "both") ||
-                 !strcmp(my_argv[pos + 1], "hv")) {
+      } else if ((strcmp(my_argv[pos + 1], "both") == 0) ||
+                 (strcmp(my_argv[pos + 1], "hv") == 0)) {
         wrap = 3;
         ++pos;
       } else
         wrap = 1;
-    } else if (!strcmp(my_argv[pos], "--cache-threshold")) {
+    } else if (strcmp(my_argv[pos], "--cache-threshold") == 0) {
       if (pos + 1 >= (int)my_argv.size()) {
         utils::die("Error: Missing parameters");
       }
@@ -277,39 +280,39 @@ int main(int argc, char* argv[]) {
         }
       }
       memory::MapAlloc::CacheThreshold(threshold);
-    } else if (!strcmp(my_argv[pos], "--nomask") ||
-               !strcmp(my_argv[pos], "--no-mask"))
+    } else if ((strcmp(my_argv[pos], "--nomask") == 0) ||
+               (strcmp(my_argv[pos], "--no-mask") == 0))
       no_mask = true;
-    else if (!strcmp(my_argv[pos], "--timing") ||
-             !strcmp(my_argv[pos], "--timings"))
+    else if ((strcmp(my_argv[pos], "--timing") == 0) ||
+             (strcmp(my_argv[pos], "--timings") == 0))
       timing = true;
-    else if (!strcmp(my_argv[pos], "--bigtiff"))
+    else if (strcmp(my_argv[pos], "--bigtiff") == 0)
       big_tiff = true;
-    else if (!strcmp(my_argv[pos], "--bgr"))
+    else if (strcmp(my_argv[pos], "--bgr") == 0)
       bgr = true;
-    else if (!strcmp(my_argv[pos], "--wideblend"))
+    else if (strcmp(my_argv[pos], "--wideblend") == 0)
       wideblend = true;
-    else if (!strcmp(my_argv[pos], "--reverse"))
+    else if (strcmp(my_argv[pos], "--reverse") == 0)
       reverse = true;
-    else if (!strcmp(my_argv[pos], "--gamma"))
+    else if (strcmp(my_argv[pos], "--gamma") == 0)
       gamma = true;
-    else if (!strcmp(my_argv[pos], "--no-dither") ||
-             !strcmp(my_argv[pos], "--nodither"))
+    else if ((strcmp(my_argv[pos], "--no-dither") == 0) ||
+             (strcmp(my_argv[pos], "--nodither") == 0))
       dither = false;
     //  else if (!strcmp(my_argv[i], "--force"))     force_coverage =
     // true;
-    else if (!strncmp(my_argv[pos], "-f", 2))
+    else if (strncmp(my_argv[pos], "-f", 2) == 0)
       utils::Output(0, "ignoring Enblend option -f\n");
-    else if (!strcmp(my_argv[pos], "-a"))
+    else if (strcmp(my_argv[pos], "-a") == 0)
       utils::Output(0, "ignoring Enblend option -a\n");
-    else if (!strcmp(my_argv[pos], "--no-ciecam"))
+    else if (strcmp(my_argv[pos], "--no-ciecam") == 0)
       utils::Output(0, "ignoring Enblend option --no-ciecam\n");
-    else if (!strcmp(my_argv[pos], "--primary-seam-generator")) {
+    else if (strcmp(my_argv[pos], "--primary-seam-generator") == 0) {
       utils::Output(0, "ignoring Enblend option --primary-seam-generator\n");
       ++pos;
     }
 
-    else if (!strcmp(my_argv[pos], "--compression")) {
+    else if (strcmp(my_argv[pos], "--compression") == 0) {
       if (++pos < (int)my_argv.size()) {
         if (strcmp(my_argv[pos], "0") == 0)
           jpeg_quality = 0;
@@ -329,44 +332,48 @@ int main(int argc, char* argv[]) {
       } else {
         utils::die("Error: Missing parameter value");
       }
-    } else if (!strcmp(my_argv[pos], "-v") ||
-               !strcmp(my_argv[pos], "--verbose"))
+    } else if ((strcmp(my_argv[pos], "-v") == 0) ||
+               (strcmp(my_argv[pos], "--verbose") == 0))
       ++utils::verbosity;
-    else if (!strcmp(my_argv[pos], "-q") || !strcmp(my_argv[pos], "--quiet"))
+    else if ((strcmp(my_argv[pos], "-q") == 0) ||
+             (strcmp(my_argv[pos], "--quiet") == 0))
       --utils::verbosity;
-    else if ((!strcmp(my_argv[pos], "--saveseams") ||
-              !strcmp(my_argv[pos], "--save-seams")) &&
+    else if (((strcmp(my_argv[pos], "--saveseams") == 0) ||
+              (strcmp(my_argv[pos], "--save-seams") == 0)) &&
              pos < (int)my_argv.size() - 1)
       seamsave_filename = my_argv[++pos];
-    else if ((!strcmp(my_argv[pos], "--loadseams") ||
-              !strcmp(my_argv[pos], "--load-seams")) &&
+    else if (((strcmp(my_argv[pos], "--loadseams") == 0) ||
+              (strcmp(my_argv[pos], "--load-seams") == 0)) &&
              pos < (int)my_argv.size() - 1)
       seamload_filename = my_argv[++pos];
-    else if ((!strcmp(my_argv[pos], "--savexor") ||
-              !strcmp(my_argv[pos], "--save-xor")) &&
+    else if (((strcmp(my_argv[pos], "--savexor") == 0) ||
+              (strcmp(my_argv[pos], "--save-xor") == 0)) &&
              pos < (int)my_argv.size() - 1)
       xor_filename = my_argv[++pos];
-    else if (!strcmp(my_argv[pos], "--tempdir") ||
-             !strcmp(my_argv[pos], "--tmpdir") && pos < (int)my_argv.size() - 1)
+    else if ((strcmp(my_argv[pos], "--tempdir") == 0) ||
+             (strcmp(my_argv[pos], "--tmpdir") == 0) &&
+                 pos < (int)my_argv.size() - 1)
       memory::MapAlloc::SetTmpdir(my_argv[++pos]);
-    else if (!strcmp(my_argv[pos], "--all-threads"))
+    else if (strcmp(my_argv[pos], "--all-threads") == 0)
       all_threads = true;
-    else if (!strcmp(my_argv[pos], "-o") || !strcmp(my_argv[pos], "--output")) {
+    else if ((strcmp(my_argv[pos], "-o") == 0) ||
+             (strcmp(my_argv[pos], "--output") == 0)) {
       if (++pos < (int)my_argv.size()) {
         output_filename = my_argv[pos];
         char* ext = strrchr(output_filename, '.');
 
-        if (!ext) {
+        if (ext == nullptr) {
           utils::die("Error: Unknown output filetype");
         }
 
         ++ext;
-        if (!(_stricmp(ext, "jpg") && _stricmp(ext, "jpeg"))) {
+        if (!((_stricmp(ext, "jpg") != 0) && (_stricmp(ext, "jpeg") != 0))) {
           output_type = io::ImageType::MB_JPEG;
           if (jpeg_quality == -1) jpeg_quality = 75;
-        } else if (!(_stricmp(ext, "tif") && _stricmp(ext, "tiff"))) {
+        } else if (!((_stricmp(ext, "tif") != 0) &&
+                     (_stricmp(ext, "tiff") != 0))) {
           output_type = io::ImageType::MB_TIFF;
-        } else if (!_stricmp(ext, "png")) {
+        } else if (_stricmp(ext, "png") == 0) {
           output_type = io::ImageType::MB_PNG;
         } else {
           utils::die("Error: Unknown file extension");
@@ -375,7 +382,7 @@ int main(int argc, char* argv[]) {
         ++pos;
         break;
       }
-    } else if (!strcmp(my_argv[pos], "--no-output")) {
+    } else if (strcmp(my_argv[pos], "--no-output") == 0) {
       ++pos;
       break;
     } else {
@@ -404,17 +411,17 @@ int main(int argc, char* argv[]) {
     utils::die("Error: Bad PNG compression quality setting\n");
   }
 
-  if (output_type == io::ImageType::MB_NONE && !seamsave_filename) {
+  if (output_type == io::ImageType::MB_NONE && (seamsave_filename == nullptr)) {
     utils::die("Error: No output file specified");
   }
-  if (seamload_filename && seamsave_filename) {
+  if ((seamload_filename != nullptr) && (seamsave_filename != nullptr)) {
     utils::die("Error: Cannot load and save seams at the same time");
   }
   if (wrap == 3) {
     utils::die("Error: Wrapping in both directions is not currently supported");
   }
 
-  if (!strcmp(my_argv[pos], "--")) {
+  if (strcmp(my_argv[pos], "--") == 0) {
     ++pos;
   }
 
@@ -423,11 +430,11 @@ int main(int argc, char* argv[]) {
    ***********************************************************************/
 
   while (pos < (int)my_argv.size()) {
-    if (images.size()) {
+    if (images.size() != 0u) {
       int x, y;
       int n = 0;
       sscanf_s(my_argv[pos], "%d,%d%n", &x, &y, &n);
-      if (!my_argv[pos][n]) {
+      if (my_argv[pos][n] == 0) {
         images.back()->xpos_add_ = x;
         images.back()->ypos_add_ = y;
         pos++;
@@ -442,17 +449,17 @@ int main(int argc, char* argv[]) {
   if (n_images == 0) {
     utils::die("Error: No input files specified");
   }
-  if (seamsave_filename && n_images > 256) {
+  if ((seamsave_filename != nullptr) && n_images > 256) {
     seamsave_filename = NULL;
     utils::Output(
         0, "Warning: seam saving not possible with more than 256 images");
   }
-  if (seamload_filename && n_images > 256) {
+  if ((seamload_filename != nullptr) && n_images > 256) {
     seamload_filename = NULL;
     utils::Output(
         0, "Warning: seam loading not possible with more than 256 images");
   }
-  if (xor_filename && n_images > 255) {
+  if ((xor_filename != nullptr) && n_images > 255) {
     xor_filename = NULL;
     utils::Output(
         0, "Warning: XOR map saving not possible with more than 255 images");
@@ -482,7 +489,7 @@ int main(int argc, char* argv[]) {
       } else {
         tiff_file = TIFFOpen(output_filename, "w8");
       }
-      if (!tiff_file) {
+      if (tiff_file == nullptr) {
         utils::die("Error: Could not open output file");
       }
     } break;
@@ -491,13 +498,13 @@ int main(int argc, char* argv[]) {
         utils::die("Error: 16bpp output is incompatible with JPEG output");
       }
       fopen_s(&jpeg_file, output_filename, "wb");
-      if (!jpeg_file) {
+      if (jpeg_file == nullptr) {
         utils::die("Error: Could not open output file");
       }
     } break;
     case io::ImageType::MB_PNG: {
       fopen_s(&jpeg_file, output_filename, "wb");
-      if (!jpeg_file) {
+      if (jpeg_file == nullptr) {
         utils::die("Error: Could not open output file");
       }
     } break;
@@ -604,8 +611,8 @@ int main(int argc, char* argv[]) {
         cinfo.in_color_space = JCS_RGB;
 
         jpeg_set_defaults(&cinfo);
-        jpeg_set_quality(&cinfo, jpeg_quality, true);
-        jpeg_start_compress(&cinfo, true);
+        jpeg_set_quality(&cinfo, jpeg_quality, 1);
+        jpeg_start_compress(&cinfo, 1);
       } break;
       case io::ImageType::MB_PNG: {
         png_file = new io::png::Pnger(
@@ -633,7 +640,7 @@ int main(int argc, char* argv[]) {
         int x = 0;
         while (x < result.width) {
           uint32_t cur = result.full_mask.ReadForwards32();
-          if (cur & 0x80000000) {
+          if ((cur & 0x80000000) != 0u) {
             int lim = x + (cur & 0x7fffffff);
             switch (result.output_bpp) {
               case 8: {
@@ -728,7 +735,7 @@ int main(int argc, char* argv[]) {
       printf("Laplace:  %.3fs\n", result.timing.laplace_time);
       printf("Blend:    %.3fs\n", result.timing.blend_time);
       printf("Collapse: %.3fs\n", result.timing.collapse_time);
-      if (wrap) {
+      if (wrap != 0) {
         printf("Wrapping: %.3fs\n", result.timing.wrap_time);
       }
       printf("Output:   %.3fs\n", result.timing.out_time);

@@ -1,0 +1,5 @@
+Checks: >
+  -*,
+  readability-implicit-bool-conversion
+
+HeaderFilterRegex: ".*multiblend.*src.*"

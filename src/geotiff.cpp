@@ -53,29 +53,29 @@ int geotiff_read(TIFF* tiff, GeoTIFFInfo* info) {
   //  memset(info,0,sizeof(GeoTIFFInfo));
   geotiff_register(tiff);
 
-  if (!TIFFGetField(tiff, TIFFTAG_GEOPIXELSCALE, &nCount, &geo_scale) ||
+  if ((TIFFGetField(tiff, TIFFTAG_GEOPIXELSCALE, &nCount, &geo_scale) == 0) ||
       nCount < 2)
-    return false;
+    return 0;
 
   info->XCellRes = geo_scale[0];
   info->YCellRes = geo_scale[1];
   double* tiepoints;
 
-  if (!TIFFGetField(tiff, TIFFTAG_GEOTIEPOINTS, &nCount, &tiepoints) ||
+  if ((TIFFGetField(tiff, TIFFTAG_GEOTIEPOINTS, &nCount, &tiepoints) == 0) ||
       nCount < 6)
-    return false;
+    return 0;
   info->XGeoRef = tiepoints[3] - tiepoints[0] * (geo_scale[0]);
   info->YGeoRef = tiepoints[4] - tiepoints[1] * (geo_scale[1]);
   // TODO: check if tiepoints refer to center of upper left pixel or upper left
   // edge of upper left pixel
   char* nodata;
 
-  if (TIFFGetField(tiff, TIFFTAG_GDAL_NODATA, &nCount, &nodata))
+  if (TIFFGetField(tiff, TIFFTAG_GDAL_NODATA, &nCount, &nodata) != 0)
     info->nodata = std::atoi(nodata);
 
   // TODO: read coordinate system definitions...
   info->set = true;
-  return true;
+  return 1;
 }
 
 /** Write geotiff tags to an image */

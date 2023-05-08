@@ -37,16 +37,16 @@ void Image::Open() {
   uint16_t compression;
 
   char* ext = strrchr(filename_, '.');
-  if (!ext) {
+  if (ext == nullptr) {
     utils::die("Could not identify file extension: %s", filename_);
   }
   ++ext;
 
-  if (!_stricmp(ext, "tif") || !_stricmp(ext, "tiff")) {
+  if ((_stricmp(ext, "tif") == 0) || (_stricmp(ext, "tiff") == 0)) {
     type_ = ImageType::MB_TIFF;
-  } else if (!_stricmp(ext, "jpg") || !_stricmp(ext, "jpeg")) {
+  } else if ((_stricmp(ext, "jpg") == 0) || (_stricmp(ext, "jpeg") == 0)) {
     type_ = ImageType::MB_JPEG;
-  } else if (!_stricmp(ext, "png")) {
+  } else if (_stricmp(ext, "png") == 0) {
     type_ = ImageType::MB_PNG;
   } else {
     utils::die("Unknown file extension: %s", filename_);
@@ -55,15 +55,17 @@ void Image::Open() {
   switch (type_) {
     case ImageType::MB_TIFF: {
       tiff_ = TIFFOpen(filename_, "r");
-      if (!tiff_) {
+      if (tiff_ == nullptr) {
         utils::die("Could not open %s", filename_);
       }
 
-      if (!TIFFGetField(tiff_, TIFFTAG_XPOSITION, &tiff_xpos)) tiff_xpos = -1;
-      if (!TIFFGetField(tiff_, TIFFTAG_YPOSITION, &tiff_ypos)) tiff_ypos = -1;
-      if (!TIFFGetField(tiff_, TIFFTAG_XRESOLUTION, &tiff_xres_))
+      if (TIFFGetField(tiff_, TIFFTAG_XPOSITION, &tiff_xpos) == 0)
+        tiff_xpos = -1;
+      if (TIFFGetField(tiff_, TIFFTAG_YPOSITION, &tiff_ypos) == 0)
+        tiff_ypos = -1;
+      if (TIFFGetField(tiff_, TIFFTAG_XRESOLUTION, &tiff_xres_) == 0)
         tiff_xres_ = -1;
-      if (!TIFFGetField(tiff_, TIFFTAG_YRESOLUTION, &tiff_yres_))
+      if (TIFFGetField(tiff_, TIFFTAG_YRESOLUTION, &tiff_yres_) == 0)
         tiff_yres_ = -1;
       TIFFGetField(tiff_, TIFFTAG_IMAGEWIDTH, &tiff_width_);
       TIFFGetField(tiff_, TIFFTAG_IMAGELENGTH, &tiff_height_);
@@ -87,7 +89,7 @@ void Image::Open() {
 
       if (tiff_xpos == -1 && tiff_ypos == -1) {
         // try to read geotiff tags
-        if (tiff::geotiff_read(tiff_, &geotiff_)) {
+        if (tiff::geotiff_read(tiff_, &geotiff_) != 0) {
           xpos_ = (int)(geotiff_.XGeoRef / geotiff_.XCellRes);
           ypos_ = (int)(geotiff_.YGeoRef / geotiff_.YCellRes);
         } else {
@@ -132,22 +134,22 @@ void Image::Open() {
         }
       }
 
-      if (first_strip_ ||
+      if ((first_strip_ != 0) ||
           end_strip_ !=
               TIFFNumberOfStrips(tiff_)) {  // double check that min strips are
                                             // (probably) transparent
         tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tiff_));
-        if (first_strip_)
+        if (first_strip_ != 0)
           TIFFReadScanline(tiff_, buf, 0);
         else
           TIFFReadScanline(tiff_, buf, tiff_u_height_ - 1);
         bool trans;
         switch (bpp_) {
           case 8:
-            trans = !(((uint32_t*)buf)[0] && 0xff000000);
+            trans = !((((uint32_t*)buf)[0] != 0u) && true);
             break;
           case 16:
-            trans = !(((uint64_t*)buf)[0] && 0xffff000000000000);
+            trans = !((((uint64_t*)buf)[0] != 0u) && true);
             break;
         }
         if (!trans) {
@@ -167,7 +169,7 @@ void Image::Open() {
     } break;
     case ImageType::MB_JPEG: {
       fopen_s(&file_, filename_, "rb");
-      if (!file_) {
+      if (file_ == nullptr) {
         utils::die("Could not open %s", filename_);
       }
 
@@ -177,7 +179,7 @@ void Image::Open() {
       jpeg_read_header(&cinfo_, TRUE);
       jpeg_start_decompress(&cinfo_);
 
-      if (!cinfo_.output_width || !cinfo_.output_height) {
+      if ((cinfo_.output_width == 0u) || (cinfo_.output_height == 0u)) {
         utils::die("Unknown JPEG format (%s)", filename_);
       }
 
@@ -197,7 +199,7 @@ void Image::Open() {
     } break;
     case ImageType::MB_PNG: {
       fopen_s(&file_, filename_, "rb");
-      if (!file_) {
+      if (file_ == nullptr) {
         utils::die("Could not open %s", filename_);
       }
 
@@ -210,11 +212,11 @@ void Image::Open() {
 
       png_ptr_ =
           png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-      if (!png_ptr_) {
+      if (png_ptr_ == nullptr) {
         utils::die("Error: libpng problem");
       }
       png_infop info_ptr = png_create_info_struct(png_ptr_);
-      if (!info_ptr) {
+      if (info_ptr == nullptr) {
         utils::die("Error: libpng problem");
       }
 
@@ -541,7 +543,7 @@ void Image::Read(void* data, bool gamma) {
           ++mc;
         }
 
-        if (mc) {
+        if (mc != 0) {
           tiff_mask_->Write32(mc);
           mc = 0;
         }
@@ -562,7 +564,7 @@ void Image::Read(void* data, bool gamma) {
           } break;
         }
 
-        if (mc) {
+        if (mc != 0) {
           tiff_mask_->Write32(0x80000000 | mc);
           mc = 0;
         }
@@ -610,7 +612,7 @@ void Image::Read(void* data, bool gamma) {
 
     while (x >= 0) {
       mask = tiff_mask_->ReadBackwards32();
-      if (mask & 0x80000000) {  // solid
+      if ((mask & 0x80000000) != 0u) {  // solid
         x -= mask & 0x7fffffff;
         d = 3;
       } else {
@@ -619,7 +621,7 @@ void Image::Read(void* data, bool gamma) {
           --mask;
           --x;
         }
-        while (mask) {
+        while (mask != 0u) {
           uint32_t best = this_line[x];
           if (d < best) {
             this_line[x] = d;
@@ -651,7 +653,7 @@ void Image::Read(void* data, bool gamma) {
       while (x >= 0) {
         mask = tiff_mask_->ReadBackwards32();
 
-        if (mask & 0x80000000) {  // solid
+        if ((mask & 0x80000000) != 0u) {  // solid
           mc = mask & 0x7fffffff;
           x -= mc;
           memset(&this_line[x + 1], 0, mc << 2);
@@ -659,7 +661,7 @@ void Image::Read(void* data, bool gamma) {
         } else {
           b = prev_line[x] + 3;
           c = (x < width_ - 1) ? prev_line[x + 1] + 4 : 0x80000000;
-          while (mask) {
+          while (mask != 0u) {
             a = (x > 0) ? prev_line[x - 1] + 4 : 0x80000000;
             utils::ReadInpaintDT(dt, current_count, current_step, dt_val);
             int copy = 0;
@@ -681,7 +683,7 @@ void Image::Read(void* data, bool gamma) {
               copy = x + 1;
             }
 
-            if (copy) {
+            if (copy != 0) {
               if (bpp_ == 8)
                 bitmap32[x] = bitmap32[copy];
               else
@@ -844,9 +846,9 @@ void Image::MaskPng(int i) {
 
         cur = *data++;
 
-        if (cur & 0x80000000) {
+        if ((cur & 0x80000000) != 0u) {
           count = cur & 0x00ffffff;
-          if (cur & 0x20000000)
+          if ((cur & 0x20000000) != 0u)
             val = *(float*)data++;
           else
             val = (float)((cur >> 30) & 1);
@@ -861,7 +863,7 @@ void Image::MaskPng(int i) {
 
       line += masks_[0]->width_;
     }
-    if (l & 1)
+    if ((l & 1) != 0)
       px += masks_[l]->width_ + 1;
     else
       py += masks_[l]->height_ + 1;

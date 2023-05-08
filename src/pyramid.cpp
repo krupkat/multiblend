@@ -25,7 +25,7 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
   float* data;
 
   int n_levels = DefaultNumLevels(width, height);
-  if (_levels) {
+  if (_levels != 0) {
     if (_levels < 0)
       n_levels -= _levels;
     else
@@ -38,11 +38,12 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
   req_alignment = 2;
 
   for (int n = 0; n < n_levels; ++n) {
-    bool x_shift = (x - b) & (req_alignment - 1);
-    bool y_shift = (y - b) & (req_alignment - 1);
-    int pitch = (width + x_shift + 7) & ~7;
-    size_t bytes =
-        (size_t)pitch * ((height + y_shift + 3) & ~3) * sizeof(float);
+    bool x_shift = ((x - b) & (req_alignment - 1)) != 0;
+    bool y_shift = ((y - b) & (req_alignment - 1)) != 0;
+    int pitch = (width + static_cast<int>(x_shift) + 7) & ~7;
+    size_t bytes = (size_t)pitch *
+                   ((height + static_cast<int>(y_shift) + 3) & ~3) *
+                   sizeof(float);
     total_bytes_ += bytes;
 
     if (shared_) {
@@ -50,7 +51,7 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
     } else {
       if (!no_alloc_) {
         data = (float*)_aligned_malloc(bytes, 16);  // was 32
-        if (!data) {
+        if (data == nullptr) {
           for (int j = 0; j < n; ++j) _aligned_free(levels_[j].data);
           throw(bytes);
         }
@@ -60,11 +61,12 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
     }
 
     levels_.push_back({width, height, pitch, pitch >> 2, bytes, data, x, y,
-                       x_shift, y_shift, n ? levels_[n - 1].x_shift : false,
-                       n ? levels_[n - 1].m128_pitch : 0});
+                       x_shift, y_shift,
+                       n != 0 ? levels_[n - 1].x_shift : false,
+                       n != 0 ? levels_[n - 1].m128_pitch : 0});
 
-    x -= (x_shift << n);
-    y -= (y_shift << n);
+    x -= (static_cast<int>(x_shift) << n);
+    y -= (static_cast<int>(y_shift) << n);
 
     x -= req_alignment;
     y -= req_alignment;
@@ -73,8 +75,8 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
 
     req_alignment <<= 1;
 
-    width = (width + x_shift + 6) >> 1;
-    height = (height + y_shift + 6) >> 1;
+    width = (width + static_cast<int>(x_shift) + 6) >> 1;
+    height = (height + static_cast<int>(y_shift) + 6) >> 1;
   }
 
   threadpool_ = mt::Threadpool::GetInstance();
@@ -124,7 +126,7 @@ Pyramid::~Pyramid() {
  * copiers
  ***********************************************************************/
 void Pyramid::set_lut(int bits, bool gamma) {
-  if (lut_bits_ < bits || lut_gamma_ != gamma || !lut_) {
+  if (lut_bits_ < bits || lut_gamma_ != gamma || (lut_ == nullptr)) {
     free(lut_);
     lut_ = (float*)malloc((1 << bits) << 2);
     lut_bits_ = bits;
@@ -472,11 +474,11 @@ void Pyramid::Subsample(int sub_w, int sub_h, Pyramid* source) {
   int mid_pitch = sub_w == 2 ? ((m128_pitch_in >> 1) + 1) & ~1 : m128_pitch_in;
   __m128 three = _mm_set_ps1(3);
   __m128 four = _mm_set_ps1(4);
-  __m128 mul = _mm_set_ps1((sub_h ? 1.0f / 8 : 1.0f) *
+  __m128 mul = _mm_set_ps1((sub_h != 0 ? 1.0f / 8 : 1.0f) *
                            (sub_w == 2 ? 1.0f / 64 : 1.0f / 8));
 
   for (y = 0; y < levels_[0].height; ++y) {
-    if (sub_h) {
+    if (sub_h != 0) {
       if (y == 0) {
         for (x = 0; x < m128_pitch_in; ++x) {
           _mm_store_ps(
@@ -549,7 +551,7 @@ void Pyramid::Subsample_Squeeze(__m128* in, __m128* Out, int m128_pitch_in,
     e = _mm_hadd_ps(e, f);
 
     f = _mm_hadd_ps(b, c);
-    if (mul) {
+    if (mul != nullptr) {
       _mm_store_ps((float*)&Out[x],
                    _mm_mul_ps(_mm_add_ps(e, _mm_mul_ps(f, three)), *mul));
     } else {
@@ -590,7 +592,8 @@ void Pyramid::Shrink() {
     hi = (__m128*)levels_[l].data;
     lo = (__m128*)levels_[l + 1].data;
 
-    int height_odd = (levels_[l].height & 1) ^ levels_[l].y_shift;
+    int height_odd =
+        (levels_[l].height & 1) ^ static_cast<int>(levels_[l].y_shift);
     int first_bad_line = levels_[l + 1].height - (3 - height_odd);
 
     for (int t = 0; t < (int)levels_[l + 1].bands.size() - 1; ++t) {
@@ -663,10 +666,12 @@ void Pyramid::ShrinkThread(__m128* line, __m128* hi, __m128* lo,
     }
   } else {
     lo += m128_pitch_lo * sy;
-    hi += m128_pitch_hi *
-          (((sy - 1) << 1) -
-           y_shift);  // because hi has a missing line compared to lo, lo's line
-                      // 0 corresponds to hi's line -2, 1=>0, 2=>2, 3=>4
+    hi +=
+        m128_pitch_hi *
+        (((sy - 1) << 1) -
+         static_cast<int>(
+             y_shift));  // because hi has a missing line compared to lo, lo's
+                         // line 0 corresponds to hi's line -2, 1=>0, 2=>2, 3=>4
   }
 
   ey = (std::min)(first_bad_line, ey);
@@ -690,7 +695,7 @@ void Pyramid::ShrinkThread(__m128* line, __m128* hi, __m128* lo,
 
   if (y == first_bad_line) {  // final block
     // prepenultimate line
-    if (!height_odd) {
+    if (height_odd == 0) {
       for (x = 0; x < m128_pitch_hi; ++x) {
         line[x] = _mm_add_ps(
             _mm_add_ps(
@@ -972,7 +977,7 @@ void Pyramid::LaplaceThread(Level* upper_level, Level* lower_level, int sy,
   }
 
   for (int y = sy; y < ey; ++y) {
-    if (!((y + upper_level->y_shift) & 1)) {
+    if (((y + static_cast<int>(upper_level->y_shift)) & 1) == 0) {
       GetExpandedLine(*lower_level, temp3, lo_y++);
 
       LaplaceLine3(hi, temp1, temp2, temp3, upper_level->m128_pitch);
@@ -1197,7 +1202,7 @@ void Pyramid::FuseThread(__m128* a, __m128* b, __m128* m, int m128_pitch,
   } else {
     __m128 ones = _mm_set_ps1(1.0f);
     __m128 blacks = _mm_set_ps1((float)black);
-    if (black) {
+    if (black != 0) {
       for (p = 0; p < count; ++p) {
         _mm_store_ps(
             (float*)&a[p],
@@ -1443,7 +1448,7 @@ void Pyramid::Png(const char* filename) {
       line += levels_[0].pitch;
       data += levels_[l].pitch;
     }
-    if (l & 1)
+    if ((l & 1) != 0)
       px += levels_[l].pitch + 1;
     else
       py += levels_[l].height + 1;

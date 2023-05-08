@@ -18,7 +18,7 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
   y_ = 0;
   height_ = height;
 
-  if (type == PNG_COLOR_TYPE_PALETTE && !palette_) {
+  if (type == PNG_COLOR_TYPE_PALETTE && (palette_ == nullptr)) {
     palette_ = (png_color*)malloc(256 * sizeof(png_color));
 
     double base = 2;
@@ -46,10 +46,10 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
     palette_[255].blue = 0;
   }
 
-  if (!file) {
+  if (file == nullptr) {
     fopen_s(&file_, filename, "wb");
-    if (!file_) {
-      if (name) {
+    if (file_ == nullptr) {
+      if (name != nullptr) {
         utils::Output(0, "WARNING: Could not save %s\n", name);
       }
       return;
@@ -59,8 +59,8 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
   }
 
   png_ptr_ = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-  if (!png_ptr_) {
-    if (name) {
+  if (png_ptr_ == nullptr) {
+    if (name != nullptr) {
       utils::Output(0, "WARNING: PNG create failed\n");
     }
     fclose(file_);
@@ -70,8 +70,8 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
   }
 
   info_ptr_ = png_create_info_struct(png_ptr_);
-  if (!info_ptr_) {
-    if (name) {
+  if (info_ptr_ == nullptr) {
+    if (name != nullptr) {
       utils::Output(0, "WARNING: PNG create failed\n");
     }
     png_destroy_write_struct(&png_ptr_, (png_infopp)NULL);
@@ -93,15 +93,16 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
   png_set_compression_level(png_ptr_, compression < 0 ? 3 : compression);
   if (bpp == 16) png_set_swap(png_ptr_);
 
-  line_ = name ? new uint8_t[(type == PNG_COLOR_TYPE_RGB_ALPHA ? (width << 2)
-                              : type == PNG_COLOR_TYPE_RGB     ? width * 3
-                                                               : width)
-                             << (bpp >> 4)]
-               : NULL;
+  line_ = name != nullptr
+              ? new uint8_t[(type == PNG_COLOR_TYPE_RGB_ALPHA ? (width << 2)
+                             : type == PNG_COLOR_TYPE_RGB     ? width * 3
+                                                              : width)
+                            << (bpp >> 4)]
+              : NULL;
 };
 
 void Pnger::Write() {
-  if (!file_) return;
+  if (file_ == nullptr) return;
 
   png_write_row(png_ptr_, (uint8_t*)line_);
 
@@ -115,7 +116,7 @@ void Pnger::Write() {
 }
 
 void Pnger::WriteRows(uint8_t** rows, int num_rows) {
-  if (!file_) return;
+  if (file_ == nullptr) return;
 
   png_write_rows(png_ptr_, rows, num_rows);
 
@@ -139,7 +140,7 @@ void Pnger::Quick(char* filename, uint8_t* data, int width, int height,
 
 Pnger::~Pnger() {
   delete line_;
-  if (file_) fclose(file_);
+  if (file_ != nullptr) fclose(file_);
 }
 
 }  // namespace multiblend::io::png
