@@ -16,8 +16,8 @@ class MapAlloc {
     MapAllocObject(size_t size, int alignment);
     ~MapAllocObject();
     void* GetPointer();
-    size_t GetSize() const { return size_; }
-    bool IsFile() const;
+    [[nodiscard]] size_t GetSize() const { return size_; }
+    [[nodiscard]] bool IsFile() const;
 
    private:
 #ifdef _WIN32

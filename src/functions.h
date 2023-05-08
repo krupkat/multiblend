@@ -208,7 +208,7 @@ void CompositeLine(const float* input_p, float* output_p, int i, int x_offset,
     mc = C;                                                          \
     current_i = I;                                                   \
   } else {                                                           \
-    mc += C;                                                         \
+    mc += (C);                                                       \
   }
 // end macro
 

@@ -141,7 +141,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       blend_wh = (std::max)(width, height);
     }
 
-    blend_levels = (int)floor(log2(blend_wh + 4.0f) - 1);
+    blend_levels = (int)std::floor(std::log2(blend_wh + 4.0f) - 1);
     if (opts.wideblend) {
       blend_levels++;
     }
@@ -907,7 +907,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
     int wrap_levels_v = 0;
 
     if ((opts.wrap & 1) != 0) {
-      wrap_levels_h = (int)floor(log2((width >> 1) + 4.0f) - 1);
+      wrap_levels_h = (int)std::floor(std::log2((width >> 1) + 4.0f) - 1);
       wrap_pyramids.push_back(
           new PyramidWithMasks(width >> 1, height, wrap_levels_h, 0, 0, true));
       wrap_pyramids.push_back(new PyramidWithMasks(
@@ -915,7 +915,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
     }
 
     if ((opts.wrap & 2) != 0) {
-      wrap_levels_v = (int)floor(log2((height >> 1) + 4.0f) - 1);
+      wrap_levels_v = (int)std::floor(std::log2((height >> 1) + 4.0f) - 1);
       wrap_pyramids.push_back(
           new PyramidWithMasks(width, height >> 1, wrap_levels_v, 0, 0, true));
       wrap_pyramids.push_back(new PyramidWithMasks(

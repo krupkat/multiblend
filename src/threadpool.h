@@ -25,7 +25,7 @@ class Threadpool {
     return instance_;
   }
   void Queue(std::function<void()> function);
-  int GetNThreads() const { return n_threads_; };
+  [[nodiscard]] int GetNThreads() const { return n_threads_; };
   void Wait();
 
   struct tp_struct {

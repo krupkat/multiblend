@@ -1370,7 +1370,7 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
   __m128 temp1;
   __m128 temp2;
 
-  int iradius = (int)floor(radius);
+  int iradius = (int)std::floor(radius);
   __m128 irp1 = _mm_set_ps1((float)(iradius + 1));
   __m128 mul = _mm_set_ps1(radius - iradius);
   __m128 acc;
