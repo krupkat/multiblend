@@ -44,8 +44,8 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
     bool y_shift = ((y - b) & (req_alignment - 1)) != 0;
     int pitch = (width + static_cast<int>(x_shift) + 7) & ~7;
     std::size_t bytes = (std::size_t)pitch *
-                   ((height + static_cast<int>(y_shift) + 3) & ~3) *
-                   sizeof(float);
+                        ((height + static_cast<int>(y_shift) + 3) & ~3) *
+                        sizeof(float);
     total_bytes_ += bytes;
 
     if (shared_) {
@@ -1160,8 +1160,9 @@ void Pyramid::Multiply(int level, float mul) {
     return;
   }
   if (mul == 0) {
-    ZeroMemory(levels_[level].data, static_cast<std::size_t>(levels_[level].height) *
-                                        levels_[level].pitch * sizeof(float));
+    ZeroMemory(levels_[level].data,
+               static_cast<std::size_t>(levels_[level].height) *
+                   levels_[level].pitch * sizeof(float));
     return;
   }
 

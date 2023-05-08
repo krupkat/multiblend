@@ -520,8 +520,9 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
           memset(&xor_map->line_[x], xor_image, min_count);
         }
 
-        std::size_t p = (y - images[xor_image]->ypos_) * images[xor_image]->width_ +
-                   (x - images[xor_image]->xpos_);
+        std::size_t p =
+            (y - images[xor_image]->ypos_) * images[xor_image]->width_ +
+            (x - images[xor_image]->xpos_);
 
         int total_count = min_count;
         total_pixels += total_count;
@@ -820,7 +821,8 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       utils::die("Error: Couldn't open seam file");
     }
 
-    std::size_t r = fread(sig, 1, 8, f);  // assignment suppresses g++ -Ofast warning
+    std::size_t r =
+        fread(sig, 1, 8, f);  // assignment suppresses g++ -Ofast warning
     if (!png_check_sig(sig, 8)) {
       utils::die("Error: Bad PNG signature");
     }
@@ -1251,8 +1253,8 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       timer.Start();
 
       try {
-        output_channels[c] = memory::MapAlloc::Alloc(((std::size_t)width * height)
-                                                     << (opts.output_bpp >> 4));
+        output_channels[c] = memory::MapAlloc::Alloc(
+            ((std::size_t)width * height) << (opts.output_bpp >> 4));
       } catch (char* e) {
         printf("%s\n", e);
         exit(EXIT_FAILURE);
