@@ -8,8 +8,6 @@
 
 namespace multiblend {
 
-// void GetExpandedLine(__m128* temp, int y);
-
 class Pyramid {
  public:
   struct Level {
