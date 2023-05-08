@@ -41,7 +41,7 @@ class MapAlloc {
   static void* Alloc(size_t size, int alignment = 16);
   static void Free(void* p);
   static size_t GetSize(void* p);
-  static void CacheThreshold(size_t threshold);
+  static void CacheThreshold(size_t limit);
   static void SetTmpdir(const char* _tmpdir);
   static bool LastFile() { return objects_.back()->IsFile(); }
   // static bool last_mapped;

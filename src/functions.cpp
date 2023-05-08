@@ -449,22 +449,21 @@ void ReadInpaintDT(Flex* flex, int& current_count, int& current_step,
     if (_byte == 255) {
       dt_val = flex->ReadBackwards32();
       return;
-    } else {
-      current_step = ((_byte & 7) - 3);
-      if ((_byte & 0x80) == 0) {  // 0b0ccccsss
-        current_count = _byte >> 3;
-      } else if ((_byte & 0x40) == 0) {  // 0b10ssssss
-        current_step = (_byte & 0x3f);
-        current_count = 0;
-      } else if ((_byte & 0x20) == 0) {  // 0b11000000
-        current_count = flex->ReadBackwards8();
-      } else if ((_byte & 0x10) == 0) {  // 0b11100000
-        current_count = flex->ReadBackwards16();
-      } else {  // if (!(_byte & 0x08)) {
-        current_count = flex->ReadBackwards32();
-      }
-      dt_val += current_step;
     }
+    current_step = ((_byte & 7) - 3);
+    if ((_byte & 0x80) == 0) {  // 0b0ccccsss
+      current_count = _byte >> 3;
+    } else if ((_byte & 0x40) == 0) {  // 0b10ssssss
+      current_step = (_byte & 0x3f);
+      current_count = 0;
+    } else if ((_byte & 0x20) == 0) {  // 0b11000000
+      current_count = flex->ReadBackwards8();
+    } else if ((_byte & 0x10) == 0) {  // 0b11100000
+      current_count = flex->ReadBackwards16();
+    } else {  // if (!(_byte & 0x08)) {
+      current_count = flex->ReadBackwards32();
+    }
+    dt_val += current_step;
   }
 }
 
@@ -478,22 +477,21 @@ void ReadSeamDT(Flex* flex, int& current_count, int64_t& current_step,
     if (_byte == 255) {
       dt_val = flex->ReadBackwards64();
       return;
-    } else {
-      current_step = ((int64_t)(_byte & 7) - 3) << 32;
-      if ((_byte & 0x80) == 0) {  // 0b0ccccsss
-        current_count = _byte >> 3;
-      } else if ((_byte & 0x40) == 0) {  // 0b10ssssss
-        current_step = (int64_t)(_byte & 0x3f) << 32;
-        current_count = 0;
-      } else if ((_byte & 0x20) == 0) {  // 0b11000000
-        current_count = flex->ReadBackwards8();
-      } else if ((_byte & 0x10) == 0) {  // 0b11100000
-        current_count = flex->ReadBackwards16();
-      } else {  // if (!(_byte & 0x08)) {
-        current_count = flex->ReadBackwards32();
-      }
-      dt_val += current_step;
     }
+    current_step = ((int64_t)(_byte & 7) - 3) << 32;
+    if ((_byte & 0x80) == 0) {  // 0b0ccccsss
+      current_count = _byte >> 3;
+    } else if ((_byte & 0x40) == 0) {  // 0b10ssssss
+      current_step = (int64_t)(_byte & 0x3f) << 32;
+      current_count = 0;
+    } else if ((_byte & 0x20) == 0) {  // 0b11000000
+      current_count = flex->ReadBackwards8();
+    } else if ((_byte & 0x10) == 0) {  // 0b11100000
+      current_count = flex->ReadBackwards16();
+    } else {  // if (!(_byte & 0x08)) {
+      current_count = flex->ReadBackwards32();
+    }
+    dt_val += current_step;
   }
 }
 

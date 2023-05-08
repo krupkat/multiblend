@@ -17,6 +17,12 @@ Checks: >
   misc-throw-by-value-catch-by-reference,
   bugprone-suspicious-string-compare,
   google-readability-todo,
-  modernize-use-bool-literals
+  modernize-use-bool-literals,
+  performance-noexcept-move-constructor,
+  readability-avoid-const-params-in-decls,
+  readability-delete-null-pointer,
+  readability-else-after-return,
+  readability-inconsistent-declaration-parameter-name
+
 
 HeaderFilterRegex: ".*multiblend.*src.*"

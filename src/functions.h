@@ -25,15 +25,14 @@ class Flex {
   Flex(const Flex& other) = delete;
   Flex& operator=(const Flex& other) = delete;
 
-  Flex(Flex&& other) { *this = std::move(other); }
-  Flex& operator=(Flex&& other) {
+  Flex(Flex&& other) noexcept { *this = std::move(other); }
+  Flex& operator=(Flex&& other) noexcept {
     if (this != &other) {
       if (data_ != nullptr) {
         free(data_);
       }
-      if (rows_ != nullptr) {
-        delete[] rows_;
-      }
+
+      delete[] rows_;
 
       data_ = other.data_;
       width_ = other.width_;
@@ -139,9 +138,8 @@ class Flex {
     if (data_ != nullptr) {
       free(data_);
     }
-    if (rows_ != nullptr) {
-      delete[] rows_;
-    }
+
+    delete[] rows_;
   }
 
   uint8_t* data_ = nullptr;

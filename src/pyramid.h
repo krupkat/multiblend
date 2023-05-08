@@ -52,14 +52,14 @@ class Pyramid {
   static void ShrinkThread(__m128* line, __m128* hi, __m128* lo,
                            int m128_pitch_hi, int m128_pitch_lo,
                            int first_bad_line, int height_odd, int sy, int ey,
-                           const bool x_shift, const bool y_shift);
+                           bool x_shift, bool y_shift);
 
   static void Squeeze(__m128* line, __m128* lo, int m128_pitch_lo,
                       int m128_pitch_hi, __m128 final_mul,
                       bool x_shift);  // was __forceinline
   static void LaplaceThreadWrapper(Level* upper_level, Level* lower_level,
                                    int sy, int ey);
-  static void LaplaceThread(Level* upper_level, Level* lower_evel, int sy,
+  static void LaplaceThread(Level* upper_level, Level* lower_level, int sy,
                             int ey, __m128* temp1, __m128* temp2,
                             __m128* temp3);
   static void FuseThread(__m128* a, __m128* b, __m128* m, int m128_pitch,
