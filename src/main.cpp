@@ -258,8 +258,8 @@ int main(int argc, char* argv[]) {
       ++pos;
       int shift = 0;
       int n = 0;
-      size_t len = strlen(my_argv[pos]);
-      size_t threshold;
+      std::size_t len = strlen(my_argv[pos]);
+      std::size_t threshold;
       sscanf_s(my_argv[pos], "%zu%n", &threshold, &n);
       if (n != len) {
         if (n == len - 1) {
@@ -679,7 +679,7 @@ int main(int argc, char* argv[]) {
               } break;
             }
           } else {
-            size_t t = (size_t)cur * bytes_per_pixel;
+            std::size_t t = (std::size_t)cur * bytes_per_pixel;
             switch (result.output_bpp) {
               case 8: {
                 ZeroMemory(&((uint8_t*)strip)[strip_p], t);

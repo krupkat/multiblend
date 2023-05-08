@@ -21,7 +21,7 @@ inline int _stricmp(const char* a, const char* b) { return strcasecmp(a, b); }
 
 #define strcpy_s(a, b) strcpy(a, b)
 
-inline void* _aligned_malloc(size_t size, int boundary) {
+inline void* _aligned_malloc(std::size_t size, int boundary) {
   return memalign(boundary, size);
 }
 

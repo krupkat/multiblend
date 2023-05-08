@@ -344,7 +344,7 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
  ***********************************************************************/
 void CompositeLine(const float* input_p, float* output_p, int i, int x_offset,
                    int in_level_width, int out_level_width, int out_level_pitch,
-                   uint8_t* _mask, size_t mask_p) {
+                   uint8_t* _mask, std::size_t mask_p) {
   int x = 0;
   int mask_count;
   float current_val;

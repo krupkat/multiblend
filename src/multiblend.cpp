@@ -26,7 +26,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
   /***********************************************************************
    * Open images to get prelimary info
    ***********************************************************************/
-  size_t untrimmed_bytes = 0;
+  std::size_t untrimmed_bytes = 0;
 
   for (int i = 0; i < n_images; ++i) {
     images[i]->Open();
@@ -128,7 +128,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       std::sort(widths.begin(), widths.end());
       std::sort(heights.begin(), heights.end());
 
-      size_t halfway = (widths.size() - 1) >> 1;
+      std::size_t halfway = (widths.size() - 1) >> 1;
 
       blend_wh =
           std::max((widths.size() & 1) != 0u
@@ -520,7 +520,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
           memset(&xor_map->line_[x], xor_image, min_count);
         }
 
-        size_t p = (y - images[xor_image]->ypos_) * images[xor_image]->width_ +
+        std::size_t p = (y - images[xor_image]->ypos_) * images[xor_image]->width_ +
                    (x - images[xor_image]->xpos_);
 
         int total_count = min_count;
@@ -820,7 +820,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       utils::die("Error: Couldn't open seam file");
     }
 
-    size_t r = fread(sig, 1, 8, f);  // assignment suppresses g++ -Ofast warning
+    std::size_t r = fread(sig, 1, 8, f);  // assignment suppresses g++ -Ofast warning
     if (!png_check_sig(sig, 8)) {
       utils::die("Error: Bad PNG signature");
     }
@@ -961,7 +961,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
     }
 
     for (int l = total_levels - 1; l >= 0; --l) {
-      size_t max_bytes = 0;
+      std::size_t max_bytes = 0;
 
       if (l < blend_levels) {
         for (auto& image : images) {
@@ -1086,9 +1086,9 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
                     in_line = in_level.height - 1;
                   }
                   float* input_p =
-                      in_level.data + (size_t)in_line * in_level.pitch;
+                      in_level.data + (std::size_t)in_line * in_level.pitch;
                   float* output_p =
-                      out_level.data + (size_t)y * out_level.pitch;
+                      out_level.data + (std::size_t)y * out_level.pitch;
 
                   utils::CompositeLine(input_p, output_p, i, x_offset,
                                        in_level.width, out_level.width,
@@ -1172,9 +1172,9 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
                         in_line = in_level.height - 1;
                       }
                       float* input_p =
-                          in_level.data + (size_t)in_line * in_level.pitch;
+                          in_level.data + (std::size_t)in_line * in_level.pitch;
                       float* output_p =
-                          out_level.data + (size_t)y * out_level.pitch;
+                          out_level.data + (std::size_t)y * out_level.pitch;
 
                       utils::CompositeLine(
                           input_p, output_p, wp + static_cast<int>(level == 0),
@@ -1251,7 +1251,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       timer.Start();
 
       try {
-        output_channels[c] = memory::MapAlloc::Alloc(((size_t)width * height)
+        output_channels[c] = memory::MapAlloc::Alloc(((std::size_t)width * height)
                                                      << (opts.output_bpp >> 4));
       } catch (char* e) {
         printf("%s\n", e);

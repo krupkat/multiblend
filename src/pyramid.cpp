@@ -43,7 +43,7 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
     bool x_shift = ((x - b) & (req_alignment - 1)) != 0;
     bool y_shift = ((y - b) & (req_alignment - 1)) != 0;
     int pitch = (width + static_cast<int>(x_shift) + 7) & ~7;
-    size_t bytes = (size_t)pitch *
+    std::size_t bytes = (std::size_t)pitch *
                    ((height + static_cast<int>(y_shift) + 3) & ~3) *
                    sizeof(float);
     total_bytes_ += bytes;
@@ -1160,7 +1160,7 @@ void Pyramid::Multiply(int level, float mul) {
     return;
   }
   if (mul == 0) {
-    ZeroMemory(levels_[level].data, static_cast<size_t>(levels_[level].height) *
+    ZeroMemory(levels_[level].data, static_cast<std::size_t>(levels_[level].height) *
                                         levels_[level].pitch * sizeof(float));
     return;
   }
@@ -1329,7 +1329,7 @@ void Pyramid::Blend(Pyramid* b) {
     return;
   }
   memcpy(levels_[GetNLevels() - 1].data, b->levels_[GetNLevels() - 1].data,
-         static_cast<size_t>(levels_[GetNLevels() - 1].height) *
+         static_cast<std::size_t>(levels_[GetNLevels() - 1].height) *
              levels_[GetNLevels() - 1].pitch * sizeof(float));
 }
 
@@ -1487,7 +1487,7 @@ void Pyramid::Png(const char* filename) {
   int width = levels_[0].pitch;
   int height =
       levels_[0].height + (levels_.size() > 1 ? 1 + levels_[1].height : 0);
-  auto* temp = (uint8_t*)calloc(static_cast<size_t>(width) * height, 1);
+  auto* temp = (uint8_t*)calloc(static_cast<std::size_t>(width) * height, 1);
 
   int px = 0;
   int py = 0;

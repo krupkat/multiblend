@@ -14,7 +14,7 @@ class Pyramid {
     int width, height;
     int pitch;
     int m128_pitch;
-    size_t bytes;
+    std::size_t bytes;
     float* data;
     int x;
     int y;
@@ -66,7 +66,7 @@ class Pyramid {
                          int sy, int ey, bool pre, int black);
   void LaplaceCollapse(int n_levels, bool Collapse);
 
-  size_t total_bytes_ = 0;
+  std::size_t total_bytes_ = 0;
 
 #define PLL(X) [](float* p, __m128 d, __m128 z, __m128 m) { return X; }
 #define N _mm_load_ps(p)
@@ -137,7 +137,7 @@ class Pyramid {
                             int m128_pitch_lo);
   static void LaplaceExpandShifted(__m128* hi, __m128* lo, int m128_pitch_hi,
                                    int m128_pitch_lo);
-  [[nodiscard]] size_t GetTotalBytes() const { return total_bytes_; }
+  [[nodiscard]] std::size_t GetTotalBytes() const { return total_bytes_; }
   std::vector<Level>& GetLevels() { return levels_; };
   Level& GetLevel(int level) { return levels_[level]; };
   void Png(const char* filename);
@@ -200,9 +200,9 @@ void Pyramid::OutPlanar8 _OP_ {
     }
   }
 
-  dst_p += (size_t)(sy - (level ? 1 : 0)) * pitch;
+  dst_p += (std::size_t)(sy - (level ? 1 : 0)) * pitch;
 
-  p_pt += (size_t)m128_pitch * sy;
+  p_pt += (std::size_t)m128_pitch * sy;
 
   __m128 dither_add;
 

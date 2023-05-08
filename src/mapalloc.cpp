@@ -19,15 +19,15 @@ std::vector<MapAlloc::MapAllocObject*> MapAlloc::objects_;
 char MapAlloc::tmpdir_[256] = "";
 char MapAlloc::filename_[512];
 int MapAlloc::suffix_ = 0;
-size_t MapAlloc::cache_threshold_ = ~(size_t)0;
-size_t MapAlloc::total_allocated_ = 0;
+std::size_t MapAlloc::cache_threshold_ = ~(std::size_t)0;
+std::size_t MapAlloc::total_allocated_ = 0;
 
 /***********************************************************************
  * MapAlloc
  ***********************************************************************/
-void MapAlloc::CacheThreshold(size_t limit) { cache_threshold_ = limit; }
+void MapAlloc::CacheThreshold(std::size_t limit) { cache_threshold_ = limit; }
 
-void* MapAlloc::Alloc(size_t size, int alignment) {
+void* MapAlloc::Alloc(std::size_t size, int alignment) {
   auto* m = new MapAllocObject(size, alignment);
   objects_.push_back(m);
   return m->GetPointer();
@@ -43,7 +43,7 @@ void MapAlloc::Free(void* p) {
   }
 }
 
-size_t MapAlloc::GetSize(void* p) {
+std::size_t MapAlloc::GetSize(void* p) {
   for (auto it = objects_.begin(); it < objects_.end(); ++it) {
     if ((*it)->GetPointer() == p) {
       return (*it)->GetSize();
@@ -55,7 +55,7 @@ size_t MapAlloc::GetSize(void* p) {
 
 void MapAlloc::SetTmpdir(const char* _tmpdir) {
   strcpy_s(tmpdir_, _tmpdir);
-  size_t l = strlen(tmpdir_);
+  std::size_t l = strlen(tmpdir_);
   while (tmpdir_[l - 1] == '\\' || tmpdir_[l - 1] == '/' && l > 0) {
     tmpdir_[--l] = 0;
   }
@@ -64,7 +64,7 @@ void MapAlloc::SetTmpdir(const char* _tmpdir) {
 /***********************************************************************
  * MapAllocObject
  ***********************************************************************/
-MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
+MapAlloc::MapAllocObject::MapAllocObject(std::size_t size, int alignment)
     : size_(size) {
   if (total_allocated_ + size_ < cache_threshold_) {
     pointer_ = _aligned_malloc(size_, alignment);
@@ -74,7 +74,7 @@ MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
 #ifdef _WIN32
     if (tmpdir_[0] == 0) {
       GetTempPath(256, tmpdir_);
-      size_t l = strlen(tmpdir_);
+      std::size_t l = strlen(tmpdir_);
       while (tmpdir_[l - 1] == '\\' || tmpdir_[l - 1] == '/' && l > 0) {
         tmpdir_[--l] = 0;
       }

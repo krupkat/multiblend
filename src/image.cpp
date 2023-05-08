@@ -223,7 +223,7 @@ void Image::Open() {
       }
 
       uint8_t sig[8];
-      size_t r =
+      std::size_t r =
           fread(sig, 1, 8, file_);  // assignment suppresses g++ -Ofast warning
       if (!png_check_sig(sig, 8)) {
         utils::die("Bad PNG signature (%s)", filename_);
@@ -277,7 +277,7 @@ void Image::Open() {
   xpos_ += xpos_add_;
   ypos_ += ypos_add_;
 
-  size_t untrimmed_pixels = (size_t)tiff_u_height_ * tiff_width_;
+  std::size_t untrimmed_pixels = (std::size_t)tiff_u_height_ * tiff_width_;
   untrimmed_bytes_ = (untrimmed_pixels * spp_) << (bpp_ >> 4);
 }
 
@@ -771,7 +771,7 @@ void Image::Read(void* data, bool gamma) {
   /***********************************************************************
    * Extract channels
    ***********************************************************************/
-  size_t channel_bytes = ((size_t)width_ * height_) << (bpp_ >> 4);
+  std::size_t channel_bytes = ((std::size_t)width_ * height_) << (bpp_ >> 4);
 
   for (int c = 0; c < 3; ++c) {
     channels_.push_back(new Channel(channel_bytes));
@@ -815,7 +815,7 @@ void Image::Read(void* data, bool gamma) {
       case 8: {
         uint8_t byte;
         auto* bytes = (uint8_t*)data;
-        size_t p = 0;
+        std::size_t p = 0;
         for (y = 0; y < height_; ++y) {
           for (x = 0; x < width_; ++x) {
             byte = *bytes++;
@@ -837,7 +837,7 @@ void Image::Read(void* data, bool gamma) {
       case 16: {
         uint16_t word;
         auto* words = (uint16_t*)data;
-        size_t p = 0;
+        std::size_t p = 0;
         for (y = 0; y < height_; ++y) {
           for (x = 0; x < width_; ++x) {
             word = *words++;
@@ -874,7 +874,7 @@ void Image::MaskPng(int i) {
   int width = masks_[0]->width_;
   int height = masks_[0]->height_;  // +1 + masks[1]->height;
 
-  size_t size = (size_t)width * height;
+  std::size_t size = (std::size_t)width * height;
   auto* temp = (uint8_t*)malloc(size);
   memset(temp, 32, size);
 
