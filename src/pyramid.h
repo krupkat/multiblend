@@ -10,8 +10,7 @@ namespace multiblend {
 
 class Pyramid {
  public:
-  class Level {
-   public:
+  struct Level {
     int width, height;
     int pitch;
     int m128_pitch;
@@ -24,20 +23,19 @@ class Pyramid {
     bool upper_x_shift;
     int upper_m128_pitch;
     std::vector<int> bands;
-    __m128* GetLine(int y);
-    void GetExpandedLine(__m128* temp, int y);
   };
 
  private:
-  std::vector<Level> levels;
-  __m128** lines;
-  bool shared;
-  bool no_alloc;
-  float* lut = NULL;
-  int lut_bits = 0;
-  bool lut_gamma = false;
-  int out_max;
-  mt::Threadpool* threadpool;
+  std::vector<Level> levels_;
+  __m128** lines_;
+  bool shared_;
+  bool no_alloc_;
+  float* lut_ = NULL;
+  int lut_bits_ = 0;
+  bool lut_gamma_ = false;
+  int out_max_;
+  mt::Threadpool* threadpool_;
+
   void set_lut(int bits, bool gamma);
   void CopyInterleavedThread_8bit(uint8_t* src_p, int step, int pitch, int sy,
                                   int ey);
@@ -64,7 +62,8 @@ class Pyramid {
   void FuseThread(__m128* a, __m128* b, __m128* m, int m128_pitch, int sy,
                   int ey, bool pre, int black);
   void LaplaceCollapse(int n_levels, bool Collapse);
-  size_t total_bytes = 0;
+
+  size_t total_bytes_ = 0;
 
 #define PLL(X) [](float* p, __m128 d, __m128 z, __m128 m) { return X; }
 #define N _mm_load_ps(p)
@@ -102,12 +101,12 @@ class Pyramid {
   void Copy(uint8_t* src_p, int step, int pitch, bool gamma, int bits);
   void Subsample(int sub_w, int sub_h, Pyramid* source);
   void Shrink();
-  void Laplace() { LaplaceCollapse((int)levels.size(), false); };
-  void Collapse() { LaplaceCollapse((int)levels.size(), true); };
+  void Laplace() { LaplaceCollapse((int)levels_.size(), false); };
+  void Collapse() { LaplaceCollapse((int)levels_.size(), true); };
   void Collapse(int n_levels) { LaplaceCollapse(n_levels, true); };
   float Average();
-  void Add(float add, int _levels = 0x7fff);
-  void MultiplyAndAdd(float add, float mul, int _levels = 0x7fff);
+  void Add(float add, int levels = 0x7fff);
+  void MultiplyAndAdd(float add, float mul, int levels = 0x7fff);
   void MultiplyAddClamp(float add, float mul, int level = 0x7fff);
   void Multiply(int level, float mul);
   void MultplyByPyramid(Pyramid* b);
@@ -120,13 +119,13 @@ class Pyramid {
   template <typename T>
   void Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
            int level = 0, int step = 0, int offset = 0, bool chroma = false);
-  int GetNLevels() { return (int)levels.size(); };
-  int GetPitch(int level = 0) { return levels[level].pitch; };
-  float* GetData(int level = 0) { return levels[level].data; };
-  int GetWidth(int level = 0) { return levels[level].width; };
-  int GetHeight(int level = 0) { return levels[level].height; };
-  int GetX(int level = 0) { return levels[level].x; };
-  int GetY(int level = 0) { return levels[level].y; };
+  int GetNLevels() { return (int)levels_.size(); };
+  int GetPitch(int level = 0) { return levels_[level].pitch; };
+  float* GetData(int level = 0) { return levels_[level].data; };
+  int GetWidth(int level = 0) { return levels_[level].width; };
+  int GetHeight(int level = 0) { return levels_[level].height; };
+  int GetX(int level = 0) { return levels_[level].x; };
+  int GetY(int level = 0) { return levels_[level].y; };
   static void LaplaceLine2(__m128* hi, __m128* temp1, __m128* temp2,
                            int m128_pitch);
   static void LaplaceLine3(__m128* hi, __m128* temp1, __m128* temp2,
@@ -135,11 +134,15 @@ class Pyramid {
                             int m128_pitch_lo);
   static void LaplaceExpandShifted(__m128* hi, __m128* lo, int m128_pitch_hi,
                                    int m128_pitch_lo);
-  size_t GetTotalBytes() { return total_bytes; }
-  std::vector<Level>& GetLevels() { return levels; };
-  Level& GetLevel(int level) { return levels[level]; };
+  size_t GetTotalBytes() { return total_bytes_; }
+  std::vector<Level>& GetLevels() { return levels_; };
+  Level& GetLevel(int level) { return levels_[level]; };
   void Png(const char* filename);
 };
+
+__m128* GetLine(const Pyramid::Level& level, int y);
+
+void GetExpandedLine(const Pyramid::Level& level, __m128* temp, int y);
 
 /***********************************************************************
 ************************************************************************
@@ -172,21 +175,21 @@ void Pyramid::OutPlanar8 _OP_ {
       _mm_set_epi32(0x80808080, 0x80808080, 0x80808080, 0x0c080400);
   __m128i pixels;
   __m128* p_p;
-  __m128* p_pt = (__m128*)levels[level].data;
+  __m128* p_pt = (__m128*)levels_[level].data;
 
   __m128i* dst_pp_m;
   int* dst_pp_i;
   uint8_t* dst_pp_b;
 
-  int m128_pitch = levels[level].pitch >> 2;
+  int m128_pitch = levels_[level].pitch >> 2;
 
-  int sixteens = levels[level].width >> 4;
-  int fours = (levels[level].width >> 2) - (sixteens << 2);
-  int singles = levels[level].width & 3;
+  int sixteens = levels_[level].width >> 4;
+  int fours = (levels_[level].width >> 2) - (sixteens << 2);
+  int singles = levels_[level].width & 3;
 
   if (level) {
     if (sy == 0) sy++;
-    if (ey == levels[level].height) ey--;
+    if (ey == levels_[level].height) ey--;
   }
 
   dst_p += (size_t)(sy - (level ? 1 : 0)) * pitch;
@@ -243,9 +246,9 @@ void Pyramid::OutPlanar8 _OP_ {
     }
 
     if (level) {
-      memcpy(dst_p, dst_p + 1, levels[level].width - 2);
-      dst_p[levels[level].width - 1] = (uint8_t)black;
-      dst_p[levels[level].width - 2] = (uint8_t)black;
+      memcpy(dst_p, dst_p + 1, levels_[level].width - 2);
+      dst_p[levels_[level].width - 1] = (uint8_t)black;
+      dst_p[levels_[level].width - 2] = (uint8_t)black;
     }
 
     p_pt += m128_pitch;
@@ -271,20 +274,20 @@ void Pyramid::OutPlanar16 _OP_ {
       _mm_set_epi32(0x0d0c0908, 0x05040100, 0x80808080, 0x80808080);
   __m128i pixels;
   __m128* p_p;
-  __m128* p_pt = (__m128*)levels[level].data;
+  __m128* p_pt = (__m128*)levels_[level].data;
 
   __m128i* dst_pp_m;
   uint16_t* dst_pp_w;
 
-  int m128_pitch = levels[level].pitch >> 2;
+  int m128_pitch = levels_[level].pitch >> 2;
 
-  int eights = levels[level].width >> 3;
-  int four = levels[level].width & 4;
-  int singles = levels[level].width & 3;
+  int eights = levels_[level].width >> 3;
+  int four = levels_[level].width & 4;
+  int singles = levels_[level].width & 3;
 
   if (level) {
     if (sy == 0) sy++;
-    if (ey == levels[level].height) ey--;
+    if (ey == levels_[level].height) ey--;
   }
 
   dst_p += (sy - (level ? 1 : 0)) * pitch;
@@ -340,9 +343,9 @@ void Pyramid::OutPlanar16 _OP_ {
     }
 
     if (level) {
-      memcpy(dst_p, dst_p + 1, (levels[level].width - 2) << 1);
-      dst_p[levels[level].width - 1] = black;
-      dst_p[levels[level].width - 2] = black;
+      memcpy(dst_p, dst_p + 1, (levels_[level].width - 2) << 1);
+      dst_p[levels_[level].width - 1] = black;
+      dst_p[levels_[level].width - 2] = black;
     }
 
     p_pt += m128_pitch;
@@ -375,18 +378,18 @@ void Pyramid::OutPlanar32 _OP_ {
     maxes = _mm_set_ps1(1.0f);
   }
 
-  __m128* p_p = (__m128*)levels[level].data;
+  __m128* p_p = (__m128*)levels_[level].data;
 
   float* dst_pp_f;
 
-  int m128_pitch = levels[level].pitch >> 2;
+  int m128_pitch = levels_[level].pitch >> 2;
 
-  int fours = (levels[level].width + 3) >> 2;
-  int wipes = (fours << 2) - levels[level].width;
+  int fours = (levels_[level].width + 3) >> 2;
+  int wipes = (fours << 2) - levels_[level].width;
 
   if (level) {
     if (sy == 0) sy++;
-    if (ey == levels[level].height) ey--;
+    if (ey == levels_[level].height) ey--;
   }
 
   dst_p += (sy - (level ? 1 : 0)) * pitch;
@@ -408,9 +411,9 @@ void Pyramid::OutPlanar32 _OP_ {
     }
 
     if (level) {
-      memcpy(dst_p, ((float*)dst_p) + 1, (levels[level].width - 2) << 2);
-      ((float*)dst_p)[levels[level].width - 1] = 0.0f;
-      ((float*)dst_p)[levels[level].width - 2] = 0.0f;
+      memcpy(dst_p, ((float*)dst_p) + 1, (levels_[level].width - 2) << 2);
+      ((float*)dst_p)[levels_[level].width - 1] = 0.0f;
+      ((float*)dst_p)[levels_[level].width - 2] = 0.0f;
     }
 
     p_p += m128_pitch;
@@ -431,18 +434,18 @@ void Pyramid::OutInterleaved(T dst_p, F _loader, int pitch, int sy, int ey,
 
   if (level) {
     if (sy == 0) sy++;
-    if (ey == levels[level].height) ey--;
+    if (ey == levels_[level].height) ey--;
   }
 
   dst_p += (sy - (level ? 1 : 0)) * pitch + offset;
 
-  int m128_pitch = levels[level].pitch >> 2;
-  __m128* p_p = (__m128*)levels[level].data + m128_pitch * sy;
+  int m128_pitch = levels_[level].pitch >> 2;
+  __m128* p_p = (__m128*)levels_[level].data + m128_pitch * sy;
   T dst_pp;
 
   __m128i a;
-  int fours = levels[level].width >> 2;
-  int singles = levels[level].width & 3;
+  int fours = levels_[level].width >> 2;
+  int singles = levels_[level].width & 3;
 
   if (level) {
     singles--;
@@ -521,7 +524,7 @@ template <typename T>
 void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
                   int level, int step, int offset, bool chroma) {
   int bytes = sizeof(*dst_p);
-  int eb = (int)(levels[level].bands.size() - 1);
+  int eb = (int)(levels_[level].bands.size() - 1);
 
   typedef
       typename std::conditional<sizeof(*dst_p) == 1, uint8_t*, uint16_t*>::type
@@ -534,59 +537,59 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
     for (int b = 0; b < eb; ++b) {
       switch (s) {
         case 0:
-          threadpool->Queue([=, this] {
-            OutInterleaved((Type)dst_p, PLL(N), pitch, levels[level].bands[b],
-                           levels[level].bands[b + 1], level, chroma, step,
+          threadpool_->Queue([=, this] {
+            OutInterleaved((Type)dst_p, PLL(N), pitch, levels_[level].bands[b],
+                           levels_[level].bands[b + 1], level, chroma, step,
                            offset);
           });
           break;
         case 1:
-          threadpool->Queue([=, this] {
-            OutInterleaved((Type)dst_p, PLL(G), pitch, levels[level].bands[b],
-                           levels[level].bands[b + 1], level, chroma, step,
+          threadpool_->Queue([=, this] {
+            OutInterleaved((Type)dst_p, PLL(G), pitch, levels_[level].bands[b],
+                           levels_[level].bands[b + 1], level, chroma, step,
                            offset);
           });
           break;
         case 2:
-          threadpool->Queue([=, this] {
-            OutInterleaved((Type)dst_p, PLL(D), pitch, levels[level].bands[b],
-                           levels[level].bands[b + 1], level, chroma, step,
+          threadpool_->Queue([=, this] {
+            OutInterleaved((Type)dst_p, PLL(D), pitch, levels_[level].bands[b],
+                           levels_[level].bands[b + 1], level, chroma, step,
                            offset);
           });
           break;
         case 3:
-          threadpool->Queue([=, this] {
-            OutInterleaved((Type)dst_p, PLL(DG), pitch, levels[level].bands[b],
-                           levels[level].bands[b + 1], level, chroma, step,
+          threadpool_->Queue([=, this] {
+            OutInterleaved((Type)dst_p, PLL(DG), pitch, levels_[level].bands[b],
+                           levels_[level].bands[b + 1], level, chroma, step,
                            offset);
           });
           break;
         case 4:
-          threadpool->Queue([=, this] {
-            OutInterleaved((Type)dst_p, PLL(C), pitch, levels[level].bands[b],
-                           levels[level].bands[b + 1], level, chroma, step,
+          threadpool_->Queue([=, this] {
+            OutInterleaved((Type)dst_p, PLL(C), pitch, levels_[level].bands[b],
+                           levels_[level].bands[b + 1], level, chroma, step,
                            offset);
           });
           break;
         case 5:
-          threadpool->Queue([=, this] {
-            OutInterleaved((Type)dst_p, PLL(CG), pitch, levels[level].bands[b],
-                           levels[level].bands[b + 1], level, chroma, step,
+          threadpool_->Queue([=, this] {
+            OutInterleaved((Type)dst_p, PLL(CG), pitch, levels_[level].bands[b],
+                           levels_[level].bands[b + 1], level, chroma, step,
                            offset);
           });
           break;
         case 6:
-          threadpool->Queue([=, this] {
-            OutInterleaved((Type)dst_p, PLL(CD), pitch, levels[level].bands[b],
-                           levels[level].bands[b + 1], level, chroma, step,
+          threadpool_->Queue([=, this] {
+            OutInterleaved((Type)dst_p, PLL(CD), pitch, levels_[level].bands[b],
+                           levels_[level].bands[b + 1], level, chroma, step,
                            offset);
           });
           break;
         case 7:
-          threadpool->Queue([=, this] {
-            OutInterleaved((Type)dst_p, PLL(CDG), pitch, levels[level].bands[b],
-                           levels[level].bands[b + 1], level, chroma, step,
-                           offset);
+          threadpool_->Queue([=, this] {
+            OutInterleaved((Type)dst_p, PLL(CDG), pitch,
+                           levels_[level].bands[b], levels_[level].bands[b + 1],
+                           level, chroma, step, offset);
           });
           break;
       }
@@ -597,51 +600,51 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
         for (int b = 0; b < eb; ++b) {
           switch (s) {
             case 0:
-              threadpool->Queue([=, this] {
-                OutPlanar8(dst_p, PLL(N), pitch, levels[level].bands[b],
-                           levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar8(dst_p, PLL(N), pitch, levels_[level].bands[b],
+                           levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 1:
-              threadpool->Queue([=, this] {
-                OutPlanar8(dst_p, PLL(G), pitch, levels[level].bands[b],
-                           levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar8(dst_p, PLL(G), pitch, levels_[level].bands[b],
+                           levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 2:
-              threadpool->Queue([=, this] {
-                OutPlanar8(dst_p, PLL(D), pitch, levels[level].bands[b],
-                           levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar8(dst_p, PLL(D), pitch, levels_[level].bands[b],
+                           levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 3:
-              threadpool->Queue([=, this] {
-                OutPlanar8(dst_p, PLL(DG), pitch, levels[level].bands[b],
-                           levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar8(dst_p, PLL(DG), pitch, levels_[level].bands[b],
+                           levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 4:
-              threadpool->Queue([=, this] {
-                OutPlanar8(dst_p, PLL(C), pitch, levels[level].bands[b],
-                           levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar8(dst_p, PLL(C), pitch, levels_[level].bands[b],
+                           levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 5:
-              threadpool->Queue([=, this] {
-                OutPlanar8(dst_p, PLL(CG), pitch, levels[level].bands[b],
-                           levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar8(dst_p, PLL(CG), pitch, levels_[level].bands[b],
+                           levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 6:
-              threadpool->Queue([=, this] {
-                OutPlanar8(dst_p, PLL(CD), pitch, levels[level].bands[b],
-                           levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar8(dst_p, PLL(CD), pitch, levels_[level].bands[b],
+                           levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 7:
-              threadpool->Queue([=, this] {
-                OutPlanar8(dst_p, PLL(CDG), pitch, levels[level].bands[b],
-                           levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar8(dst_p, PLL(CDG), pitch, levels_[level].bands[b],
+                           levels_[level].bands[b + 1], level, chroma);
               });
               break;
           }
@@ -651,51 +654,51 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
         for (int b = 0; b < eb; ++b) {
           switch (s) {
             case 0:
-              threadpool->Queue([=, this] {
-                OutPlanar16(dst_p, PLL(N), pitch, levels[level].bands[b],
-                            levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar16(dst_p, PLL(N), pitch, levels_[level].bands[b],
+                            levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 1:
-              threadpool->Queue([=, this] {
-                OutPlanar16(dst_p, PLL(G), pitch, levels[level].bands[b],
-                            levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar16(dst_p, PLL(G), pitch, levels_[level].bands[b],
+                            levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 2:
-              threadpool->Queue([=, this] {
-                OutPlanar16(dst_p, PLL(D), pitch, levels[level].bands[b],
-                            levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar16(dst_p, PLL(D), pitch, levels_[level].bands[b],
+                            levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 3:
-              threadpool->Queue([=, this] {
-                OutPlanar16(dst_p, PLL(DG), pitch, levels[level].bands[b],
-                            levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar16(dst_p, PLL(DG), pitch, levels_[level].bands[b],
+                            levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 4:
-              threadpool->Queue([=, this] {
-                OutPlanar16(dst_p, PLL(C), pitch, levels[level].bands[b],
-                            levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar16(dst_p, PLL(C), pitch, levels_[level].bands[b],
+                            levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 5:
-              threadpool->Queue([=, this] {
-                OutPlanar16(dst_p, PLL(CG), pitch, levels[level].bands[b],
-                            levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar16(dst_p, PLL(CG), pitch, levels_[level].bands[b],
+                            levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 6:
-              threadpool->Queue([=, this] {
-                OutPlanar16(dst_p, PLL(CD), pitch, levels[level].bands[b],
-                            levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar16(dst_p, PLL(CD), pitch, levels_[level].bands[b],
+                            levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 7:
-              threadpool->Queue([=, this] {
-                OutPlanar16(dst_p, PLL(CDG), pitch, levels[level].bands[b],
-                            levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar16(dst_p, PLL(CDG), pitch, levels_[level].bands[b],
+                            levels_[level].bands[b + 1], level, chroma);
               });
               break;
           }
@@ -705,27 +708,27 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
         for (int b = 0; b < eb; ++b) {
           switch (s) {
             case 0:
-              threadpool->Queue([=, this] {
-                OutPlanar32(dst_p, PLL(N), pitch, levels[level].bands[b],
-                            levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar32(dst_p, PLL(N), pitch, levels_[level].bands[b],
+                            levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 1:
-              threadpool->Queue([=, this] {
-                OutPlanar32(dst_p, PLL(G), pitch, levels[level].bands[b],
-                            levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar32(dst_p, PLL(G), pitch, levels_[level].bands[b],
+                            levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 4:
-              threadpool->Queue([=, this] {
-                OutPlanar32(dst_p, PLL(C), pitch, levels[level].bands[b],
-                            levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar32(dst_p, PLL(C), pitch, levels_[level].bands[b],
+                            levels_[level].bands[b + 1], level, chroma);
               });
               break;
             case 5:
-              threadpool->Queue([=, this] {
-                OutPlanar32(dst_p, PLL(CG), pitch, levels[level].bands[b],
-                            levels[level].bands[b + 1], level, chroma);
+              threadpool_->Queue([=, this] {
+                OutPlanar32(dst_p, PLL(CG), pitch, levels_[level].bands[b],
+                            levels_[level].bands[b + 1], level, chroma);
               });
               break;
           }
@@ -734,7 +737,7 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
     }
   }
 
-  threadpool->Wait();
+  threadpool_->Wait();
 }
 
 #undef PLL

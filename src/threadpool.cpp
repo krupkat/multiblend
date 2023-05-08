@@ -4,32 +4,32 @@
 
 namespace multiblend::mt {
 
-Threadpool* Threadpool::instance;
+Threadpool* Threadpool::instance_;
 
 /**********************************************************************
  * Constructor (private)
  **********************************************************************/
-Threadpool::Threadpool(int _threads) {
-  n_threads = _threads > 0 ? (std::min)((unsigned int)_threads,
+Threadpool::Threadpool(int threads) {
+  n_threads_ = threads > 0 ? (std::min)((unsigned int)threads,
                                         std::thread::hardware_concurrency())
                            : std::thread::hardware_concurrency();
-  threads = new tp_struct[n_threads];
+  threads_ = new tp_struct[n_threads_];
 
-  for (int i = 0; i < n_threads; ++i) {
+  for (int i = 0; i < n_threads_; ++i) {
 #ifdef _WIN32
-    threads[i].handle = CreateThread(NULL, 1, (LPTHREAD_START_ROUTINE)Thread,
-                                     &threads[i], 0, NULL);
+    threads_[i].handle = CreateThread(NULL, 1, (LPTHREAD_START_ROUTINE)Thread,
+                                      &threads_[i], 0, NULL);
 #else
-    pthread_create(&threads[i].handle, NULL, TP_Thread, &threads[i]);
+    pthread_create(&threads_[i].handle, NULL, TP_Thread, &threads_[i]);
 #endif
-    threads[i].main_mutex = &main_mutex;
-    threads[i].return_mutex = &return_mutex;
-    threads[i].main_cond = &main_cond;
-    threads[i].return_cond = &return_cond;
-    threads[i].free = true;
-    threads[i].stop = false;
-    threads[i].queue = &queue;
-    threads[i].i = i;
+    threads_[i].main_mutex = &main_mutex_;
+    threads_[i].return_mutex = &return_mutex_;
+    threads_[i].main_cond = &main_cond_;
+    threads_[i].return_cond = &return_cond_;
+    threads_[i].free = true;
+    threads_[i].stop = false;
+    threads_[i].queue = &queue_;
+    threads_[i].i = i;
   }
 }
 
@@ -40,18 +40,18 @@ Threadpool::~Threadpool() {
   int i;
 
   {
-    std::lock_guard<std::mutex> mlock(main_mutex);
-    for (i = 0; i < n_threads; ++i) {
-      threads[i].stop = true;
+    std::lock_guard<std::mutex> mlock(main_mutex_);
+    for (i = 0; i < n_threads_; ++i) {
+      threads_[i].stop = true;
     }
   }
 
-  main_cond.notify_all();
-  for (i = 0; i < n_threads; ++i) {
+  main_cond_.notify_all();
+  for (i = 0; i < n_threads_; ++i) {
 #ifdef _WIN32
-    WaitForSingleObject(threads[i].handle, INFINITE);
+    WaitForSingleObject(threads_[i].handle, INFINITE);
 #else
-    pthread_join(threads[i].handle, NULL);
+    pthread_join(threads_[i].handle, NULL);
 #endif
   }
 }
@@ -94,22 +94,22 @@ void* TP_Thread(void* param) {
  * Wait
  **********************************************************************/
 void Threadpool::Wait() {
-  if (!queue.size()) {
+  if (!queue_.size()) {
     int i;
-    for (i = 0; i < n_threads; ++i) {
-      if (!threads[i].free) break;
+    for (i = 0; i < n_threads_; ++i) {
+      if (!threads_[i].free) break;
     }
-    if (i == n_threads) return;
+    if (i == n_threads_) return;
   }
 
   {
-    std::unique_lock<std::mutex> rlock(return_mutex);
-    return_cond.wait(rlock, [this] {
-      if (queue.size()) {
+    std::unique_lock<std::mutex> rlock(return_mutex_);
+    return_cond_.wait(rlock, [this] {
+      if (queue_.size()) {
         return false;
       }
-      for (int i = 0; i < n_threads; ++i) {
-        if (!threads[i].free) {
+      for (int i = 0; i < n_threads_; ++i) {
+        if (!threads_[i].free) {
           return false;
         }
       }
@@ -122,9 +122,9 @@ void Threadpool::Wait() {
  * Queue
  **********************************************************************/
 void Threadpool::Queue(std::function<void()> function) {
-  std::lock_guard<std::mutex> mlock(main_mutex);  // not sure what this is for
-  queue.push_back(std::move(function));
-  main_cond.notify_one();  // changed from notify_all()
+  std::lock_guard<std::mutex> mlock(main_mutex_);  // not sure what this is for
+  queue_.push_back(std::move(function));
+  main_cond_.notify_one();  // changed from notify_all()
 }
 
 }  // namespace multiblend::mt

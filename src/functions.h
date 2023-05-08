@@ -16,9 +16,9 @@ extern int verbosity;
  ***********************************************************************/
 class Flex {
  public:
-  Flex() : width(0), height(0) {}
-  Flex(int _width, int _height) : width(_width), height(_height) {
-    rows = new int[height];
+  Flex() : width_(0), height_(0) {}
+  Flex(int width, int height) : width_(width), height_(height) {
+    rows_ = new int[height_];
     NextLine();
   };
 
@@ -28,131 +28,131 @@ class Flex {
   Flex(Flex&& other) { *this = std::move(other); }
   Flex& operator=(Flex&& other) {
     if (this != &other) {
-      if (data) {
-        free(data);
+      if (data_) {
+        free(data_);
       }
-      if (rows) {
-        delete[] rows;
+      if (rows_) {
+        delete[] rows_;
       }
 
-      data = other.data;
-      width = other.width;
-      height = other.height;
-      rows = other.rows;
-      y = other.y;
+      data_ = other.data_;
+      width_ = other.width_;
+      height_ = other.height_;
+      rows_ = other.rows_;
+      y_ = other.y_;
 
-      size = other.size;
-      p = other.p;
-      end_p = other.end_p;
-      mask_count = other.mask_count;
-      mask_white = other.mask_white;
-      first = other.first;
+      size_ = other.size_;
+      p_ = other.p_;
+      end_p_ = other.end_p_;
+      mask_count_ = other.mask_count_;
+      mask_white_ = other.mask_white_;
+      first_ = other.first_;
 
-      other.data = nullptr;
-      other.rows = nullptr;
+      other.data_ = nullptr;
+      other.rows_ = nullptr;
     }
     return *this;
   }
 
   void NextLine() {
-    end_p = p;
-    if (y < height - 1) rows[++y] = p;
+    end_p_ = p_;
+    if (y_ < height_ - 1) rows_[++y_] = p_;
 
-    if (p + (width << 2) > size) {
-      if (y == 0) {
-        size = (std::max)(height, 16) << 4;  // was << 2
-        data = (uint8_t*)malloc(size);
-      } else if (y < height) {
-        int prev_size = size;
-        int new_size1 = (p / y) * height + (width << 4);
-        int new_size2 = size << 1;
-        size = (std::max)(new_size1, new_size2);
-        data = (uint8_t*)realloc(data, size);
+    if (p_ + (width_ << 2) > size_) {
+      if (y_ == 0) {
+        size_ = (std::max)(height_, 16) << 4;  // was << 2
+        data_ = (uint8_t*)malloc(size_);
+      } else if (y_ < height_) {
+        int prev_size = size_;
+        int new_size1 = (p_ / y_) * height_ + (width_ << 4);
+        int new_size2 = size_ << 1;
+        size_ = (std::max)(new_size1, new_size2);
+        data_ = (uint8_t*)realloc(data_, size_);
       }
     }
 
     MaskFinalise();
-    first = true;
+    first_ = true;
   }
 
   void Shrink() {
-    data = (uint8_t*)realloc(data, p);
-    end_p = p;
+    data_ = (uint8_t*)realloc(data_, p_);
+    end_p_ = p_;
   }
 
   void Write32(uint32_t w) {
-    *((uint32_t*)&data[p]) = w;
-    p += 4;
+    *((uint32_t*)&data_[p_]) = w;
+    p_ += 4;
   }
   void Write64(uint64_t w) {
-    *((uint64_t*)&data[p]) = w;
-    p += 8;
+    *((uint64_t*)&data_[p_]) = w;
+    p_ += 8;
   }
 
   void MaskWrite(int count, bool white) {
-    if (first) {
-      mask_count = count;
-      mask_white = white;
-      first = false;
+    if (first_) {
+      mask_count_ = count;
+      mask_white_ = white;
+      first_ = false;
     } else {
-      if (white == mask_white) {
-        mask_count += count;
+      if (white == mask_white_) {
+        mask_count_ += count;
       } else {
-        Write32((mask_white << 31) | mask_count);
-        mask_count = count;
-        mask_white = white;
+        Write32((mask_white_ << 31) | mask_count_);
+        mask_count_ = count;
+        mask_white_ = white;
       }
     }
   }
 
   void MaskFinalise() {
-    if (mask_count) Write32((mask_white << 31) | mask_count);
+    if (mask_count_) Write32((mask_white_ << 31) | mask_count_);
   }
 
-  void IncrementLast32(int inc) { *((uint32_t*)&data[p - 4]) += inc; }
+  void IncrementLast32(int inc) { *((uint32_t*)&data_[p_ - 4]) += inc; }
 
-  uint8_t ReadBackwards8() { return data[--p]; }
-  uint16_t ReadBackwards16() { return *((uint16_t*)&data[p -= 2]); }
-  uint32_t ReadBackwards32() { return *((uint32_t*)&data[p -= 4]); }
-  uint64_t ReadBackwards64() { return *((uint64_t*)&data[p -= 8]); }
+  uint8_t ReadBackwards8() { return data_[--p_]; }
+  uint16_t ReadBackwards16() { return *((uint16_t*)&data_[p_ -= 2]); }
+  uint32_t ReadBackwards32() { return *((uint32_t*)&data_[p_ -= 4]); }
+  uint64_t ReadBackwards64() { return *((uint64_t*)&data_[p_ -= 8]); }
 
   uint32_t ReadForwards32() {
-    uint32_t out = *((uint32_t*)&data[p]);
-    p += 4;
+    uint32_t out = *((uint32_t*)&data_[p_]);
+    p_ += 4;
     return out;
   }
 
   void Copy(uint8_t* src, int len) {
-    memcpy(&data[p], src, len);
-    p += len;
+    memcpy(&data_[p_], src, len);
+    p_ += len;
   }
 
-  void Start() { p = 0; }
+  void Start() { p_ = 0; }
 
-  void End() { p = end_p; }
+  void End() { p_ = end_p_; }
 
   ~Flex() {
-    if (data) {
-      free(data);
+    if (data_) {
+      free(data_);
     }
-    if (rows) {
-      delete[] rows;
+    if (rows_) {
+      delete[] rows_;
     }
   }
 
-  uint8_t* data = NULL;
-  int width;
-  int height;
-  int* rows = nullptr;
-  int y = -1;
+  uint8_t* data_ = NULL;
+  int width_;
+  int height_;
+  int* rows_ = nullptr;
+  int y_ = -1;
 
  private:
-  int size = 0;
-  int p = 0;
-  int end_p = 0;
-  int mask_count = 0;
-  bool mask_white;
-  bool first;
+  int size_ = 0;
+  int p_ = 0;
+  int end_p_ = 0;
+  int mask_count_ = 0;
+  bool mask_white_;
+  bool first_;
 };
 
 /***********************************************************************
@@ -160,18 +160,18 @@ class Flex {
  ***********************************************************************/
 class Timer {
  public:
-  void Start() { start_time = std::chrono::high_resolution_clock::now(); };
+  void Start() { start_time_ = std::chrono::high_resolution_clock::now(); };
 
   double Read() {
     std::chrono::duration<double> elapsed =
-        std::chrono::high_resolution_clock::now() - start_time;
+        std::chrono::high_resolution_clock::now() - start_time_;
     return elapsed.count();
   };
 
   void Report(const char* name) { printf("%s: %.3fs\n", name, Read()); };
 
  private:
-  std::chrono::high_resolution_clock::time_point start_time;
+  std::chrono::high_resolution_clock::time_point start_time_;
 };
 
 void Output(int level, const char* fmt, ...);
@@ -188,25 +188,25 @@ void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
  * Seam macro
  ***********************************************************************/
 // Record macro
-#define RECORD(I, C)                                                \
-  if ((I) != current_i) {                                           \
-    if (mc > 0) {                                                   \
-      if (seam_map) memset(&seam_map->line[x - mc], current_i, mc); \
-      for (int i = 0; i < n_images; ++i) {                          \
-        if (i == current_i) {                                       \
-          images[i]->masks[0]->Write32(0xc0000000 | mc);            \
-        } else if (i == prev_i || prev_i == -1) {                   \
-          images[i]->masks[0]->Write32(0x80000000 | mc);            \
-        } else {                                                    \
-          images[i]->masks[0]->IncrementLast32(mc);                 \
-        }                                                           \
-      }                                                             \
-    }                                                               \
-    prev_i = current_i;                                             \
-    mc = C;                                                         \
-    current_i = I;                                                  \
-  } else {                                                          \
-    mc += C;                                                        \
+#define RECORD(I, C)                                                 \
+  if ((I) != current_i) {                                            \
+    if (mc > 0) {                                                    \
+      if (seam_map) memset(&seam_map->line_[x - mc], current_i, mc); \
+      for (int i = 0; i < n_images; ++i) {                           \
+        if (i == current_i) {                                        \
+          images[i]->masks_[0]->Write32(0xc0000000 | mc);            \
+        } else if (i == prev_i || prev_i == -1) {                    \
+          images[i]->masks_[0]->Write32(0x80000000 | mc);            \
+        } else {                                                     \
+          images[i]->masks_[0]->IncrementLast32(mc);                 \
+        }                                                            \
+      }                                                              \
+    }                                                                \
+    prev_i = current_i;                                              \
+    mc = C;                                                          \
+    current_i = I;                                                   \
+  } else {                                                           \
+    mc += C;                                                         \
   }
 // end macro
 

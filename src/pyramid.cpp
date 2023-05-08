@@ -21,7 +21,7 @@ Pyramid::Pyramid(int width, int height, int _levels, Pyramid* share)
 
 Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
                  bool _no_alloc, Pyramid* share)
-    : shared(share != NULL), no_alloc(_no_alloc) {
+    : shared_(share != NULL), no_alloc_(_no_alloc) {
   float* data;
 
   int n_levels = DefaultNumLevels(width, height);
@@ -43,15 +43,15 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
     int pitch = (width + x_shift + 7) & ~7;
     size_t bytes =
         (size_t)pitch * ((height + y_shift + 3) & ~3) * sizeof(float);
-    total_bytes += bytes;
+    total_bytes_ += bytes;
 
-    if (shared) {
-      data = share->levels[levels.size()].data;
+    if (shared_) {
+      data = share->levels_[levels_.size()].data;
     } else {
-      if (!no_alloc) {
+      if (!no_alloc_) {
         data = (float*)_aligned_malloc(bytes, 16);  // was 32
         if (!data) {
-          for (int j = 0; j < n; ++j) _aligned_free(levels[j].data);
+          for (int j = 0; j < n; ++j) _aligned_free(levels_[j].data);
           throw(bytes);
         }
       } else {
@@ -59,9 +59,9 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
       }
     }
 
-    levels.push_back({width, height, pitch, pitch >> 2, bytes, data, x, y,
-                      x_shift, y_shift, n ? levels[n - 1].x_shift : false,
-                      n ? levels[n - 1].m128_pitch : 0});
+    levels_.push_back({width, height, pitch, pitch >> 2, bytes, data, x, y,
+                       x_shift, y_shift, n ? levels_[n - 1].x_shift : false,
+                       n ? levels_[n - 1].m128_pitch : 0});
 
     x -= (x_shift << n);
     y -= (y_shift << n);
@@ -77,15 +77,15 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
     height = (height + y_shift + 6) >> 1;
   }
 
-  threadpool = mt::Threadpool::GetInstance();
+  threadpool_ = mt::Threadpool::GetInstance();
 
-  for (auto level = levels.begin(); level < levels.end(); ++level) {
+  for (auto level = levels_.begin(); level < levels_.end(); ++level) {
     level->bands.push_back(0);
     if (level->height >
-        threadpool->GetNThreads() * 4) {  // bands should be at least four
-                                          // pixels high to be safe for shrink
-      for (int i = 1; i < threadpool->GetNThreads(); ++i) {
-        int b = ((int)(level->height * i * (1.0 / threadpool->GetNThreads())) &
+        threadpool_->GetNThreads() * 4) {  // bands should be at least four
+                                           // pixels high to be safe for shrink
+      for (int i = 1; i < threadpool_->GetNThreads(); ++i) {
+        int b = ((int)(level->height * i * (1.0 / threadpool_->GetNThreads())) &
                  ~3);  // was &~1 to make all bands even height (not sure of
                        // reason); changed to &~3 for vertical SSE processing
                        // (see fastblur)
@@ -96,49 +96,49 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
     level->bands.push_back(level->height);
   }
 
-  lines = new __m128*[threadpool->GetNThreads()];
+  lines_ = new __m128*[threadpool_->GetNThreads()];
 
-  for (int i = 0; i < threadpool->GetNThreads(); ++i) {
-    lines[i] = (__m128*)_aligned_malloc(levels[0].pitch * sizeof(float),
-                                        16);  // was 32
+  for (int i = 0; i < threadpool_->GetNThreads(); ++i) {
+    lines_[i] = (__m128*)_aligned_malloc(levels_[0].pitch * sizeof(float),
+                                         16);  // was 32
   }
 }
 
 Pyramid::~Pyramid() {
-  for (int i = 0; i < threadpool->GetNThreads(); ++i) {
-    _aligned_free(lines[i]);
+  for (int i = 0; i < threadpool_->GetNThreads(); ++i) {
+    _aligned_free(lines_[i]);
   }
-  delete lines;
+  delete lines_;
 
-  if (!shared && !no_alloc) {
-    for (auto it = levels.begin(); it < levels.end(); ++it) {
+  if (!shared_ && !no_alloc_) {
+    for (auto it = levels_.begin(); it < levels_.end(); ++it) {
       _aligned_free(it->data);
     }
   }
-  levels.clear();
+  levels_.clear();
 
-  free(lut);
+  free(lut_);
 }
 
 /***********************************************************************
  * copiers
  ***********************************************************************/
 void Pyramid::set_lut(int bits, bool gamma) {
-  if (lut_bits < bits || lut_gamma != gamma || !lut) {
-    free(lut);
-    lut = (float*)malloc((1 << bits) << 2);
-    lut_bits = bits;
-    lut_gamma = gamma;
+  if (lut_bits_ < bits || lut_gamma_ != gamma || !lut_) {
+    free(lut_);
+    lut_ = (float*)malloc((1 << bits) << 2);
+    lut_bits_ = bits;
+    lut_gamma_ = gamma;
   }
 
   unsigned int l = 1 << bits;
   if (gamma) {
     for (unsigned int i = 0; i < l; ++i) {
-      lut[i] = (float)(i * i);
+      lut_[i] = (float)(i * i);
     }
   } else {
     for (unsigned int i = 0; i < l; ++i) {
-      lut[i] = (float)i;
+      lut_[i] = (float)i;
     }
   }
 }
@@ -147,55 +147,57 @@ void Pyramid::Copy(uint8_t* src_p, int step, int pitch, bool gamma, int bits) {
   if (step > 1) {
     set_lut(bits, gamma);
 
-    for (int t = 0; t < (int)levels[0].bands.size() - 1; ++t) {
+    for (int t = 0; t < (int)levels_[0].bands.size() - 1; ++t) {
       switch (bits) {
         case 8:
-          threadpool->Queue([=, this] {
-            CopyInterleavedThread_8bit(src_p, step, pitch, levels[0].bands[t],
-                                       levels[0].bands[t + 1]);
+          threadpool_->Queue([=, this] {
+            CopyInterleavedThread_8bit(src_p, step, pitch, levels_[0].bands[t],
+                                       levels_[0].bands[t + 1]);
           });
           break;
         case 16:
-          threadpool->Queue([=, this] {
+          threadpool_->Queue([=, this] {
             CopyInterleavedThread_16bit((uint16_t*)src_p, step, pitch,
-                                        levels[0].bands[t],
-                                        levels[0].bands[t + 1]);
+                                        levels_[0].bands[t],
+                                        levels_[0].bands[t + 1]);
           });
           break;
         case 32:
           break;
       }
     }
-    threadpool->Wait();
+    threadpool_->Wait();
   } else {
-    for (int t = 0; t < (int)levels[0].bands.size() - 1; ++t) {
+    for (int t = 0; t < (int)levels_[0].bands.size() - 1; ++t) {
       // planar (only slight improvement with MT, but increases CPU usage)
       switch (bits) {
         case 8:
-          threadpool->Queue([=, this] {
-            CopyPlanarThread_8bit(src_p, pitch, gamma, levels[0].bands[t],
-                                  levels[0].bands[t + 1]);
+          threadpool_->Queue([=, this] {
+            CopyPlanarThread_8bit(src_p, pitch, gamma, levels_[0].bands[t],
+                                  levels_[0].bands[t + 1]);
           });
           break;
         case 10:
         case 12:
         case 14:
         case 16:
-          threadpool->Queue([=, this] {
+          threadpool_->Queue([=, this] {
             CopyPlanarThread_16bit((uint16_t*)src_p, pitch, gamma,
-                                   levels[0].bands[t], levels[0].bands[t + 1]);
+                                   levels_[0].bands[t],
+                                   levels_[0].bands[t + 1]);
           });
           break;
         case 32:
-          threadpool->Queue([=, this] {
+          threadpool_->Queue([=, this] {
             CopyPlanarThread_32bit((__m128*)src_p, pitch, gamma,
-                                   levels[0].bands[t], levels[0].bands[t + 1]);
+                                   levels_[0].bands[t],
+                                   levels_[0].bands[t + 1]);
           });
           break;
       }
     }
 
-    threadpool->Wait();
+    threadpool_->Wait();
   }
 }
 
@@ -206,19 +208,19 @@ void Pyramid::CopyInterleavedThread_8bit(uint8_t* src_p, int step, int pitch,
 
   src_p += sy * pitch;
 
-  float* p_p = levels[0].data;
-  p_p += sy * levels[0].pitch;
+  float* p_p = levels_[0].data;
+  p_p += sy * levels_[0].pitch;
 
   for (y = sy; y < ey; ++y) {
     src_pp = src_p;
-    for (x = 0; x < levels[0].width; ++x) {
-      p_p[x] = lut[*src_pp];
+    for (x = 0; x < levels_[0].width; ++x) {
+      p_p[x] = lut_[*src_pp];
       src_pp += step;
     }
-    for (; x < levels[0].pitch; ++x) {
+    for (; x < levels_[0].pitch; ++x) {
       p_p[x] = p_p[x - 1];  // this was commented out, not sure if required
     }
-    p_p += levels[0].pitch;
+    p_p += levels_[0].pitch;
     src_p += pitch;
   }
 }
@@ -230,19 +232,19 @@ void Pyramid::CopyInterleavedThread_16bit(uint16_t* src_p, int step, int pitch,
 
   src_p += sy * pitch;
 
-  float* p_p = levels[0].data;
-  p_p += sy * levels[0].pitch;
+  float* p_p = levels_[0].data;
+  p_p += sy * levels_[0].pitch;
 
   for (y = sy; y < ey; ++y) {
     src_pp = src_p;
-    for (x = 0; x < levels[0].width; ++x) {
-      p_p[x] = lut[*src_pp];
+    for (x = 0; x < levels_[0].width; ++x) {
+      p_p[x] = lut_[*src_pp];
       src_pp += step;
     }
-    for (; x < levels[0].pitch; ++x) {
+    for (; x < levels_[0].pitch; ++x) {
       p_p[x] = p_p[x - 1];
     }
-    p_p += levels[0].pitch;
+    p_p += levels_[0].pitch;
     src_p += pitch;
   }
 }
@@ -254,19 +256,19 @@ void Pyramid::CopyPlanarThread_8bit(uint8_t* src_p, int pitch, bool gamma,
   __m128 fpixels;
   __m128i shuffle =
       _mm_set_epi32(0x80808003, 0x80808002, 0x80808001, 0x80808000);
-  __m128* rp_p = (__m128*)levels[0].data;
+  __m128* rp_p = (__m128*)levels_[0].data;
   __m128* p_p;
   __m128i* src_pp_m;
   int* src_pp_i;
   uint8_t* src_pp_b;
 
-  int sixteens = levels[0].width >> 4;
-  int fours = (levels[0].width & 0xf) >> 2;
-  int ones = (levels[0].width & 3);
-  int extras = levels[0].pitch - levels[0].width;
+  int sixteens = levels_[0].width >> 4;
+  int fours = (levels_[0].width & 0xf) >> 2;
+  int ones = (levels_[0].width & 3);
+  int extras = levels_[0].pitch - levels_[0].width;
 
   src_p += sy * pitch;
-  rp_p += sy * levels[0].m128_pitch;
+  rp_p += sy * levels_[0].m128_pitch;
 
   int g;
 
@@ -343,7 +345,7 @@ void Pyramid::CopyPlanarThread_8bit(uint8_t* src_p, int pitch, bool gamma,
     }
 
     src_p += pitch;
-    rp_p += levels[0].m128_pitch;
+    rp_p += levels_[0].m128_pitch;
   }
 }
 
@@ -357,17 +359,17 @@ void Pyramid::CopyPlanarThread_16bit(uint16_t* src_p, int pitch, bool gamma,
       _mm_set_epi32(0x80800706, 0x80800504, 0x80800302, 0x80800100);
   __m128i shuffle2 =
       _mm_set_epi32(0x80800f0e, 0x80800d0c, 0x80800b0a, 0x80800908);
-  __m128* rp_p = (__m128*)levels[0].data;
+  __m128* rp_p = (__m128*)levels_[0].data;
   __m128* p_p;
   __m128i* src_pp_m;
   uint16_t* src_pp_w;
 
-  int eights = levels[0].width >> 3;
-  int ones = (levels[0].width & 7);
-  int extras = levels[0].pitch - levels[0].width;
+  int eights = levels_[0].width >> 3;
+  int ones = (levels_[0].width & 7);
+  int extras = levels_[0].pitch - levels_[0].width;
 
   src_p += sy * pitch;
-  rp_p += sy * levels[0].m128_pitch;
+  rp_p += sy * levels_[0].m128_pitch;
 
   int g;
 
@@ -412,7 +414,7 @@ void Pyramid::CopyPlanarThread_16bit(uint16_t* src_p, int pitch, bool gamma,
     }
 
     src_p += pitch;
-    rp_p += levels[0].m128_pitch;
+    rp_p += levels_[0].m128_pitch;
   }
 }
 
@@ -422,35 +424,35 @@ void Pyramid::CopyPlanarThread_32bit(__m128* src_p, int pitch, bool gamma,
 
   pitch >>= 2;
 
-  __m128* rp_p = (__m128*)levels[0].data;
+  __m128* rp_p = (__m128*)levels_[0].data;
 
   src_p += sy * pitch;
-  rp_p += sy * levels[0].m128_pitch;
+  rp_p += sy * levels_[0].m128_pitch;
 
   if (gamma) {
-    int fours = (levels[0].width + 3) >> 2;
+    int fours = (levels_[0].width + 3) >> 2;
 
     for (y = sy; y < ey; ++y) {
       for (x = 0; x < fours; ++x) {
         __m128 pixels = _mm_load_ps((float*)&src_p[x]);
         _mm_store_ps((float*)&rp_p[x], _mm_mul_ps(pixels, pixels));
       }
-      float copy = ((float*)rp_p)[levels[0].width - 1];
-      for (x = levels[0].width; x < levels[0].pitch; ++x)
+      float copy = ((float*)rp_p)[levels_[0].width - 1];
+      for (x = levels_[0].width; x < levels_[0].pitch; ++x)
         ((float*)rp_p)[x] = copy;
       src_p += pitch;
-      rp_p += levels[0].m128_pitch;
+      rp_p += levels_[0].m128_pitch;
     }
   } else {
-    int copy_bytes = levels[0].width << 2;
+    int copy_bytes = levels_[0].width << 2;
 
     for (y = sy; y < ey; ++y) {
       memcpy(rp_p, src_p, copy_bytes);
-      float copy = ((float*)rp_p)[levels[0].width - 1];
-      for (x = levels[0].width; x < levels[0].pitch; ++x)
+      float copy = ((float*)rp_p)[levels_[0].width - 1];
+      for (x = levels_[0].width; x < levels_[0].pitch; ++x)
         ((float*)rp_p)[x] = copy;
       src_p += pitch;
-      rp_p += levels[0].m128_pitch;
+      rp_p += levels_[0].m128_pitch;
     }
   }
 }
@@ -461,19 +463,19 @@ void Pyramid::CopyPlanarThread_32bit(__m128* src_p, int pitch, bool gamma,
 void Pyramid::Subsample(int sub_w, int sub_h, Pyramid* source) {
   int x, y;
   int p = 0;
-  __m128* in = (__m128*)source->levels[0].data;
-  __m128* out = (__m128*)levels[0].data;
-  __m128** temp_lines = source->lines;
+  __m128* in = (__m128*)source->levels_[0].data;
+  __m128* out = (__m128*)levels_[0].data;
+  __m128** temp_lines = source->lines_;
   __m128* line = temp_lines[0];
-  int m128_pitch_in = source->levels[0].m128_pitch;
-  int m128_pitch_out = levels[0].m128_pitch;
+  int m128_pitch_in = source->levels_[0].m128_pitch;
+  int m128_pitch_out = levels_[0].m128_pitch;
   int mid_pitch = sub_w == 2 ? ((m128_pitch_in >> 1) + 1) & ~1 : m128_pitch_in;
   __m128 three = _mm_set_ps1(3);
   __m128 four = _mm_set_ps1(4);
   __m128 mul = _mm_set_ps1((sub_h ? 1.0f / 8 : 1.0f) *
                            (sub_w == 2 ? 1.0f / 64 : 1.0f / 8));
 
-  for (y = 0; y < levels[0].height; ++y) {
+  for (y = 0; y < levels_[0].height; ++y) {
     if (sub_h) {
       if (y == 0) {
         for (x = 0; x < m128_pitch_in; ++x) {
@@ -486,7 +488,7 @@ void Pyramid::Subsample(int sub_w, int sub_h, Pyramid* source) {
                                  three),
                       _mm_load_ps((float*)&in[x + (m128_pitch_in << 1)]))));
         }
-      } else if (y == levels[0].height - 1) {
+      } else if (y == levels_[0].height - 1) {
         for (x = 0; x < m128_pitch_in; ++x) {
           _mm_store_ps(
               (float*)&temp_lines[0][x],
@@ -584,23 +586,23 @@ void Pyramid::Shrink() {
   const __m128 _16th = _mm_set_ps1(1.0 / 16);
   const __m128 _256th = _mm_set_ps1(1.0 / 256);
 
-  for (l = 0; l < (int)levels.size() - 1; ++l) {
-    hi = (__m128*)levels[l].data;
-    lo = (__m128*)levels[l + 1].data;
+  for (l = 0; l < (int)levels_.size() - 1; ++l) {
+    hi = (__m128*)levels_[l].data;
+    lo = (__m128*)levels_[l + 1].data;
 
-    int height_odd = (levels[l].height & 1) ^ levels[l].y_shift;
-    int first_bad_line = levels[l + 1].height - (3 - height_odd);
+    int height_odd = (levels_[l].height & 1) ^ levels_[l].y_shift;
+    int first_bad_line = levels_[l + 1].height - (3 - height_odd);
 
-    for (int t = 0; t < (int)levels[l + 1].bands.size() - 1; ++t) {
-      threadpool->Queue([=, this] {
-        ShrinkThread(lines[t], hi, lo, levels[l].m128_pitch,
-                     levels[l + 1].m128_pitch, first_bad_line, height_odd,
-                     levels[l + 1].bands[t], levels[l + 1].bands[t + 1],
-                     levels[l].x_shift, levels[l].y_shift);
+    for (int t = 0; t < (int)levels_[l + 1].bands.size() - 1; ++t) {
+      threadpool_->Queue([=, this] {
+        ShrinkThread(lines_[t], hi, lo, levels_[l].m128_pitch,
+                     levels_[l + 1].m128_pitch, first_bad_line, height_odd,
+                     levels_[l + 1].bands[t], levels_[l + 1].bands[t + 1],
+                     levels_[l].x_shift, levels_[l].y_shift);
       });
     }
 
-    threadpool->Wait();
+    threadpool_->Wait();
   }
 }
 
@@ -797,14 +799,14 @@ void Pyramid::LaplaceCollapse(int n_levels, bool Collapse) {
     else
       l = j;
 
-    for (int t = 0; t < (int)levels[l].bands.size() - 1; ++t) {
-      threadpool->Queue([=, this] {
-        LaplaceThreadWrapper(&levels[l], &levels[l + 1], levels[l].bands[t],
-                             levels[l].bands[t + 1]);
+    for (int t = 0; t < (int)levels_[l].bands.size() - 1; ++t) {
+      threadpool_->Queue([=, this] {
+        LaplaceThreadWrapper(&levels_[l], &levels_[l + 1], levels_[l].bands[t],
+                             levels_[l].bands[t + 1]);
       });
     }
 
-    threadpool->Wait();
+    threadpool_->Wait();
   }
 }
 
@@ -924,13 +926,18 @@ void Pyramid::LaplaceLine3(__m128* hi, __m128* temp1, __m128* temp2,
   }
 }
 
-__m128* Pyramid::Level::GetLine(int y) { return (__m128*)(data + y * pitch); }
+__m128* GetLine(const Pyramid::Level& level, int y) {
+  return (__m128*)(level.data + y * level.pitch);
+}
 
-void Pyramid::Level::GetExpandedLine(__m128* temp, int y) {
-  if (upper_x_shift)
-    LaplaceExpandShifted(temp, GetLine(y), upper_m128_pitch, m128_pitch);
-  else
-    LaplaceExpand(temp, GetLine(y), upper_m128_pitch, m128_pitch);
+void GetExpandedLine(const Pyramid::Level& level, __m128* temp, int y) {
+  if (level.upper_x_shift) {
+    Pyramid::LaplaceExpandShifted(temp, GetLine(level, y),
+                                  level.upper_m128_pitch, level.m128_pitch);
+  } else {
+    Pyramid::LaplaceExpand(temp, GetLine(level, y), level.upper_m128_pitch,
+                           level.m128_pitch);
+  }
 }
 
 void Pyramid::LaplaceThreadWrapper(Level* upper_level, Level* lower_level,
@@ -957,16 +964,16 @@ void Pyramid::LaplaceThread(Level* upper_level, Level* lower_level, int sy,
 
   if (upper_level->y_shift) {
     ++lo_y;
-    lower_level->GetExpandedLine(temp2, lo_y++);
-    lower_level->GetExpandedLine(temp3, lo_y++);
+    GetExpandedLine(*lower_level, temp2, lo_y++);
+    GetExpandedLine(*lower_level, temp3, lo_y++);
   } else {
-    lower_level->GetExpandedLine(temp1, lo_y++);
-    lower_level->GetExpandedLine(temp2, lo_y++);
+    GetExpandedLine(*lower_level, temp1, lo_y++);
+    GetExpandedLine(*lower_level, temp2, lo_y++);
   }
 
   for (int y = sy; y < ey; ++y) {
     if (!((y + upper_level->y_shift) & 1)) {
-      lower_level->GetExpandedLine(temp3, lo_y++);
+      GetExpandedLine(*lower_level, temp3, lo_y++);
 
       LaplaceLine3(hi, temp1, temp2, temp3, upper_level->m128_pitch);
     } else {
@@ -987,16 +994,16 @@ void Pyramid::LaplaceThread(Level* upper_level, Level* lower_level, int sy,
  ***********************************************************************/
 float Pyramid::Average() {
   int x, y;
-  int fours = levels[0].width >> 2;
+  int fours = levels_[0].width >> 2;
 
   __m128 m128_total = {0};
   __m128 one = _mm_set_ps1(1.0f);
   double total = 0;
   double row_total;
 
-  __m128* data = (__m128*)levels[0].data;
+  __m128* data = (__m128*)levels_[0].data;
 
-  for (y = 0; y < levels[0].height; ++y) {
+  for (y = 0; y < levels_[0].height; ++y) {
     m128_total = _mm_setzero_ps();
 
     for (x = 0; x < fours; ++x) {
@@ -1007,17 +1014,17 @@ float Pyramid::Average() {
     m128_total = _mm_hadd_ps(m128_total, m128_total);
     row_total = _mm_cvtss_f32(m128_total);
 
-    for (x <<= 2; x < levels[0].width; ++x) {
+    for (x <<= 2; x < levels_[0].width; ++x) {
       row_total += ((float*)data)[x];
     }
 
     total += row_total;
 
-    data += levels[0].m128_pitch;
+    data += levels_[0].m128_pitch;
   }
 
-  total /= levels[0].width;
-  total /= levels[0].height;
+  total /= levels_[0].width;
+  total /= levels_[0].height;
 
   return (float)total;
 }
@@ -1025,51 +1032,51 @@ float Pyramid::Average() {
 /***********************************************************************
  * Add
  ***********************************************************************/
-void Pyramid::Add(float add, int _levels) {
+void Pyramid::Add(float add, int levels) {
   __m128 __add = _mm_set_ps1(add);
 
-  int lim = (std::min)(_levels, (int)levels.size() - 1);
+  int lim = (std::min)(levels, (int)levels_.size() - 1);
 
   for (int l = 0; l < lim; ++l) {
-    __m128* data = (__m128*)levels[l].data;
+    __m128* data = (__m128*)levels_[l].data;
 
-    for (int t = 0; t < (int)levels[l].bands.size() - 1; ++t) {
-      threadpool->Queue([=, this]() {
-        __m128* data =
-            (__m128*)levels[l].data + levels[l].bands[t] * levels[l].m128_pitch;
-        for (int y = levels[l].bands[t]; y < levels[l].bands[t + 1]; ++y) {
-          for (int x = 0; x < levels[l].m128_pitch; ++x) {
+    for (int t = 0; t < (int)levels_[l].bands.size() - 1; ++t) {
+      threadpool_->Queue([=, this]() {
+        __m128* data = (__m128*)levels_[l].data +
+                       levels_[l].bands[t] * levels_[l].m128_pitch;
+        for (int y = levels_[l].bands[t]; y < levels_[l].bands[t + 1]; ++y) {
+          for (int x = 0; x < levels_[l].m128_pitch; ++x) {
             _mm_store_ps((float*)&data[x], _mm_add_ps(__add, data[x]));
           }
-          data += levels[l].m128_pitch;
+          data += levels_[l].m128_pitch;
         }
       });
     }
 
-    threadpool->Wait();
+    threadpool_->Wait();
   }
 }
 
 /***********************************************************************
  * Multiply and add
  ***********************************************************************/
-void Pyramid::MultiplyAndAdd(float add, float mul, int _levels) {
+void Pyramid::MultiplyAndAdd(float add, float mul, int levels) {
   int i;
   int x, y;
   __m128 __add = _mm_set_ps1(add);
   __m128 __mul = _mm_set_ps1(mul);
 
-  int lim = (std::min)(_levels, (int)levels.size() - 1);
+  int lim = (std::min)(levels, (int)levels_.size() - 1);
 
   for (i = 0; i < lim; ++i) {
-    __m128* data = (__m128*)levels[i].data;
+    __m128* data = (__m128*)levels_[i].data;
 
-    for (y = 0; y < levels[i].height; ++y) {
-      for (x = 0; x < levels[i].m128_pitch; ++x) {
+    for (y = 0; y < levels_[i].height; ++y) {
+      for (x = 0; x < levels_[i].m128_pitch; ++x) {
         _mm_store_ps((float*)&data[x],
                      _mm_add_ps(__add, _mm_mul_ps(data[x], __mul)));
       }
-      data += levels[i].m128_pitch;
+      data += levels_[i].m128_pitch;
     }
   }
 }
@@ -1084,17 +1091,17 @@ void Pyramid::MultiplyAddClamp(float add, float mul, int level) {
   __m128 __min = _mm_set_ps1(1.0f);
   __m128 __max = _mm_set_ps1(0.0f);
 
-  __m128* data = (__m128*)levels[level].data;
+  __m128* data = (__m128*)levels_[level].data;
 
-  for (y = 0; y < levels[level].height; ++y) {
-    for (x = 0; x < levels[level].m128_pitch; ++x) {
+  for (y = 0; y < levels_[level].height; ++y) {
+    for (x = 0; x < levels_[level].m128_pitch; ++x) {
       _mm_store_ps(
           (float*)&data[x],
           _mm_max_ps(
               _mm_min_ps(_mm_add_ps(__add, _mm_mul_ps(data[x], __mul)), __min),
               __max));
     }
-    data += levels[level].m128_pitch;
+    data += levels_[level].m128_pitch;
   }
 }
 
@@ -1104,22 +1111,22 @@ void Pyramid::MultiplyAddClamp(float add, float mul, int level) {
 void Pyramid::Multiply(int level, float mul) {
   if (mul == 1) return;
   if (mul == 0) {
-    ZeroMemory(levels[level].data,
-               levels[level].height * levels[level].pitch * sizeof(float));
+    ZeroMemory(levels_[level].data,
+               levels_[level].height * levels_[level].pitch * sizeof(float));
     return;
   }
 
   int x, y;
   __m128 __mul = _mm_set_ps1(mul);
 
-  __m128* data = (__m128*)levels[level].data;
+  __m128* data = (__m128*)levels_[level].data;
 
-  for (y = 0; y < levels[level].height; ++y) {
-    for (x = 0; x < levels[level].m128_pitch; ++x) {
+  for (y = 0; y < levels_[level].height; ++y) {
+    for (x = 0; x < levels_[level].m128_pitch; ++x) {
       _mm_store_ps((float*)&data[x],
                    _mm_mul_ps(_mm_load_ps((float*)&data[x]), __mul));
     }
-    data += levels[level].m128_pitch;
+    data += levels_[level].m128_pitch;
   }
 }
 
@@ -1129,17 +1136,17 @@ void Pyramid::Multiply(int level, float mul) {
 void Pyramid::MultplyByPyramid(Pyramid* b) {
   int x, y;
 
-  for (int l = 0; l < (int)levels.size() - 1; ++l) {
-    __m128* data = (__m128*)levels[l].data;
-    __m128* _b = (__m128*)b->levels[l].data;
+  for (int l = 0; l < (int)levels_.size() - 1; ++l) {
+    __m128* data = (__m128*)levels_[l].data;
+    __m128* _b = (__m128*)b->levels_[l].data;
 
-    for (y = 0; y < levels[l].height; ++y) {
-      for (x = 0; x < levels[l].m128_pitch; ++x) {
+    for (y = 0; y < levels_[l].height; ++y) {
+      for (x = 0; x < levels_[l].m128_pitch; ++x) {
         _mm_store_ps((float*)&data[x], _mm_mul_ps(_mm_load_ps((float*)&data[x]),
                                                   _mm_load_ps((float*)&_b[x])));
       }
-      data += levels[l].m128_pitch;
-      _b += levels[l].m128_pitch;
+      data += levels_[l].m128_pitch;
+      _b += levels_[l].m128_pitch;
     }
   }
 }
@@ -1151,7 +1158,7 @@ void Pyramid::Fuse(Pyramid* _b, Pyramid* mask, bool pre = false,
                    int black = 0x00) {
   int l;
 
-  for (l = 0; l < (int)levels.size(); ++l) {
+  for (l = 0; l < (int)levels_.size(); ++l) {
     //  fuse_thread((__m128*)levels[l].data,
     //(__m128*)_b->levels[l].data,
     //(__m128*)mask->levels[l].data, m128_pitch, 0, levels[l].height, pre,
@@ -1160,14 +1167,14 @@ void Pyramid::Fuse(Pyramid* _b, Pyramid* mask, bool pre = false,
     // fuse doesn't see any gains from multithreading; leave this here as
     // reference
 
-    for (int t = 0; t < (int)levels[l].bands.size() - 1; ++t) {
-      threadpool->Queue([=, this] {
-        FuseThread((__m128*)levels[l].data, (__m128*)_b->levels[l].data,
-                   (__m128*)mask->levels[l].data, levels[l].m128_pitch,
-                   levels[l].bands[t], levels[l].bands[t + 1], pre, black);
+    for (int t = 0; t < (int)levels_[l].bands.size() - 1; ++t) {
+      threadpool_->Queue([=, this] {
+        FuseThread((__m128*)levels_[l].data, (__m128*)_b->levels_[l].data,
+                   (__m128*)mask->levels_[l].data, levels_[l].m128_pitch,
+                   levels_[l].bands[t], levels_[l].bands[t + 1], pre, black);
       });
     }
-    threadpool->Wait();
+    threadpool_->Wait();
   }
 }
 
@@ -1213,11 +1220,11 @@ void Pyramid::Fuse(Pyramid* b, float weight) {
   int p;
   __m128 w = _mm_set_ps1(weight);
 
-  for (l = 0; l < (int)levels.size(); ++l) {
-    __m128* _a = (__m128*)levels[l].data;
-    __m128* _b = (__m128*)b->levels[l].data;
+  for (l = 0; l < (int)levels_.size(); ++l) {
+    __m128* _a = (__m128*)levels_[l].data;
+    __m128* _b = (__m128*)b->levels_[l].data;
 
-    int count = levels[l].height * levels[l].m128_pitch;
+    int count = levels_[l].height * levels_[l].m128_pitch;
     for (p = 0; p < count; ++p) {
       __m128 __a = _a[p];
       _mm_store_ps((float*)&_a[p],
@@ -1268,8 +1275,8 @@ void Pyramid::Denoise(int level, float power, bool gamma) {
  ***********************************************************************/
 void Pyramid::Blend(Pyramid* b) {
   if (b->GetNLevels() < GetNLevels()) return;
-  memcpy(levels[GetNLevels() - 1].data, b->levels[GetNLevels() - 1].data,
-         levels[GetNLevels() - 1].height * levels[GetNLevels() - 1].pitch *
+  memcpy(levels_[GetNLevels() - 1].data, b->levels_[GetNLevels() - 1].data,
+         levels_[GetNLevels() - 1].height * levels_[GetNLevels() - 1].pitch *
              sizeof(float));
 }
 
@@ -1287,24 +1294,24 @@ void Pyramid::Blend(Pyramid* b) {
   right++;
 
 void Pyramid::BlurX(float radius, Pyramid* transpose) {
-  for (int i = 0; i < (int)levels[0].bands.size() - 1; ++i) {
-    threadpool->Queue([=, this] {
-      BlurXThread(radius, transpose, levels[0].bands[i],
-                  levels[0].bands[i + 1]);
+  for (int i = 0; i < (int)levels_[0].bands.size() - 1; ++i) {
+    threadpool_->Queue([=, this] {
+      BlurXThread(radius, transpose, levels_[0].bands[i],
+                  levels_[0].bands[i + 1]);
     });
   }
-  threadpool->Wait();
+  threadpool_->Wait();
 }
 
 void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
   int x, y;
   int i;
   int o;
-  float* line0 = levels[0].data + sy * levels[0].pitch;
-  float* line1 = line0 + levels[0].pitch;
-  float* line2 = line1 + levels[0].pitch;
-  float* line3 = line2 + levels[0].pitch;
-  float* out = transpose->levels[0].data + sy;
+  float* line0 = levels_[0].data + sy * levels_[0].pitch;
+  float* line1 = line0 + levels_[0].pitch;
+  float* line2 = line1 + levels_[0].pitch;
+  float* line3 = line2 + levels_[0].pitch;
+  float* out = transpose->levels_[0].data + sy;
   __m128 temp1, temp2;
 
   int iradius = (int)floor(radius);
@@ -1317,7 +1324,7 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
   int fours = (ey - sy + 3) >>
               2;  // +3 is probably not necessary because all bands are mod 4
 
-  if (iradius < levels[0].width >> 1) {
+  if (iradius < levels_[0].width >> 1) {
     for (y = 0; y < fours; ++y) {
       acc = _mm_setzero_ps();
       left = 0;
@@ -1339,36 +1346,36 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
         _mm_store_ps(
             &out[o],
             _mm_add_ps(acc, _mm_mul_ps(_mm_add_ps(temp1, temp2), mul)));
-        o += transpose->levels[0].pitch;
+        o += transpose->levels_[0].pitch;
         acc = _mm_add_ps(_mm_sub_ps(temp2, temp1), acc);
         ++x;
       }
 
-      while (right < levels[0].width) {
+      while (right < levels_[0].width) {
         BLUR_SSE_GET_RIGHT;
         _mm_store_ps(
             &out[o],
             _mm_add_ps(acc, _mm_mul_ps(_mm_add_ps(temp1, temp2), mul)));
-        o += transpose->levels[0].pitch;
+        o += transpose->levels_[0].pitch;
         BLUR_SSE_GET_LEFT
         acc = _mm_add_ps(_mm_sub_ps(temp2, temp1), acc);
         ++x;
       }
 
-      while (x < levels[0].width) {
+      while (x < levels_[0].width) {
         _mm_store_ps(
             &out[o],
             _mm_add_ps(acc, _mm_mul_ps(_mm_add_ps(temp1, temp2), mul)));
-        o += transpose->levels[0].pitch;
+        o += transpose->levels_[0].pitch;
         BLUR_SSE_GET_LEFT;
         acc = _mm_add_ps(_mm_sub_ps(temp2, temp1), acc);
         ++x;
       }
 
-      line0 += levels[0].pitch << 2;
-      line1 += levels[0].pitch << 2;
-      line2 += levels[0].pitch << 2;
-      line3 += levels[0].pitch << 2;
+      line0 += levels_[0].pitch << 2;
+      line1 += levels_[0].pitch << 2;
+      line2 += levels_[0].pitch << 2;
+      line3 += levels_[0].pitch << 2;
       out += 4;
     }
   } else {
@@ -1380,7 +1387,7 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
       acc = _mm_mul_ps(temp1, irp1);
       right = 1;
       for (x = 1; x < iradius + 1; ++x) {
-        if (right < levels[0].width) {
+        if (right < levels_[0].width) {
           BLUR_SSE_GET(temp2, right);
           ++right;
         }
@@ -1391,24 +1398,24 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
       o = 0;
       left = -iradius;
 
-      for (x = 0; x < levels[0].width; ++x) {
-        if (right < levels[0].width) {
+      for (x = 0; x < levels_[0].width; ++x) {
+        if (right < levels_[0].width) {
           BLUR_SSE_GET(temp2, right);
           ++right;
         }
         _mm_store_ps(
             &out[o],
             _mm_add_ps(acc, _mm_mul_ps(_mm_add_ps(temp1, temp2), mul)));
-        o += transpose->levels[0].pitch;
+        o += transpose->levels_[0].pitch;
         if (left > 0) BLUR_SSE_GET(temp1, left);
         ++left;
         acc = _mm_add_ps(_mm_sub_ps(temp2, temp1), acc);
       }
 
-      line0 += levels[0].pitch << 2;
-      line1 += levels[0].pitch << 2;
-      line2 += levels[0].pitch << 2;
-      line3 += levels[0].pitch << 2;
+      line0 += levels_[0].pitch << 2;
+      line1 += levels_[0].pitch << 2;
+      line2 += levels_[0].pitch << 2;
+      line3 += levels_[0].pitch << 2;
       out += 4;
     }
   }
@@ -1418,28 +1425,28 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
  * PNG debug
  ***********************************************************************/
 void Pyramid::Png(const char* filename) {
-  int width = levels[0].pitch;
+  int width = levels_[0].pitch;
   int height =
-      levels[0].height + (levels.size() > 1 ? 1 + levels[1].height : 0);
+      levels_[0].height + (levels_.size() > 1 ? 1 + levels_[1].height : 0);
   uint8_t* temp = (uint8_t*)calloc(width * height, 1);
 
   int px = 0, py = 0;
 
-  for (int l = 0; l < (int)levels.size(); ++l) {
-    float* data = (float*)levels[l].data;
-    uint8_t* line = temp + py * levels[0].pitch + px;
-    for (int y = 0; y < levels[l].height; ++y) {
-      for (int x = 0; x < levels[l].pitch; ++x) {
+  for (int l = 0; l < (int)levels_.size(); ++l) {
+    float* data = (float*)levels_[l].data;
+    uint8_t* line = temp + py * levels_[0].pitch + px;
+    for (int y = 0; y < levels_[l].height; ++y) {
+      for (int x = 0; x < levels_[l].pitch; ++x) {
         int f = (int)floor(data[x] + 0.5);
         line[x] = std::max(0, std::min(255, f));
       }
-      line += levels[0].pitch;
-      data += levels[l].pitch;
+      line += levels_[0].pitch;
+      data += levels_[l].pitch;
     }
     if (l & 1)
-      px += levels[l].pitch + 1;
+      px += levels_[l].pitch + 1;
     else
-      py += levels[l].height + 1;
+      py += levels_[l].height + 1;
   }
 
   io::png::Pnger::Quick((char*)filename, temp, width, height, width,

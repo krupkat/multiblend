@@ -19,11 +19,11 @@ void* TP_Thread(void* param);
 class Threadpool {
  public:
   static Threadpool* GetInstance(int threads = 0) {
-    if (!instance) instance = new Threadpool(threads);
-    return instance;
+    if (!instance_) instance_ = new Threadpool(threads);
+    return instance_;
   }
   void Queue(std::function<void()> function);
-  int GetNThreads() { return n_threads; };
+  int GetNThreads() { return n_threads_; };
   void Wait();
 
   struct tp_struct {
@@ -44,19 +44,19 @@ class Threadpool {
   };
 
  private:
-  static Threadpool* instance;
-  Threadpool(int _threads = 0);  // constructor is private
+  static Threadpool* instance_;
+  Threadpool(int threads = 0);  // constructor is private
   ~Threadpool();
 #ifdef _WIN32
   static DWORD WINAPI Thread(void* param);
 #endif
-  tp_struct* threads;
-  std::deque<std::function<void()>> queue;
-  int n_threads;
-  std::mutex main_mutex;
-  std::mutex return_mutex;
-  std::condition_variable main_cond;
-  std::condition_variable return_cond;
+  tp_struct* threads_;
+  std::deque<std::function<void()>> queue_;
+  int n_threads_;
+  std::mutex main_mutex_;
+  std::mutex return_mutex_;
+  std::condition_variable main_cond_;
+  std::condition_variable return_cond_;
 };
 
 }  // namespace multiblend::mt
