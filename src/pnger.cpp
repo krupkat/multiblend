@@ -44,9 +44,9 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
       if (base >= 6) {
         base -= 6;
       }
-      palette_[i].red = (png_byte)(sqrt(r) * 255 + 0.5);
-      palette_[i].green = (png_byte)(sqrt(g) * 255 + 0.5);
-      palette_[i].blue = (png_byte)(sqrt(b) * 255 + 0.5);
+      palette_[i].red = (png_byte)std::lround(sqrt(r) * 255);
+      palette_[i].green = (png_byte)std::lround(sqrt(g) * 255);
+      palette_[i].blue = (png_byte)std::lround(sqrt(b) * 255);
     }
 
     palette_[255].red = 0;

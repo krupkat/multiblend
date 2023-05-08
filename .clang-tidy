@@ -7,6 +7,7 @@ Checks: >
   modernize-use-auto,
   bugprone-implicit-widening-of-multiplication-result,
   readability-isolate-declaration,
-  modernize-deprecated-headers
+  modernize-deprecated-headers,
+  bugprone-incorrect-roundings
 
 HeaderFilterRegex: ".*multiblend.*src.*"

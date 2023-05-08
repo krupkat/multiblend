@@ -1,5 +1,6 @@
 #include "src/image.h"
 
+#include <cmath>
 #include <cstdio>
 
 #include "src/functions.h"
@@ -107,10 +108,10 @@ void Image::Open() {
         }
       } else {
         if (tiff_xpos != -1 && tiff_xres_ > 0) {
-          xpos_ = (int)(tiff_xpos * tiff_xres_ + 0.5);
+          xpos_ = (int)std::lroundf(tiff_xpos * tiff_xres_);
         }
         if (tiff_ypos != -1 && tiff_yres_ > 0) {
-          ypos_ = (int)(tiff_ypos * tiff_yres_ + 0.5);
+          ypos_ = (int)std::lroundf(tiff_ypos * tiff_yres_);
         }
       }
 
