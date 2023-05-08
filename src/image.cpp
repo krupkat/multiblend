@@ -164,10 +164,10 @@ void Image::Open() {
         bool trans;
         switch (bpp_) {
           case 8:
-            trans = ((uint32_t*)buf)[0] == 0u;
+            trans = (((uint32_t*)buf)[0] & 0xff000000) == 0u;
             break;
           case 16:
-            trans = ((uint64_t*)buf)[0] == 0u;
+            trans = (((uint64_t*)buf)[0] & 0xffff000000000000) == 0u;
             break;
         }
         if (!trans) {
