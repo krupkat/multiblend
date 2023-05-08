@@ -88,7 +88,9 @@ int Squish(uint32_t* in, uint32_t* out, int in_width, int out_width) {
     out[out_p++] = (cur & 0xff000000) | out_count;
     current_val = (float)last_int;
   } else {
-    if (out_count > 1) out[out_p++] = (cur & 0xa0000000) | out_count;
+    if (out_count > 1) {
+      out[out_p++] = (cur & 0xa0000000) | out_count;
+    }
     ((float*)out)[out_p++] = current_val;
   }
   wrote = out_count;
@@ -124,7 +126,9 @@ int Squish(uint32_t* in, uint32_t* out, int in_width, int out_width) {
       }
     }
 
-    if (read == in_width) in_count = 0x7fffffff;
+    if (read == in_width) {
+      in_count = 0x7fffffff;
+    }
 
     if (in_count >= 2) {
       d = e = current_val;
@@ -162,7 +166,9 @@ int Squish(uint32_t* in, uint32_t* out, int in_width, int out_width) {
 
     if (c_read == in_p && in_count >= 4) {
       out_count = in_count >> 1;
-      if (out_count > (out_width - wrote)) out_count = out_width - wrote;
+      if (out_count > (out_width - wrote)) {
+        out_count = out_width - wrote;
+      }
       if (last_int >= 0) {
         out[out_p++] = ((0x2 | last_int) << 30) | out_count;
       } else {
@@ -192,7 +198,9 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
   float vals[5];
   int min_count;
 
-  for (int i = 0; i < 5; ++i) real_lines[i] = new uint32_t[masks[0]->width_];
+  for (int i = 0; i < 5; ++i) {
+    real_lines[i] = new uint32_t[masks[0]->width_];
+  }
 
   for (int l = 1; l < n_levels; ++l) {
     int in_width = masks[l - 1]->width_;
@@ -263,7 +271,9 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
             }
           }
 
-          if (count[i] < min_count) min_count = count[i];
+          if (count[i] < min_count) {
+            min_count = count[i];
+          }
         }
 
         float val = (vals[0] + vals[4]) * 0.0625f +
@@ -283,7 +293,9 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
         }
 
         wrote += min_count;
-        for (i = 0; i < 5; ++i) count[i] -= min_count;
+        for (i = 0; i < 5; ++i) {
+          count[i] -= min_count;
+        }
       }
 
       if (y == 1) {
@@ -318,7 +330,9 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
     }
   }
 
-  for (i = 0; i < 5; ++i) delete[] real_lines[i];
+  for (i = 0; i < 5; ++i) {
+    delete[] real_lines[i];
+  }
 }
 
 /***********************************************************************
@@ -353,7 +367,9 @@ void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
     int lim = x + mask_count;
 
     if (last_int == 0) {
-      if (i == 0) memset(&output_p[x], 0, mask_count << 2);
+      if (i == 0) {
+        memset(&output_p[x], 0, mask_count << 2);
+      }
       x += mask_count;
     } else if (last_int == 1) {
       if (x < x_offset) {
@@ -514,13 +530,17 @@ int CompressDTLine(uint32_t* input, uint8_t* output, int width) {
   while (((left_val = input[x++]) == 0u) && x < width) {
     ;
   }
-  if (left_val == 0u) return p;
+  if (left_val == 0u) {
+    return p;
+  }
 
   while (x < width) {
     while (((right_val = input[x++]) == 0u) && x < width) {
       ;
     }
-    if (right_val == 0u) break;
+    if (right_val == 0u) {
+      break;
+    }
 
     if ((step = (int)(left_val - right_val) + 3) < 67 && step >= 0) {
       if (step <= 7) {
@@ -571,13 +591,17 @@ int CompressSeamLine(uint64_t* input, uint8_t* output, int width) {
   while ((((right_val = input[--x]) & 0xffffffff00000000) == 0u) && x > 0) {
     ;
   }
-  if ((right_val & 0xffffffff00000000) == 0u) return p;
+  if ((right_val & 0xffffffff00000000) == 0u) {
+    return p;
+  }
 
   while (x > 0) {
     while ((((left_val = input[--x]) & 0xffffffff00000000) == 0u) && x > 0) {
       ;
     }
-    if ((left_val & 0xffffffff00000000) == 0u) break;
+    if ((left_val & 0xffffffff00000000) == 0u) {
+      break;
+    }
 
     if ((((right_val ^ left_val) & 0xffffffff) == 0u) &&
         (step = ((int64_t)(right_val - left_val) >> 32) + 3) < 67 &&

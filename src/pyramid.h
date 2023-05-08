@@ -188,8 +188,12 @@ void Pyramid::OutPlanar8 _OP_ {
   int singles = levels_[level].width & 3;
 
   if (level) {
-    if (sy == 0) sy++;
-    if (ey == levels_[level].height) ey--;
+    if (sy == 0) {
+      sy++;
+    }
+    if (ey == levels_[level].height) {
+      ey--;
+    }
   }
 
   dst_p += (size_t)(sy - (level ? 1 : 0)) * pitch;
@@ -241,7 +245,9 @@ void Pyramid::OutPlanar8 _OP_ {
       *dst_pp_b++ = (uint8_t)_mm_extract_epi8(a, 0);
       if (singles > 1) {
         *dst_pp_b++ = (uint8_t)_mm_extract_epi8(a, 4);
-        if (singles == 3) *dst_pp_b++ = (uint8_t)_mm_extract_epi8(a, 8);
+        if (singles == 3) {
+          *dst_pp_b++ = (uint8_t)_mm_extract_epi8(a, 8);
+        }
       }
     }
 
@@ -286,8 +292,12 @@ void Pyramid::OutPlanar16 _OP_ {
   int singles = levels_[level].width & 3;
 
   if (level) {
-    if (sy == 0) sy++;
-    if (ey == levels_[level].height) ey--;
+    if (sy == 0) {
+      sy++;
+    }
+    if (ey == levels_[level].height) {
+      ey--;
+    }
   }
 
   dst_p += (sy - (level ? 1 : 0)) * pitch;
@@ -338,7 +348,9 @@ void Pyramid::OutPlanar16 _OP_ {
       *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 0);
       if (singles > 1) {
         *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 2);
-        if (singles == 3) *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 4);
+        if (singles == 3) {
+          *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 4);
+        }
       }
     }
 
@@ -388,8 +400,12 @@ void Pyramid::OutPlanar32 _OP_ {
   int wipes = (fours << 2) - levels_[level].width;
 
   if (level) {
-    if (sy == 0) sy++;
-    if (ey == levels_[level].height) ey--;
+    if (sy == 0) {
+      sy++;
+    }
+    if (ey == levels_[level].height) {
+      ey--;
+    }
   }
 
   dst_p += (sy - (level ? 1 : 0)) * pitch;
@@ -433,8 +449,12 @@ void Pyramid::OutInterleaved(T dst_p, F _loader, int pitch, int sy, int ey,
   __m128 maxes = _mm_set_ps1(sizeof(*dst_p) == 1 ? 255.0f : 65535.0f);
 
   if (level) {
-    if (sy == 0) sy++;
-    if (ey == levels_[level].height) ey--;
+    if (sy == 0) {
+      sy++;
+    }
+    if (ey == levels_[level].height) {
+      ey--;
+    }
   }
 
   dst_p += (sy - (level ? 1 : 0)) * pitch + offset;

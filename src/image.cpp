@@ -19,8 +19,12 @@ int hist_blu[256];
 Image::Image(char* filename) : filename_(filename) {}
 
 Image::~Image() {
-  for (auto it = channels_.begin(); it < channels_.end(); ++it) delete (*it);
-  for (auto it = masks_.begin(); it < masks_.end(); ++it) delete (*it);
+  for (auto it = channels_.begin(); it < channels_.end(); ++it) {
+    delete (*it);
+  }
+  for (auto it = masks_.begin(); it < masks_.end(); ++it) {
+    delete (*it);
+  }
   channels_.clear();
   masks_.clear();
 
@@ -133,11 +137,15 @@ void Image::Open() {
           for (s = 0; s < (int)TIFFNumberOfStrips(tiff_); ++s) {
             temp = TIFFRawStripSize(tiff_, s);
             if (temp != min_stripsize) {
-              if (first_strip_ == -1) first_strip_ = s;
+              if (first_strip_ == -1) {
+                first_strip_ = s;
+              }
               end_strip_ = s + 1;
             }
           }
-          if (first_strip_ == -1) first_strip_ = 0;
+          if (first_strip_ == -1) {
+            first_strip_ = 0;
+          }
         }
       }
 
@@ -340,7 +348,9 @@ void Image::Read(void* data, bool gamma) {
           }
         }
 
-        if (right < left) std::swap(left, right);
+        if (right < left) {
+          std::swap(left, right);
+        }
 
         p = ((uint32_t*)data) + tiff_width_ * top;
         for (y = top; y <= bottom; ++y) {
@@ -391,7 +401,9 @@ void Image::Read(void* data, bool gamma) {
           p -= tiff_width_ << 2;
         }
 
-        if (right < left) std::swap(left, right);
+        if (right < left) {
+          std::swap(left, right);
+        }
 
         p = ((uint16_t*)data) + (tiff_width_ << 2) * top + 3;
         for (y = top; y <= bottom; ++y) {
@@ -875,7 +887,9 @@ void Image::MaskPng(int i) {
         }
 
         int t = x + count;
-        while (x < t) line[x++] = (uint8_t)(val * 255);
+        while (x < t) {
+          line[x++] = (uint8_t)(val * 255);
+        }
       }
 
       line += masks_[0]->width_;

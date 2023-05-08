@@ -216,7 +216,9 @@ int main(int argc, char* argv[]) {
           sscanf_s(my_argv[pos], "%d%n", &add_levels, &n);
         } else {
           sscanf_s(my_argv[pos], "%d%n", &fixed_levels, &n);
-          if (fixed_levels == 0) fixed_levels = 1;
+          if (fixed_levels == 0) {
+            fixed_levels = 1;
+          }
         }
         if (my_argv[pos][n] != 0) {
           utils::die("Error: Bad --levels parameter");
@@ -370,7 +372,9 @@ int main(int argc, char* argv[]) {
         ++ext;
         if (!((_stricmp(ext, "jpg") != 0) && (_stricmp(ext, "jpeg") != 0))) {
           output_type = io::ImageType::MB_JPEG;
-          if (jpeg_quality == -1) jpeg_quality = 75;
+          if (jpeg_quality == -1) {
+            jpeg_quality = 75;
+          }
         } else if (!((_stricmp(ext, "tif") != 0) &&
                      (_stricmp(ext, "tiff") != 0))) {
           output_type = io::ImageType::MB_TIFF;
@@ -560,7 +564,9 @@ int main(int argc, char* argv[]) {
         malloc((ROWS_PER_STRIP * (int64_t)result.width) * bytes_per_pixel);
     void* oc_p[3] = {result.output_channels[0], result.output_channels[1],
                      result.output_channels[2]};
-    if (bgr) std::swap(oc_p[0], oc_p[2]);
+    if (bgr) {
+      std::swap(oc_p[0], oc_p[2]);
+    }
 
     switch (output_type) {
       case io::ImageType::MB_TIFF: {
@@ -649,7 +655,9 @@ int main(int argc, char* argv[]) {
                   ((uint8_t*)strip)[strip_p++] = ((uint8_t*)(oc_p[0]))[x];
                   ((uint8_t*)strip)[strip_p++] = ((uint8_t*)(oc_p[1]))[x];
                   ((uint8_t*)strip)[strip_p++] = ((uint8_t*)(oc_p[2]))[x];
-                  if (!result.no_mask) ((uint8_t*)strip)[strip_p++] = 0xff;
+                  if (!result.no_mask) {
+                    ((uint8_t*)strip)[strip_p++] = 0xff;
+                  }
                   ++x;
                 }
               } break;
@@ -658,7 +666,9 @@ int main(int argc, char* argv[]) {
                   ((uint16_t*)strip)[strip_p++] = ((uint16_t*)(oc_p[0]))[x];
                   ((uint16_t*)strip)[strip_p++] = ((uint16_t*)(oc_p[1]))[x];
                   ((uint16_t*)strip)[strip_p++] = ((uint16_t*)(oc_p[2]))[x];
-                  if (!result.no_mask) ((uint16_t*)strip)[strip_p++] = 0xffff;
+                  if (!result.no_mask) {
+                    ((uint16_t*)strip)[strip_p++] = 0xffff;
+                  }
                   ++x;
                 }
               } break;

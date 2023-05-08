@@ -76,7 +76,9 @@ void* TP_Thread(void* param) {
         P->free = false;
       }
     }
-    if (P->stop) break;
+    if (P->stop) {
+      break;
+    }
 
     P->function();
 
@@ -97,9 +99,13 @@ void Threadpool::Wait() {
   if (queue_.size() == 0u) {
     int i;
     for (i = 0; i < n_threads_; ++i) {
-      if (!threads_[i].free) break;
+      if (!threads_[i].free) {
+        break;
+      }
     }
-    if (i == n_threads_) return;
+    if (i == n_threads_) {
+      return;
+    }
   }
 
   {

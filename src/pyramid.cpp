@@ -53,7 +53,9 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
       if (!no_alloc_) {
         data = (float*)_aligned_malloc(bytes, 16);  // was 32
         if (data == nullptr) {
-          for (int j = 0; j < n; ++j) _aligned_free(levels_[j].data);
+          for (int j = 0; j < n; ++j) {
+            _aligned_free(levels_[j].data);
+          }
           throw(bytes);
         }
       } else {
@@ -753,7 +755,9 @@ void Pyramid::Squeeze(__m128* line, __m128* lo, int m128_pitch_lo,
   const __m128 four = _mm_set_ps1(4);
   const __m128 six = _mm_set_ps1(6);
 
-  if (x_shift) memmove(&((float*)line)[1], line, (m128_pitch_hi << 4) - 4);
+  if (x_shift) {
+    memmove(&((float*)line)[1], line, (m128_pitch_hi << 4) - 4);
+  }
 
   while (lo_x < m128_pitch_lo) {
     if (hi_x >= m128_pitch_hi) {  // was >= ... + 1
@@ -762,7 +766,9 @@ void Pyramid::Squeeze(__m128* line, __m128* lo, int m128_pitch_lo,
     } else {
       b = line[hi_x++];
       c = line[hi_x++];
-      if (lo_x == 0) a = _mm_shuffle_ps(b, b, _MM_SHUFFLE(0, 0, 0, 0));
+      if (lo_x == 0) {
+        a = _mm_shuffle_ps(b, b, _MM_SHUFFLE(0, 0, 0, 0));
+      }
     }
 
     // a = EFGH
@@ -1118,7 +1124,9 @@ void Pyramid::MultiplyAddClamp(float add, float mul, int level) {
  * Multiply
  ***********************************************************************/
 void Pyramid::Multiply(int level, float mul) {
-  if (mul == 1) return;
+  if (mul == 1) {
+    return;
+  }
   if (mul == 0) {
     ZeroMemory(levels_[level].data,
                levels_[level].height * levels_[level].pitch * sizeof(float));
@@ -1283,7 +1291,9 @@ void Pyramid::Denoise(int level, float power, bool gamma) {
  * blend (base swap)
  ***********************************************************************/
 void Pyramid::Blend(Pyramid* b) {
-  if (b->GetNLevels() < GetNLevels()) return;
+  if (b->GetNLevels() < GetNLevels()) {
+    return;
+  }
   memcpy(levels_[GetNLevels() - 1].data, b->levels_[GetNLevels() - 1].data,
          levels_[GetNLevels() - 1].height * levels_[GetNLevels() - 1].pitch *
              sizeof(float));
@@ -1416,7 +1426,9 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
             &out[o],
             _mm_add_ps(acc, _mm_mul_ps(_mm_add_ps(temp1, temp2), mul)));
         o += transpose->levels_[0].pitch;
-        if (left > 0) BLUR_SSE_GET(temp1, left);
+        if (left > 0) {
+          BLUR_SSE_GET(temp1, left);
+        }
         ++left;
         acc = _mm_add_ps(_mm_sub_ps(temp2, temp1), acc);
       }

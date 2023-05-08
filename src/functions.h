@@ -56,7 +56,9 @@ class Flex {
 
   void NextLine() {
     end_p_ = p_;
-    if (y_ < height_ - 1) rows_[++y_] = p_;
+    if (y_ < height_ - 1) {
+      rows_[++y_] = p_;
+    }
 
     if (p_ + (width_ << 2) > size_) {
       if (y_ == 0) {

@@ -46,7 +46,9 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
   }
 
   for (int i = 0; i < n_images; ++i) {
-    if (opts.output_bpp == 0 && images[i]->bpp_ == 16) opts.output_bpp = 16;
+    if (opts.output_bpp == 0 && images[i]->bpp_ == 16) {
+      opts.output_bpp = 16;
+    }
     if (images[i]->bpp_ != images[0]->bpp_) {
       utils::die(
           "Error: mixture of 8bpp and 16bpp images detected (not currently "
@@ -281,11 +283,15 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
 
         if (xor_count == 1) {
           images[xor_image]->seam_present_ = true;
-          while (x > stop) this_line[x--] = xor_image;
+          while (x > stop) {
+            this_line[x--] = xor_image;
+          }
         } else {
-          if (y == height - 1) {                         // bottom row
-            if (x == width - 1) {                        // first pixel(s)
-              while (x > stop) this_line[x--] = DT_MAX;  // max
+          if (y == height - 1) {   // bottom row
+            if (x == width - 1) {  // first pixel(s)
+              while (x > stop) {
+                this_line[x--] = DT_MAX;  // max
+              }
             } else {
               utemp = this_line[x + 1];
               utemp = MASKVAL(utemp);
@@ -337,9 +343,15 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               utemp = prev_line[x - 1] + 0x400000000;
               a = MASKVAL(utemp);
 
-              if (a < d) d = a;
-              if (b < d) d = b;
-              if (c < d) d = c;
+              if (a < d) {
+                d = a;
+              }
+              if (b < d) {
+                d = b;
+              }
+              if (c < d) {
+                d = c;
+              }
 
               this_line[x--] = d;
 
@@ -350,8 +362,12 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
 
             if (last_pixel) {
               // d is the new "best" to compare against
-              if (b < d) d = b;
-              if (c < d) d = c;
+              if (b < d) {
+                d = b;
+              }
+              if (c < d) {
+                d = c;
+              }
 
               this_line[x--] = d;
 
@@ -571,7 +587,9 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
 
         best = xor_image;
       } else {
-        if (xor_map != nullptr) memset(&xor_map->line_[x], 0xff, min_count);
+        if (xor_map != nullptr) {
+          memset(&xor_map->line_[x], 0xff, min_count);
+        }
 
         if (opts.seamload_filename == nullptr) {
           if (y == 0) {
@@ -583,7 +601,9 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
                 utemp = this_line[x - 1] + 0x300000000;
                 d = MASKVAL(utemp);
 
-                if (d < best) best = d;
+                if (d < best) {
+                  best = d;
+                }
               }
 
               if (((best & 0x8000000000000000) != 0u) && (xor_count != 0)) {
@@ -610,11 +630,15 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
 
               utemp = *prev_line + 0x300000000;
               b = MASKVAL(utemp);
-              if (b < best) best = b;
+              if (b < best) {
+                best = b;
+              }
 
               utemp = prev_line[1] + 0x400000000;
               c = MASKVAL(utemp);
-              if (c < best) best = c;
+              if (c < best) {
+                best = c;
+              }
 
               if (((best & 0x8000000000000000) != 0u) && (xor_count != 0)) {
                 arbitrary_seam = true;
@@ -664,10 +688,18 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               utils::ReadSeamDT(seam_flex, current_count, current_step, dt_val);
               best = dt_val;
 
-              if (a < best) best = a;
-              if (b < best) best = b;
-              if (c < best) best = c;
-              if (d < best) best = d;
+              if (a < best) {
+                best = a;
+              }
+              if (b < best) {
+                best = b;
+              }
+              if (c < best) {
+                best = c;
+              }
+              if (d < best) {
+                best = d;
+              }
 
               if (((best & 0x8000000000000000) != 0u) && (xor_count != 0)) {
                 arbitrary_seam = true;
@@ -694,9 +726,15 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               utils::ReadSeamDT(seam_flex, current_count, current_step, dt_val);
               best = dt_val;
 
-              if (a < best) best = a;
-              if (b < best) best = b;
-              if (d < best) best = d;
+              if (a < best) {
+                best = a;
+              }
+              if (b < best) {
+                best = b;
+              }
+              if (d < best) {
+                best = d;
+              }
 
               if (((best & 0x8000000000000000) != 0u) && (xor_count != 0)) {
                 arbitrary_seam = true;
@@ -738,8 +776,12 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
     full_mask.NextLine();
     xor_mask.NextLine();
 
-    if (xor_map != nullptr) xor_map->Write();
-    if (seam_map != nullptr) seam_map->Write();
+    if (xor_map != nullptr) {
+      xor_map->Write();
+    }
+    if (seam_map != nullptr) {
+      seam_map->Write();
+    }
 
     std::swap(this_line, prev_line);
   }
@@ -943,7 +985,9 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       }
 
       for (auto& py : wrap_pyramids) {
-        if (l < py->GetNLevels()) py->GetLevel(l).data = temp;
+        if (l < py->GetNLevels()) {
+          py->GetLevel(l).data = temp;
+        }
       }
     }
 

@@ -29,13 +29,19 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
       rad = base;
       r = std::max(0.0, std::min(1.0, std::min(rad, 4 - rad)));
       rad += 2;
-      if (rad >= 6) rad -= 6;
+      if (rad >= 6) {
+        rad -= 6;
+      }
       g = std::max(0.0, std::min(1.0, std::min(rad, 4 - rad)));
       rad += 2;
-      if (rad >= 6) rad -= 6;
+      if (rad >= 6) {
+        rad -= 6;
+      }
       b = std::max(0.0, std::min(1.0, std::min(rad, 4 - rad)));
       base += 6 * 0.618033988749895;
-      if (base >= 6) base -= 6;
+      if (base >= 6) {
+        base -= 6;
+      }
       palette_[i].red = (png_byte)(sqrt(r) * 255 + 0.5);
       palette_[i].green = (png_byte)(sqrt(g) * 255 + 0.5);
       palette_[i].blue = (png_byte)(sqrt(b) * 255 + 0.5);
@@ -92,7 +98,9 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
 
   png_write_info(png_ptr_, info_ptr_);
   png_set_compression_level(png_ptr_, compression < 0 ? 3 : compression);
-  if (bpp == 16) png_set_swap(png_ptr_);
+  if (bpp == 16) {
+    png_set_swap(png_ptr_);
+  }
 
   line_ = name != nullptr
               ? new uint8_t[(type == PNG_COLOR_TYPE_RGB_ALPHA ? (width << 2)
@@ -103,7 +111,9 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
 };
 
 void Pnger::Write() {
-  if (file_ == nullptr) return;
+  if (file_ == nullptr) {
+    return;
+  }
 
   png_write_row(png_ptr_, (uint8_t*)line_);
 
@@ -117,7 +127,9 @@ void Pnger::Write() {
 }
 
 void Pnger::WriteRows(uint8_t** rows, int num_rows) {
-  if (file_ == nullptr) return;
+  if (file_ == nullptr) {
+    return;
+  }
 
   png_write_rows(png_ptr_, rows, num_rows);
 
@@ -141,7 +153,9 @@ void Pnger::Quick(char* filename, uint8_t* data, int width, int height,
 
 Pnger::~Pnger() {
   delete line_;
-  if (file_ != nullptr) fclose(file_);
+  if (file_ != nullptr) {
+    fclose(file_);
+  }
 }
 
 }  // namespace multiblend::io::png
