@@ -70,50 +70,51 @@ MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
 
   if (!pointer_) {
 #ifdef _WIN32
-    if (!tmpdir[0]) {
-      GetTempPath(256, tmpdir);
-      size_t l = strlen(tmpdir);
-      while (tmpdir[l - 1] == '\\' || tmpdir[l - 1] == '/' && l > 0)
-        tmpdir[--l] = 0;
+    if (!tmpdir_[0]) {
+      GetTempPath(256, tmpdir_);
+      size_t l = strlen(tmpdir_);
+      while (tmpdir_[l - 1] == '\\' || tmpdir_[l - 1] == '/' && l > 0) {
+        tmpdir_[--l] = 0;
+      }
     }
 
     while (true) {
-      sprintf_s(filename, "%s\\_mb%05d.tmp", tmpdir, suffix++);
-      file = CreateFile(filename, GENERIC_ALL, 0, NULL, CREATE_NEW,
-                        FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE |
-                            FILE_FLAG_SEQUENTIAL_SCAN,
-                        NULL);
-      if (file != INVALID_HANDLE_VALUE) break;
+      sprintf_s(filename_, "%s\\_mb%05d.tmp", tmpdir_, suffix_++);
+      file_ = CreateFile(filename_, GENERIC_ALL, 0, NULL, CREATE_NEW,
+                         FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE |
+                             FILE_FLAG_SEQUENTIAL_SCAN,
+                         NULL);
+      if (file_ != INVALID_HANDLE_VALUE) break;
       if (GetLastError() != 80) {
         char buf[256];
         FormatMessage(
             FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
             GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buf,
             sizeof(buf), NULL);
-        sprintf_s(filename, "Could not create temp file in %s\\: %s", tmpdir,
+        sprintf_s(filename_, "Could not create temp file in %s\\: %s", tmpdir_,
                   buf);
-        throw(filename);
+        throw(filename_);
       }
-      if (suffix == 65536) {
-        sprintf_s(filename,
+      if (suffix_ == 65536) {
+        sprintf_s(filename_,
                   "Could not create temp file in %s\\: suffixes exhausted",
-                  tmpdir);
-        throw(filename);
+                  tmpdir_);
+        throw(filename_);
       }
     }
 
-    map = CreateFileMapping(file, NULL, PAGE_READWRITE, size >> 32,
-                            size & 0xffffffff, NULL);
-    if (!map) {
-      sprintf_s(filename, "Could not allocate %zu temporary bytes in %s", size,
-                tmpdir);
-      throw(filename);
+    map_ = CreateFileMapping(file_, NULL, PAGE_READWRITE, size >> 32,
+                             size & 0xffffffff, NULL);
+    if (!map_) {
+      sprintf_s(filename_, "Could not allocate %zu temporary bytes in %s", size,
+                tmpdir_);
+      throw(filename_);
     }
 
-    pointer = MapViewOfFile(map, FILE_MAP_ALL_ACCESS, 0, 0, 0);
-    if (!pointer) {
-      sprintf_s(filename, "Could not map view of temporary file");
-      throw(filename);
+    pointer_ = MapViewOfFile(map_, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+    if (!pointer_) {
+      sprintf_s(filename_, "Could not map view of temporary file");
+      throw(filename_);
     }
 #else
     if (!tmpdir_[0]) {
@@ -158,13 +159,13 @@ MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
 
 MapAlloc::MapAllocObject::~MapAllocObject() {
 #ifdef _WIN32
-  if (!file) {
-    _aligned_free(pointer);
-    total_allocated -= size;
+  if (!file_) {
+    _aligned_free(pointer_);
+    total_allocated_ -= size_;
   } else {
-    UnmapViewOfFile(pointer);
-    CloseHandle(map);
-    CloseHandle(file);
+    UnmapViewOfFile(pointer_);
+    CloseHandle(map_);
+    CloseHandle(file_);
   }
 #else
   if (!file_) {

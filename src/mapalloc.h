@@ -21,8 +21,8 @@ class MapAlloc {
 
    private:
 #ifdef _WIN32
-    HANDLE file = NULL;
-    HANDLE map = NULL;
+    HANDLE file_ = NULL;
+    HANDLE map_ = NULL;
 #else
     int file_ = 0;
 #endif

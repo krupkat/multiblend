@@ -17,8 +17,8 @@ Threadpool::Threadpool(int threads) {
 
   for (int i = 0; i < n_threads_; ++i) {
 #ifdef _WIN32
-    threads[i].handle = CreateThread(NULL, 1, (LPTHREAD_START_ROUTINE)Thread,
-                                     &threads[i], 0, NULL);
+    threads_[i].handle = CreateThread(NULL, 1, (LPTHREAD_START_ROUTINE)Thread,
+                                      &threads_[i], 0, NULL);
 #else
     pthread_create(&threads_[i].handle, NULL, TP_Thread, &threads_[i]);
 #endif
@@ -49,7 +49,7 @@ Threadpool::~Threadpool() {
   main_cond_.notify_all();
   for (i = 0; i < n_threads_; ++i) {
 #ifdef _WIN32
-    WaitForSingleObject(threads[i].handle, INFINITE);
+    WaitForSingleObject(threads_[i].handle, INFINITE);
 #else
     pthread_join(threads_[i].handle, NULL);
 #endif
