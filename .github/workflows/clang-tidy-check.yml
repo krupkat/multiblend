@@ -1,0 +1,52 @@
+name: clang-tidy
+
+on:
+  push:
+    branches: [ "main" ]
+    paths: 
+      - "src/**"
+      - "misc/python/**"
+      - ".clang-tidy"
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+env:
+  BUILD_TYPE: "Release"
+  VCPKG_VERSION: "eb8e75bb4f5b5f46f65cb10aa863285815c2b69c"
+
+jobs:
+  clang-tidy-check:
+    name: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            generator: 'Unix Makefiles'
+            tidy_runner_script: './misc/check_tidy.sh'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@main
+        id: runvcpkg
+        with:
+          vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
+          vcpkgGitCommitId: '${{ env.VCPKG_VERSION }}'
+
+      - name: Run CMake
+        run: cmake -B build -G "${{ matrix.generator }}" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_TOOLCHAIN_FILE=${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Run clang-tidy
+        run: ${{ matrix.tidy_runner_script }} build fixes.yaml
+
+      - name: Check clang-tidy results
+        run: |
+          pip install -r misc/python/requirements.txt
+          python misc/python/check_fixes.py fixes.yaml
