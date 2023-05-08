@@ -20,7 +20,7 @@ env:
 jobs:
   clang-tidy-check:
     name: ${{ matrix.os }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
