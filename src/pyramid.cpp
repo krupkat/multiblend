@@ -261,7 +261,7 @@ void Pyramid::CopyPlanarThread_8bit(uint8_t* src_p, int pitch, bool gamma,
   __m128 fpixels;
   __m128i shuffle =
       _mm_set_epi32(0x80808003, 0x80808002, 0x80808001, 0x80808000);
-  __m128* rp_p = (__m128*)levels_[0].data;
+  auto* rp_p = (__m128*)levels_[0].data;
   __m128* p_p;
   __m128i* src_pp_m;
   int* src_pp_i;
@@ -333,7 +333,7 @@ void Pyramid::CopyPlanarThread_8bit(uint8_t* src_p, int pitch, bool gamma,
     }
 
     src_pp_b = (uint8_t*)src_pp_i;
-    float* fp_p = (float*)p_p;
+    auto* fp_p = (float*)p_p;
 
     for (x = 0; x < ones; ++x) {
       if (gamma) {
@@ -364,7 +364,7 @@ void Pyramid::CopyPlanarThread_16bit(uint16_t* src_p, int pitch, bool gamma,
       _mm_set_epi32(0x80800706, 0x80800504, 0x80800302, 0x80800100);
   __m128i shuffle2 =
       _mm_set_epi32(0x80800f0e, 0x80800d0c, 0x80800b0a, 0x80800908);
-  __m128* rp_p = (__m128*)levels_[0].data;
+  auto* rp_p = (__m128*)levels_[0].data;
   __m128* p_p;
   __m128i* src_pp_m;
   uint16_t* src_pp_w;
@@ -402,7 +402,7 @@ void Pyramid::CopyPlanarThread_16bit(uint16_t* src_p, int pitch, bool gamma,
     }
 
     src_pp_w = (uint16_t*)src_pp_m;
-    float* fp_p = (float*)p_p;
+    auto* fp_p = (float*)p_p;
 
     for (x = 0; x < ones; ++x) {
       if (gamma) {
@@ -429,7 +429,7 @@ void Pyramid::CopyPlanarThread_32bit(__m128* src_p, int pitch, bool gamma,
 
   pitch >>= 2;
 
-  __m128* rp_p = (__m128*)levels_[0].data;
+  auto* rp_p = (__m128*)levels_[0].data;
 
   src_p += sy * pitch;
   rp_p += sy * levels_[0].m128_pitch;
@@ -470,8 +470,8 @@ void Pyramid::CopyPlanarThread_32bit(__m128* src_p, int pitch, bool gamma,
 void Pyramid::Subsample(int sub_w, int sub_h, Pyramid* source) {
   int x, y;
   int p = 0;
-  __m128* in = (__m128*)source->levels_[0].data;
-  __m128* out = (__m128*)levels_[0].data;
+  auto* in = (__m128*)source->levels_[0].data;
+  auto* out = (__m128*)levels_[0].data;
   __m128** temp_lines = source->lines_;
   __m128* line = temp_lines[0];
   int m128_pitch_in = source->levels_[0].m128_pitch;
@@ -959,9 +959,9 @@ void Pyramid::LaplaceThreadWrapper(Level* upper_level, Level* lower_level,
                                    int sy, int ey) {
   int temp = upper_level->m128_pitch << 4;
 
-  __m128* temp1 = (__m128*)_aligned_malloc(temp, 16);
-  __m128* temp2 = (__m128*)_aligned_malloc(temp, 16);
-  __m128* temp3 = (__m128*)_aligned_malloc(temp, 16);
+  auto* temp1 = (__m128*)_aligned_malloc(temp, 16);
+  auto* temp2 = (__m128*)_aligned_malloc(temp, 16);
+  auto* temp3 = (__m128*)_aligned_malloc(temp, 16);
 
   LaplaceThread(upper_level, lower_level, sy, ey, temp1, temp2, temp3);
 
@@ -1016,7 +1016,7 @@ float Pyramid::Average() {
   double total = 0;
   double row_total;
 
-  __m128* data = (__m128*)levels_[0].data;
+  auto* data = (__m128*)levels_[0].data;
 
   for (y = 0; y < levels_[0].height; ++y) {
     m128_total = _mm_setzero_ps();
@@ -1053,7 +1053,7 @@ void Pyramid::Add(float add, int levels) {
   int lim = (std::min)(levels, (int)levels_.size() - 1);
 
   for (int l = 0; l < lim; ++l) {
-    __m128* data = (__m128*)levels_[l].data;
+    auto* data = (__m128*)levels_[l].data;
 
     for (int t = 0; t < (int)levels_[l].bands.size() - 1; ++t) {
       threadpool_->Queue([=, this]() {
@@ -1084,7 +1084,7 @@ void Pyramid::MultiplyAndAdd(float add, float mul, int levels) {
   int lim = (std::min)(levels, (int)levels_.size() - 1);
 
   for (i = 0; i < lim; ++i) {
-    __m128* data = (__m128*)levels_[i].data;
+    auto* data = (__m128*)levels_[i].data;
 
     for (y = 0; y < levels_[i].height; ++y) {
       for (x = 0; x < levels_[i].m128_pitch; ++x) {
@@ -1106,7 +1106,7 @@ void Pyramid::MultiplyAddClamp(float add, float mul, int level) {
   __m128 __min = _mm_set_ps1(1.0f);
   __m128 __max = _mm_set_ps1(0.0f);
 
-  __m128* data = (__m128*)levels_[level].data;
+  auto* data = (__m128*)levels_[level].data;
 
   for (y = 0; y < levels_[level].height; ++y) {
     for (x = 0; x < levels_[level].m128_pitch; ++x) {
@@ -1136,7 +1136,7 @@ void Pyramid::Multiply(int level, float mul) {
   int x, y;
   __m128 __mul = _mm_set_ps1(mul);
 
-  __m128* data = (__m128*)levels_[level].data;
+  auto* data = (__m128*)levels_[level].data;
 
   for (y = 0; y < levels_[level].height; ++y) {
     for (x = 0; x < levels_[level].m128_pitch; ++x) {
@@ -1154,8 +1154,8 @@ void Pyramid::MultplyByPyramid(Pyramid* b) {
   int x, y;
 
   for (int l = 0; l < (int)levels_.size() - 1; ++l) {
-    __m128* data = (__m128*)levels_[l].data;
-    __m128* _b = (__m128*)b->levels_[l].data;
+    auto* data = (__m128*)levels_[l].data;
+    auto* _b = (__m128*)b->levels_[l].data;
 
     for (y = 0; y < levels_[l].height; ++y) {
       for (x = 0; x < levels_[l].m128_pitch; ++x) {
@@ -1238,8 +1238,8 @@ void Pyramid::Fuse(Pyramid* b, float weight) {
   __m128 w = _mm_set_ps1(weight);
 
   for (l = 0; l < (int)levels_.size(); ++l) {
-    __m128* _a = (__m128*)levels_[l].data;
-    __m128* _b = (__m128*)b->levels_[l].data;
+    auto* _a = (__m128*)levels_[l].data;
+    auto* _b = (__m128*)b->levels_[l].data;
 
     int count = levels_[l].height * levels_[l].m128_pitch;
     for (p = 0; p < count; ++p) {
@@ -1449,12 +1449,12 @@ void Pyramid::Png(const char* filename) {
   int width = levels_[0].pitch;
   int height =
       levels_[0].height + (levels_.size() > 1 ? 1 + levels_[1].height : 0);
-  uint8_t* temp = (uint8_t*)calloc(width * height, 1);
+  auto* temp = (uint8_t*)calloc(width * height, 1);
 
   int px = 0, py = 0;
 
   for (int l = 0; l < (int)levels_.size(); ++l) {
-    float* data = (float*)levels_[l].data;
+    auto* data = (float*)levels_[l].data;
     uint8_t* line = temp + py * levels_[0].pitch + px;
     for (int y = 0; y < levels_[l].height; ++y) {
       for (int x = 0; x < levels_[l].pitch; ++x) {

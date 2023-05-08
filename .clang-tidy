@@ -3,6 +3,7 @@ Checks: >
   readability-implicit-bool-conversion,
   google-readability-braces-around-statements,
   readability-braces-around-statements,
-  modernize-use-nullptr
+  modernize-use-nullptr,
+  modernize-use-auto
 
 HeaderFilterRegex: ".*multiblend.*src.*"

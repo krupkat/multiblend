@@ -196,7 +196,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
   bool last_pixel = false;
   bool arbitrary_seam = false;
 
-  utils::Flex* seam_flex = new utils::Flex(width, height);
+  auto* seam_flex = new utils::Flex(width, height);
   int max_queue = 0;
 
   /***********************************************************************
@@ -206,13 +206,13 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       mt::Threadpool::GetInstance(opts.all_threads ? 2 : 0);
 
   int n_threads = std::max(2, threadpool->GetNThreads());
-  uint64_t** thread_lines = new uint64_t*[n_threads];
+  auto** thread_lines = new uint64_t*[n_threads];
 
   if (opts.seamload_filename == nullptr) {
-    std::mutex* flex_mutex_p = new std::mutex;
-    std::condition_variable* flex_cond_p = new std::condition_variable;
+    auto* flex_mutex_p = new std::mutex;
+    auto* flex_cond_p = new std::condition_variable;
 
-    uint8_t** thread_comp_lines = new uint8_t*[n_threads];
+    auto** thread_comp_lines = new uint8_t*[n_threads];
 
     for (int i = 0; i < n_threads; ++i) {
       thread_lines[i] = new uint64_t[width];
@@ -843,7 +843,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       utils::die("Error: Incorrect seam PNG format");
     }
 
-    png_bytep png_line = (png_bytep)malloc(width);
+    auto png_line = (png_bytep)malloc(width);
 
     for (int y = 0; y < height; ++y) {
       png_read_row(png_ptr, png_line, nullptr);

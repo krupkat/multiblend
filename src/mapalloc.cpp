@@ -27,7 +27,7 @@ size_t MapAlloc::total_allocated_ = 0;
 void MapAlloc::CacheThreshold(size_t limit) { cache_threshold_ = limit; }
 
 void* MapAlloc::Alloc(size_t size, int alignment) {
-  MapAllocObject* m = new MapAllocObject(size, alignment);
+  auto* m = new MapAllocObject(size, alignment);
   objects_.push_back(m);
   return m->GetPointer();
 }

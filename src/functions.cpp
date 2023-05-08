@@ -347,7 +347,7 @@ void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
   int last_int;
 
   mask_p >>= 2;
-  uint32_t* mask = (uint32_t*)_mask;
+  auto* mask = (uint32_t*)_mask;
 
   while (x < out_level_width) {
     uint32_t cur = mask[mask_p++];
@@ -651,7 +651,7 @@ void SwapUnswapH(Pyramid* py, bool unswap) {
   int minor_bytes = (width >> 1) << 2;
   int major_bytes = ((width + 1) >> 1) << 2;
   float* data = py->GetData();
-  uint8_t* temp = (uint8_t*)malloc(major_bytes);
+  auto* temp = (uint8_t*)malloc(major_bytes);
 
   for (int y = 0; y < height; ++y) {
     if (unswap) {
@@ -677,15 +677,15 @@ void UnswapH(Pyramid* py) { SwapUnswapH(py, true); }
 void SwapUnswapV(Pyramid* py, bool unswap) {
   int height = py->GetHeight();
   int byte_pitch = py->GetPitch() << 2;
-  uint8_t* temp = (uint8_t*)malloc(byte_pitch);
+  auto* temp = (uint8_t*)malloc(byte_pitch);
   int half_height = height >> 1;
 
   if ((height & 1) != 0) {
-    uint8_t* temp2 = (uint8_t*)malloc(byte_pitch);
+    auto* temp2 = (uint8_t*)malloc(byte_pitch);
     if (unswap) {
-      uint8_t* upper =
+      auto* upper =
           (uint8_t*)(py->GetData() + ((int64_t)height >> 1) * py->GetPitch());
-      uint8_t* lower =
+      auto* lower =
           (uint8_t*)(py->GetData() + ((int64_t)height - 1) * py->GetPitch());
 
       memcpy(temp, upper, byte_pitch);
@@ -701,8 +701,8 @@ void SwapUnswapV(Pyramid* py, bool unswap) {
 
       memcpy(lower, temp, byte_pitch);
     } else {
-      uint8_t* upper = (uint8_t*)py->GetData();
-      uint8_t* lower =
+      auto* upper = (uint8_t*)py->GetData();
+      auto* lower =
           (uint8_t*)(py->GetData() + ((int64_t)height >> 1) * py->GetPitch());
 
       memcpy(temp, lower, byte_pitch);
@@ -721,8 +721,8 @@ void SwapUnswapV(Pyramid* py, bool unswap) {
 
     free(temp2);
   } else {
-    uint8_t* upper = (uint8_t*)py->GetData();
-    uint8_t* lower =
+    auto* upper = (uint8_t*)py->GetData();
+    auto* lower =
         (uint8_t*)(py->GetData() + (int64_t)half_height * py->GetPitch());
     for (int y = 0; y < half_height; ++y) {
       memcpy(temp, upper, byte_pitch);

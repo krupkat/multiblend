@@ -157,7 +157,7 @@ void GetExpandedLine(const Pyramid::Level& level, __m128* temp, int y);
 template <typename F>
 void Pyramid::OutPlanar8 _OP_ {
   int x, y;
-  uint8_t* dst_p = (uint8_t*)_dst_p;
+  auto* dst_p = (uint8_t*)_dst_p;
   uint8_t black = chroma ? 0x80 : 0x00;
 
   __m128 zeroes = _mm_setzero_ps();
@@ -175,7 +175,7 @@ void Pyramid::OutPlanar8 _OP_ {
       _mm_set_epi32(0x80808080, 0x80808080, 0x80808080, 0x0c080400);
   __m128i pixels;
   __m128* p_p;
-  __m128* p_pt = (__m128*)levels_[level].data;
+  auto* p_pt = (__m128*)levels_[level].data;
 
   __m128i* dst_pp_m;
   int* dst_pp_i;
@@ -268,7 +268,7 @@ void Pyramid::OutPlanar8 _OP_ {
 template <typename F>
 void Pyramid::OutPlanar16 _OP_ {
   int x, y;
-  uint16_t* dst_p = (uint16_t*)_dst_p;
+  auto* dst_p = (uint16_t*)_dst_p;
   uint16_t black = chroma ? 0x8000 : 0x0000;
 
   __m128 zeroes = _mm_setzero_ps();
@@ -280,7 +280,7 @@ void Pyramid::OutPlanar16 _OP_ {
       _mm_set_epi32(0x0d0c0908, 0x05040100, 0x80808080, 0x80808080);
   __m128i pixels;
   __m128* p_p;
-  __m128* p_pt = (__m128*)levels_[level].data;
+  auto* p_pt = (__m128*)levels_[level].data;
 
   __m128i* dst_pp_m;
   uint16_t* dst_pp_w;
@@ -374,7 +374,7 @@ void Pyramid::OutPlanar16 _OP_ {
 template <typename F>
 void Pyramid::OutPlanar32 _OP_ {
   int x, y;
-  __m128* dst_p = (__m128*)_dst_p;
+  auto* dst_p = (__m128*)_dst_p;
 
   __m128 zeroes;
   __m128 maxes;
@@ -390,7 +390,7 @@ void Pyramid::OutPlanar32 _OP_ {
     maxes = _mm_set_ps1(1.0f);
   }
 
-  __m128* p_p = (__m128*)levels_[level].data;
+  auto* p_p = (__m128*)levels_[level].data;
 
   float* dst_pp_f;
 

@@ -296,7 +296,7 @@ void Image::Read(void* data, bool gamma) {
       }
     } break;
     case ImageType::MB_JPEG: {
-      uint8_t* pointer = (uint8_t*)data;
+      auto* pointer = (uint8_t*)data;
 
       while (cinfo_.output_scanline < cinfo_.output_height) {
         jpeg_read_scanlines(&cinfo_, &pointer, 1);
@@ -304,7 +304,7 @@ void Image::Read(void* data, bool gamma) {
       }
     } break;
     case ImageType::MB_PNG: {
-      uint8_t* pointer = (uint8_t*)data;
+      auto* pointer = (uint8_t*)data;
 
       for (int y = 0; y < tiff_height_; ++y) {
         png_read_row(png_ptr_, pointer, nullptr);
@@ -322,7 +322,7 @@ void Image::Read(void* data, bool gamma) {
   if (spp_ == 4) {
     switch (bpp_) {
       case 8: {
-        uint32_t* p = (uint32_t*)data;
+        auto* p = (uint32_t*)data;
         p--;
 
         for (y = 0; y < tiff_u_height_; ++y) {
@@ -443,16 +443,16 @@ void Image::Read(void* data, bool gamma) {
     mt::Threadpool* threadpool = mt::Threadpool::GetInstance();
 
     tiff_mask_ = new utils::Flex(width_, height_);
-    utils::Flex* dt = new utils::Flex(width_, height_);
+    auto* dt = new utils::Flex(width_, height_);
     int mc;
 
     int n_threads = (std::max)(2, threadpool->GetNThreads());
 
-    uint32_t** thread_lines = new uint32_t*[n_threads];
-    uint32_t** thread_comp_lines = new uint32_t*[n_threads];
+    auto** thread_lines = new uint32_t*[n_threads];
+    auto** thread_comp_lines = new uint32_t*[n_threads];
 
-    std::mutex* flex_mutex_p = new std::mutex;
-    std::condition_variable* flex_cond_p = new std::condition_variable;
+    auto* flex_mutex_p = new std::mutex;
+    auto* flex_cond_p = new std::condition_variable;
 
     for (int i = 0; i < n_threads; ++i) {
       thread_lines[i] = new uint32_t[width_];
@@ -796,7 +796,7 @@ void Image::Read(void* data, bool gamma) {
     switch (bpp_) {
       case 8: {
         uint8_t byte;
-        uint8_t* bytes = (uint8_t*)data;
+        auto* bytes = (uint8_t*)data;
         size_t p = 0;
         for (y = 0; y < height_; ++y) {
           for (x = 0; x < width_; ++x) {
@@ -818,7 +818,7 @@ void Image::Read(void* data, bool gamma) {
       } break;
       case 16: {
         uint16_t word;
-        uint16_t* words = (uint16_t*)data;
+        auto* words = (uint16_t*)data;
         size_t p = 0;
         for (y = 0; y < height_; ++y) {
           for (x = 0; x < width_; ++x) {
@@ -857,14 +857,14 @@ void Image::MaskPng(int i) {
   int height = masks_[0]->height_;  // +1 + masks[1]->height;
 
   size_t size = (size_t)width * height;
-  uint8_t* temp = (uint8_t*)malloc(size);
+  auto* temp = (uint8_t*)malloc(size);
   memset(temp, 32, size);
 
   int px = 0, py = 0;
   uint32_t cur;
 
   for (int l = 0; l < (int)masks_.size(); ++l) {
-    uint32_t* data = (uint32_t*)masks_[l]->data_;
+    auto* data = (uint32_t*)masks_[l]->data_;
     uint8_t* line = temp + py * masks_[0]->width_ + px;
     for (int y = 0; y < masks_[l]->height_; ++y) {
       int x = 0;
