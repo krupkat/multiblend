@@ -24,14 +24,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest]
         include:
           - os: ubuntu-latest
             generator: 'Unix Makefiles'
             tidy_runner_script: './misc/tidy.sh'
+          - os: windows-latest
+            generator: 'Ninja'
+            tidy_runner_script: './misc/tidy.ps1'
 
     steps:
       - uses: actions/checkout@v3
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: matrix.os == 'windows-latest'
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@main
