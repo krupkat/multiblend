@@ -202,8 +202,8 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
   float vals[5];
   int min_count;
 
-  for (int i = 0; i < 5; ++i) {
-    real_lines[i] = new uint32_t[masks[0]->width_];
+  for (auto& real_line : real_lines) {
+    real_line = new uint32_t[masks[0]->width_];
   }
 
   for (int l = 1; l < n_levels; ++l) {

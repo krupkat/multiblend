@@ -1019,6 +1019,7 @@ void Pyramid::LaplaceThread(Level* upper_level, Level* lower_level, int sy,
 
       LaplaceLine3(hi, temp1, temp2, temp3, upper_level->m128_pitch);
     } else {
+      // NOLINTNEXTLINE(readability-suspicious-call-argument)
       LaplaceLine2(hi, temp2, temp3, upper_level->m128_pitch);
 
       __m128* temp = temp1;
@@ -1328,7 +1329,7 @@ void Pyramid::Blend(Pyramid* b) {
     return;
   }
   memcpy(levels_[GetNLevels() - 1].data, b->levels_[GetNLevels() - 1].data,
-         static_cast<long>(levels_[GetNLevels() - 1].height) *
+         static_cast<size_t>(levels_[GetNLevels() - 1].height) *
              levels_[GetNLevels() - 1].pitch * sizeof(float));
 }
 
@@ -1486,7 +1487,7 @@ void Pyramid::Png(const char* filename) {
   int width = levels_[0].pitch;
   int height =
       levels_[0].height + (levels_.size() > 1 ? 1 + levels_[1].height : 0);
-  auto* temp = (uint8_t*)calloc(static_cast<long>(width) * height, 1);
+  auto* temp = (uint8_t*)calloc(static_cast<size_t>(width) * height, 1);
 
   int px = 0;
   int py = 0;

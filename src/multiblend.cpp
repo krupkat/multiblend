@@ -120,7 +120,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       std::vector<int> widths;
       std::vector<int> heights;
 
-      for (auto image : images) {
+      for (auto* image : images) {
         widths.push_back(image->width_);
         heights.push_back(image->height_);
       }
@@ -531,11 +531,11 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               uint16_t v;
               while ((total_count--) != 0) {
                 v = ((uint8_t*)images[xor_image]->channels_[0]->data_)[p];
-                channel_totals[0] += static_cast<long>(v) * v;
+                channel_totals[0] += static_cast<uint64_t>(v) * v;
                 v = ((uint8_t*)images[xor_image]->channels_[1]->data_)[p];
-                channel_totals[1] += static_cast<long>(v) * v;
+                channel_totals[1] += static_cast<uint64_t>(v) * v;
                 v = ((uint8_t*)images[xor_image]->channels_[2]->data_)[p];
-                channel_totals[2] += static_cast<long>(v) * v;
+                channel_totals[2] += static_cast<uint64_t>(v) * v;
                 ++p;
               }
             } break;
@@ -543,11 +543,11 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               uint32_t v;
               while ((total_count--) != 0) {
                 v = ((uint16_t*)images[xor_image]->channels_[0]->data_)[p];
-                channel_totals[0] += static_cast<unsigned long>(v) * v;
+                channel_totals[0] += static_cast<uint64_t>(v) * v;
                 v = ((uint16_t*)images[xor_image]->channels_[1]->data_)[p];
-                channel_totals[1] += static_cast<unsigned long>(v) * v;
+                channel_totals[1] += static_cast<uint64_t>(v) * v;
                 v = ((uint16_t*)images[xor_image]->channels_[2]->data_)[p];
-                channel_totals[2] += static_cast<unsigned long>(v) * v;
+                channel_totals[2] += static_cast<uint64_t>(v) * v;
                 ++p;
               }
             } break;
@@ -841,14 +841,14 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
     png_get_IHDR(png_ptr, info_ptr, &png_width, &png_height, &png_depth,
                  &png_colour, nullptr, nullptr, nullptr);
 
-    if (png_width != width || png_height != png_height) {
+    if (png_width != width || png_height != height) {
       utils::die("Error: Seam PNG dimensions don't match workspace");
     }
     if (png_depth != 8 || png_colour != PNG_COLOR_TYPE_PALETTE) {
       utils::die("Error: Incorrect seam PNG format");
     }
 
-    auto png_line = (png_bytep)malloc(width);
+    auto* png_line = (png_bytep)malloc(width);
 
     for (int y = 0; y < height; ++y) {
       png_read_row(png_ptr, png_line, nullptr);

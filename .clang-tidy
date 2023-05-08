@@ -23,6 +23,13 @@ Checks: >
   readability-delete-null-pointer,
   readability-else-after-return,
   readability-inconsistent-declaration-parameter-name
+  bugprone-macro-parentheses,
+  google-runtime-int,
+  misc-redundant-expression,
+  modernize-loop-convert,
+  modernize-use-using,
+  readability-qualified-auto,
+  readability-suspicious-call-argument
 
 
 HeaderFilterRegex: ".*multiblend.*src.*"

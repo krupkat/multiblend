@@ -1,5 +1,6 @@
 #include "src/geotiff.h"
 
+#include <cstdint>
 #include <cstdlib>
 
 #include <tiffio.h>
@@ -47,7 +48,7 @@ void geotiff_register(TIFF* tif) {
     Returns  1 if reading was successfull, 0 if it failed.
 */
 int geotiff_read(TIFF* tiff, GeoTIFFInfo* info) {
-  unsigned short nCount = 0;
+  uint16_t nCount = 0;
   double* geo_scale;
   // clear geotiff info
   //  memset(info,0,sizeof(GeoTIFFInfo));

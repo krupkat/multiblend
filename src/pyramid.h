@@ -554,10 +554,10 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
   int bytes = sizeof(*dst_p);
   int eb = (int)(levels_[level].bands.size() - 1);
 
-  typedef
-      typename std::conditional<sizeof(*dst_p) == 1, uint8_t*, uint16_t*>::type
-          Type;  // used to avoid generating a float* version of OutInterleaved
-                 // which would cause warnings
+  using Type =
+      typename std::conditional<sizeof(*dst_p) == 1, uint8_t*, uint16_t*>::type;
+  // used to avoid generating a float* version of OutInterleaved which would
+  // cause warnings
 
   int s = (gamma ? 1 : 0) | (dither && bytes != 4 ? 2 : 0) | (clamp ? 4 : 0);
 
