@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest] # windows runner doesn't support clang-tidy with export-fixes
         include:
           - os: ubuntu-latest
             generator: 'Unix Makefiles'
