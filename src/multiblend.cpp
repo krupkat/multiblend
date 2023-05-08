@@ -1,6 +1,6 @@
 #include "src/multiblend.h"
 
-#include <math.h>
+#include <cmath>
 
 #include "src/linux_overrides.h"
 #include "src/pnger.h"
@@ -26,7 +26,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
   /***********************************************************************
    * Open images to get prelimary info
    ***********************************************************************/
-  size_t untrimmed_bytes = 0;
+  std::size_t untrimmed_bytes = 0;
 
   for (int i = 0; i < n_images; ++i) {
     images[i]->Open();
@@ -46,7 +46,9 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
   }
 
   for (int i = 0; i < n_images; ++i) {
-    if (opts.output_bpp == 0 && images[i]->bpp_ == 16) opts.output_bpp = 16;
+    if (opts.output_bpp == 0 && images[i]->bpp_ == 16) {
+      opts.output_bpp = 16;
+    }
     if (images[i]->bpp_ != images[0]->bpp_) {
       utils::die(
           "Error: mixture of 8bpp and 16bpp images detected (not currently "
@@ -113,12 +115,12 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
   int blend_wh;
   int blend_levels;
 
-  if (!opts.fixed_levels) {
+  if (opts.fixed_levels == 0) {
     if (!opts.wideblend) {
       std::vector<int> widths;
       std::vector<int> heights;
 
-      for (auto image : images) {
+      for (auto* image : images) {
         widths.push_back(image->width_);
         heights.push_back(image->height_);
       }
@@ -126,19 +128,20 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       std::sort(widths.begin(), widths.end());
       std::sort(heights.begin(), heights.end());
 
-      size_t halfway = (widths.size() - 1) >> 1;
+      std::size_t halfway = (widths.size() - 1) >> 1;
 
-      blend_wh = std::max(
-          widths.size() & 1 ? widths[halfway]
-                            : (widths[halfway] + widths[halfway + 1] + 1) >> 1,
-          heights.size() & 1
-              ? heights[halfway]
-              : (heights[halfway] + heights[halfway + 1] + 1) >> 1);
+      blend_wh =
+          std::max((widths.size() & 1) != 0u
+                       ? widths[halfway]
+                       : (widths[halfway] + widths[halfway + 1] + 1) >> 1,
+                   (heights.size() & 1) != 0u
+                       ? heights[halfway]
+                       : (heights[halfway] + heights[halfway + 1] + 1) >> 1);
     } else {
       blend_wh = (std::max)(width, height);
     }
 
-    blend_levels = (int)floor(log2(blend_wh + 4.0f) - 1);
+    blend_levels = (int)std::floor(std::log2(blend_wh + 4.0f) - 1);
     if (opts.wideblend) {
       blend_levels++;
     }
@@ -164,7 +167,8 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
   timer.Start();
 
   utils::Output(1, "Seaming");
-  switch (((!!opts.seamsave_filename) << 1) | !!opts.xor_filename) {
+  switch ((static_cast<int>(!(opts.seamsave_filename == nullptr)) << 1) |
+          static_cast<int>(!(opts.xor_filename == nullptr))) {
     case 1:
       utils::Output(1, " (saving XOR map)");
       break;
@@ -184,15 +188,18 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
   int stop;
 
   uint64_t best;
-  uint64_t a, b, c, d;
+  uint64_t a;
+  uint64_t b;
+  uint64_t c;
+  uint64_t d;
 
 #define DT_MAX 0x9000000000000000
-  uint64_t* prev_line = NULL;
-  uint64_t* this_line = NULL;
+  uint64_t* prev_line = nullptr;
+  uint64_t* this_line = nullptr;
   bool last_pixel = false;
   bool arbitrary_seam = false;
 
-  utils::Flex* seam_flex = new utils::Flex(width, height);
+  auto* seam_flex = new utils::Flex(width, height);
   int max_queue = 0;
 
   /***********************************************************************
@@ -202,13 +209,13 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       mt::Threadpool::GetInstance(opts.all_threads ? 2 : 0);
 
   int n_threads = std::max(2, threadpool->GetNThreads());
-  uint64_t** thread_lines = new uint64_t*[n_threads];
+  auto** thread_lines = new uint64_t*[n_threads];
 
-  if (!opts.seamload_filename) {
-    std::mutex* flex_mutex_p = new std::mutex;
-    std::condition_variable* flex_cond_p = new std::condition_variable;
+  if (opts.seamload_filename == nullptr) {
+    auto* flex_mutex_p = new std::mutex;
+    auto* flex_cond_p = new std::condition_variable;
 
-    uint8_t** thread_comp_lines = new uint8_t*[n_threads];
+    auto** thread_comp_lines = new uint8_t*[n_threads];
 
     for (int i = 0; i < n_threads; ++i) {
       thread_lines[i] = new uint64_t[width];
@@ -255,7 +262,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
 
         // update image mask states
         for (int i = 0; i < n_images; ++i) {
-          if (!images[i]->mask_count_) {
+          if (images[i]->mask_count_ == 0) {
             if (x >= images[i]->mask_limit_) {
               utemp = images[i]->tiff_mask_->ReadBackwards32();
               images[i]->mask_state_ = ((~utemp) << 32) & 0x8000000000000000;
@@ -266,9 +273,10 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
             }
           }
 
-          if (images[i]->mask_count_ < min_count)
+          if (images[i]->mask_count_ < min_count) {
             min_count = images[i]->mask_count_;
-          if (!images[i]->mask_state_) {  // mask_state is inverted
+          }
+          if (images[i]->mask_state_ == 0u) {  // mask_state is inverted
             ++xor_count;
             xor_image = i;
           }
@@ -278,11 +286,15 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
 
         if (xor_count == 1) {
           images[xor_image]->seam_present_ = true;
-          while (x > stop) this_line[x--] = xor_image;
+          while (x > stop) {
+            this_line[x--] = xor_image;
+          }
         } else {
-          if (y == height - 1) {                         // bottom row
-            if (x == width - 1) {                        // first pixel(s)
-              while (x > stop) this_line[x--] = DT_MAX;  // max
+          if (y == height - 1) {   // bottom row
+            if (x == width - 1) {  // first pixel(s)
+              while (x > stop) {
+                this_line[x--] = DT_MAX;  // max
+              }
             } else {
               utemp = this_line[x + 1];
               utemp = MASKVAL(utemp);
@@ -334,9 +346,15 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               utemp = prev_line[x - 1] + 0x400000000;
               a = MASKVAL(utemp);
 
-              if (a < d) d = a;
-              if (b < d) d = b;
-              if (c < d) d = c;
+              if (a < d) {
+                d = a;
+              }
+              if (b < d) {
+                d = b;
+              }
+              if (c < d) {
+                d = c;
+              }
 
               this_line[x--] = d;
 
@@ -347,8 +365,12 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
 
             if (last_pixel) {
               // d is the new "best" to compare against
-              if (b < d) d = b;
-              if (c < d) d = c;
+              if (b < d) {
+                d = b;
+              }
+              if (c < d) {
+                d = c;
+              }
 
               this_line[x--] = d;
 
@@ -362,7 +384,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
         }
       }
 
-      if (y) {
+      if (y != 0) {
         threadpool->Queue([=] {
           int p = utils::CompressSeamLine(this_line, comp, width);
           if (p > width) {
@@ -415,15 +437,15 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
   }
 
   io::png::Pnger* xor_map =
-      opts.xor_filename
+      opts.xor_filename != nullptr
           ? new io::png::Pnger(opts.xor_filename, "XOR map", width, height,
                                PNG_COLOR_TYPE_PALETTE)
-          : NULL;
+          : nullptr;
   io::png::Pnger* seam_map =
-      opts.seamsave_filename
+      opts.seamsave_filename != nullptr
           ? new io::png::Pnger(opts.seamsave_filename, "Seam map", width,
                                height, PNG_COLOR_TYPE_PALETTE)
-          : NULL;
+          : nullptr;
 
   /***********************************************************************
    * Forward distance transform
@@ -465,7 +487,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       xor_count = 0;
 
       for (int i = 0; i < n_images; ++i) {
-        if (!images[i]->mask_count_) {
+        if (images[i]->mask_count_ == 0) {
           if (x < images[i]->mask_limit_) {
             utemp = images[i]->tiff_mask_->ReadForwards32();
             images[i]->mask_state_ = ((~utemp) << 32) & 0x8000000000000000;
@@ -476,9 +498,10 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
           }
         }
 
-        if (images[i]->mask_count_ < min_count)
+        if (images[i]->mask_count_ < min_count) {
           min_count = images[i]->mask_count_;
-        if (!images[i]->mask_state_) {
+        }
+        if (images[i]->mask_state_ == 0u) {
           ++xor_count;
           xor_image = i;
         }
@@ -486,17 +509,20 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
 
       stop = x + min_count;
 
-      if (!xor_count) {
+      if (xor_count == 0) {
         alpha = true;
       }
-      full_mask.MaskWrite(min_count, xor_count);
+      full_mask.MaskWrite(min_count, xor_count != 0);
       xor_mask.MaskWrite(min_count, xor_count == 1);
 
       if (xor_count == 1) {
-        if (xor_map) memset(&xor_map->line_[x], xor_image, min_count);
+        if (xor_map != nullptr) {
+          memset(&xor_map->line_[x], xor_image, min_count);
+        }
 
-        size_t p = (y - images[xor_image]->ypos_) * images[xor_image]->width_ +
-                   (x - images[xor_image]->xpos_);
+        std::size_t p =
+            (y - images[xor_image]->ypos_) * images[xor_image]->width_ +
+            (x - images[xor_image]->xpos_);
 
         int total_count = min_count;
         total_pixels += total_count;
@@ -504,25 +530,25 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
           switch (images[xor_image]->bpp_) {
             case 8: {
               uint16_t v;
-              while (total_count--) {
+              while ((total_count--) != 0) {
                 v = ((uint8_t*)images[xor_image]->channels_[0]->data_)[p];
-                channel_totals[0] += v * v;
+                channel_totals[0] += static_cast<uint64_t>(v) * v;
                 v = ((uint8_t*)images[xor_image]->channels_[1]->data_)[p];
-                channel_totals[1] += v * v;
+                channel_totals[1] += static_cast<uint64_t>(v) * v;
                 v = ((uint8_t*)images[xor_image]->channels_[2]->data_)[p];
-                channel_totals[2] += v * v;
+                channel_totals[2] += static_cast<uint64_t>(v) * v;
                 ++p;
               }
             } break;
             case 16: {
               uint32_t v;
-              while (total_count--) {
+              while ((total_count--) != 0) {
                 v = ((uint16_t*)images[xor_image]->channels_[0]->data_)[p];
-                channel_totals[0] += v * v;
+                channel_totals[0] += static_cast<uint64_t>(v) * v;
                 v = ((uint16_t*)images[xor_image]->channels_[1]->data_)[p];
-                channel_totals[1] += v * v;
+                channel_totals[1] += static_cast<uint64_t>(v) * v;
                 v = ((uint16_t*)images[xor_image]->channels_[2]->data_)[p];
-                channel_totals[2] += v * v;
+                channel_totals[2] += static_cast<uint64_t>(v) * v;
                 ++p;
               }
             } break;
@@ -530,7 +556,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
         } else {
           switch (images[xor_image]->bpp_) {
             case 8: {
-              while (total_count--) {
+              while ((total_count--) != 0) {
                 channel_totals[0] +=
                     ((uint8_t*)images[xor_image]->channels_[0]->data_)[p];
                 channel_totals[1] +=
@@ -541,7 +567,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               }
             } break;
             case 16: {
-              while (total_count--) {
+              while ((total_count--) != 0) {
                 channel_totals[0] +=
                     ((uint16_t*)images[xor_image]->channels_[0]->data_)[p];
                 channel_totals[1] +=
@@ -554,7 +580,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
           }
         }
 
-        if (!opts.seamload_filename) {
+        if (opts.seamload_filename == nullptr) {
           RECORD(xor_image, min_count);
           while (x < stop) {
             this_line[x++] = xor_image;
@@ -565,9 +591,11 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
 
         best = xor_image;
       } else {
-        if (xor_map) memset(&xor_map->line_[x], 0xff, min_count);
+        if (xor_map != nullptr) {
+          memset(&xor_map->line_[x], 0xff, min_count);
+        }
 
-        if (!opts.seamload_filename) {
+        if (opts.seamload_filename == nullptr) {
           if (y == 0) {
             // top row
             while (x < stop) {
@@ -577,13 +605,15 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
                 utemp = this_line[x - 1] + 0x300000000;
                 d = MASKVAL(utemp);
 
-                if (d < best) best = d;
+                if (d < best) {
+                  best = d;
+                }
               }
 
-              if (best & 0x8000000000000000 && xor_count) {
+              if (((best & 0x8000000000000000) != 0u) && (xor_count != 0)) {
                 arbitrary_seam = true;
                 for (int i = 0; i < n_images; ++i) {
-                  if (!images[i]->mask_state_) {
+                  if (images[i]->mask_state_ == 0u) {
                     best = 0x8000000000000000 | i;
                     if (!opts.reverse) {
                       break;
@@ -604,16 +634,20 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
 
               utemp = *prev_line + 0x300000000;
               b = MASKVAL(utemp);
-              if (b < best) best = b;
+              if (b < best) {
+                best = b;
+              }
 
               utemp = prev_line[1] + 0x400000000;
               c = MASKVAL(utemp);
-              if (c < best) best = c;
+              if (c < best) {
+                best = c;
+              }
 
-              if (best & 0x8000000000000000 && xor_count) {
+              if (((best & 0x8000000000000000) != 0u) && (xor_count != 0)) {
                 arbitrary_seam = true;
                 for (int i = 0; i < n_images; ++i) {
-                  if (!images[i]->mask_state_) {
+                  if (images[i]->mask_state_ == 0u) {
                     best = 0x8000000000000000 | i;
                     if (!opts.reverse) {
                       break;
@@ -658,15 +692,23 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               utils::ReadSeamDT(seam_flex, current_count, current_step, dt_val);
               best = dt_val;
 
-              if (a < best) best = a;
-              if (b < best) best = b;
-              if (c < best) best = c;
-              if (d < best) best = d;
+              if (a < best) {
+                best = a;
+              }
+              if (b < best) {
+                best = b;
+              }
+              if (c < best) {
+                best = c;
+              }
+              if (d < best) {
+                best = d;
+              }
 
-              if (best & 0x8000000000000000 && xor_count) {
+              if (((best & 0x8000000000000000) != 0u) && (xor_count != 0)) {
                 arbitrary_seam = true;
                 for (int i = 0; i < n_images; ++i) {
-                  if (!images[i]->mask_state_) {
+                  if (images[i]->mask_state_ == 0u) {
                     best = 0x8000000000000000 | i;
                     if (!opts.reverse) {
                       break;
@@ -688,14 +730,20 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               utils::ReadSeamDT(seam_flex, current_count, current_step, dt_val);
               best = dt_val;
 
-              if (a < best) best = a;
-              if (b < best) best = b;
-              if (d < best) best = d;
+              if (a < best) {
+                best = a;
+              }
+              if (b < best) {
+                best = b;
+              }
+              if (d < best) {
+                best = d;
+              }
 
-              if (best & 0x8000000000000000 && xor_count) {
+              if (((best & 0x8000000000000000) != 0u) && (xor_count != 0)) {
                 arbitrary_seam = true;
                 for (int i = 0; i < n_images; ++i) {
-                  if (!images[i]->mask_state_) {
+                  if (images[i]->mask_state_ == 0u) {
                     best = 0x8000000000000000 | i;
                     if (!opts.reverse) {
                       break;
@@ -721,7 +769,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       }
     }
 
-    if (!opts.seamload_filename) {
+    if (opts.seamload_filename == nullptr) {
       RECORD(-1, 0);
 
       for (int i = 0; i < n_images; ++i) {
@@ -732,13 +780,17 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
     full_mask.NextLine();
     xor_mask.NextLine();
 
-    if (xor_map) xor_map->Write();
-    if (seam_map) seam_map->Write();
+    if (xor_map != nullptr) {
+      xor_map->Write();
+    }
+    if (seam_map != nullptr) {
+      seam_map->Write();
+    }
 
     std::swap(this_line, prev_line);
   }
 
-  if (!opts.seamload_filename) {
+  if (opts.seamload_filename == nullptr) {
     delete[] thread_lines[0];
     delete[] thread_lines[1];
     delete[] thread_lines;
@@ -754,30 +806,34 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
   /***********************************************************************
    * Seam load
    ***********************************************************************/
-  if (opts.seamload_filename) {
-    int png_depth, png_colour;
-    png_uint_32 png_width, png_height;
+  if (opts.seamload_filename != nullptr) {
+    int png_depth;
+    int png_colour;
+    png_uint_32 png_width;
+    png_uint_32 png_height;
     uint8_t sig[8];
     png_structp png_ptr;
     png_infop info_ptr;
     FILE* f;
 
     fopen_s(&f, opts.seamload_filename, "rb");
-    if (!f) {
+    if (f == nullptr) {
       utils::die("Error: Couldn't open seam file");
     }
 
-    size_t r = fread(sig, 1, 8, f);  // assignment suppresses g++ -Ofast warning
+    std::size_t r =
+        fread(sig, 1, 8, f);  // assignment suppresses g++ -Ofast warning
     if (!png_check_sig(sig, 8)) {
       utils::die("Error: Bad PNG signature");
     }
 
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    if (!png_ptr) {
+    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr,
+                                     nullptr);
+    if (png_ptr == nullptr) {
       utils::die("Error: Seam PNG problem");
     }
     info_ptr = png_create_info_struct(png_ptr);
-    if (!info_ptr) {
+    if (info_ptr == nullptr) {
       utils::die("Error: Seam PNG problem");
     }
 
@@ -785,19 +841,19 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
     png_set_sig_bytes(png_ptr, 8);
     png_read_info(png_ptr, info_ptr);
     png_get_IHDR(png_ptr, info_ptr, &png_width, &png_height, &png_depth,
-                 &png_colour, NULL, NULL, NULL);
+                 &png_colour, nullptr, nullptr, nullptr);
 
-    if (png_width != width || png_height != png_height) {
+    if (png_width != width || png_height != height) {
       utils::die("Error: Seam PNG dimensions don't match workspace");
     }
     if (png_depth != 8 || png_colour != PNG_COLOR_TYPE_PALETTE) {
       utils::die("Error: Incorrect seam PNG format");
     }
 
-    png_bytep png_line = (png_bytep)malloc(width);
+    auto* png_line = (png_bytep)malloc(width);
 
     for (int y = 0; y < height; ++y) {
-      png_read_row(png_ptr, png_line, NULL);
+      png_read_row(png_ptr, png_line, nullptr);
 
       int ms = 0;
       int mc = 0;
@@ -852,16 +908,16 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
     int wrap_levels_h = 0;
     int wrap_levels_v = 0;
 
-    if (opts.wrap & 1) {
-      wrap_levels_h = (int)floor(log2((width >> 1) + 4.0f) - 1);
+    if ((opts.wrap & 1) != 0) {
+      wrap_levels_h = (int)std::floor(std::log2((width >> 1) + 4.0f) - 1);
       wrap_pyramids.push_back(
           new PyramidWithMasks(width >> 1, height, wrap_levels_h, 0, 0, true));
       wrap_pyramids.push_back(new PyramidWithMasks(
           (width + 1) >> 1, height, wrap_levels_h, width >> 1, 0, true));
     }
 
-    if (opts.wrap & 2) {
-      wrap_levels_v = (int)floor(log2((height >> 1) + 4.0f) - 1);
+    if ((opts.wrap & 2) != 0) {
+      wrap_levels_v = (int)std::floor(std::log2((height >> 1) + 4.0f) - 1);
       wrap_pyramids.push_back(
           new PyramidWithMasks(width, height >> 1, wrap_levels_v, 0, 0, true));
       wrap_pyramids.push_back(new PyramidWithMasks(
@@ -876,13 +932,14 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
           if (y < py->GetY() || y >= py->GetY() + py->GetHeight()) {
             py->masks[0]->Write32(0x80000000 | width);
           } else {
-            if (py->GetX()) {
+            if (py->GetX() != 0) {
               py->masks[0]->Write32(0x80000000 | py->GetX());
               py->masks[0]->Write32(0xc0000000 | py->GetWidth());
             } else {
               py->masks[0]->Write32(0xc0000000 | py->GetWidth());
-              if (py->GetWidth() != width)
+              if (py->GetWidth() != width) {
                 py->masks[0]->Write32(0x80000000 | (width - py->GetWidth()));
+              }
             }
           }
           py->masks[0]->NextLine();
@@ -906,7 +963,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
     }
 
     for (int l = total_levels - 1; l >= 0; --l) {
-      size_t max_bytes = 0;
+      std::size_t max_bytes = 0;
 
       if (l < blend_levels) {
         for (auto& image : images) {
@@ -915,8 +972,9 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       }
 
       for (auto& py : wrap_pyramids) {
-        if (l < py->GetNLevels())
+        if (l < py->GetNLevels()) {
           max_bytes = std::max(max_bytes, py->GetLevel(l).bytes);
+        }
       }
 
       float* temp;
@@ -935,14 +993,16 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       }
 
       for (auto& py : wrap_pyramids) {
-        if (l < py->GetNLevels()) py->GetLevel(l).data = temp;
+        if (l < py->GetNLevels()) {
+          py->GetLevel(l).data = temp;
+        }
       }
     }
 
     /***********************************************************************
      * Create output pyramid
      ***********************************************************************/
-    Pyramid* output_pyramid = NULL;
+    Pyramid* output_pyramid = nullptr;
 
     output_pyramid = new Pyramid(width, height, total_levels, 0, 0, true);
 
@@ -964,13 +1024,13 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
      * Blend
      ***********************************************************************/
     if (n_images == 1) {
-      if (opts.wrap) {
+      if (opts.wrap != 0) {
         utils::Output(1, "Wrapping...\n");
       } else {
         utils::Output(1, "Processing...\n");
       }
     } else {
-      if (opts.wrap) {
+      if (opts.wrap != 0) {
         utils::Output(1, "Blending/wrapping...\n");
       } else {
         utils::Output(1, "Blending...\n");
@@ -985,13 +1045,14 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
           images[i]->pyramid_->Copy((uint8_t*)images[i]->channels_[c]->data_, 1,
                                     images[i]->width_, opts.gamma,
                                     images[i]->bpp_);
-          if (opts.output_bpp != images[i]->bpp_)
+          if (opts.output_bpp != images[i]->bpp_) {
             images[i]->pyramid_->Multiply(
                 0, opts.gamma ? (opts.output_bpp == 8 ? 1.0f / 66049 : 66049)
                               : (opts.output_bpp == 8 ? 1.0f / 257 : 257));
+          }
 
           delete images[i]->channels_[c];
-          images[i]->channels_[c] = NULL;
+          images[i]->channels_[c] = nullptr;
 
           timing.copy_time += timer.Read();
 
@@ -1021,14 +1082,15 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               threadpool->Queue([=] {
                 for (int y = sy; y < ey; ++y) {
                   int in_line = y - y_offset;
-                  if (in_line < 0)
+                  if (in_line < 0) {
                     in_line = 0;
-                  else if (in_line > in_level.height - 1)
+                  } else if (in_line > in_level.height - 1) {
                     in_line = in_level.height - 1;
+                  }
                   float* input_p =
-                      in_level.data + (size_t)in_line * in_level.pitch;
+                      in_level.data + (std::size_t)in_line * in_level.pitch;
                   float* output_p =
-                      out_level.data + (size_t)y * out_level.pitch;
+                      out_level.data + (std::size_t)y * out_level.pitch;
 
                   utils::CompositeLine(input_p, output_p, i, x_offset,
                                        in_level.width, out_level.width,
@@ -1053,13 +1115,14 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
 
         output_pyramid->Copy((uint8_t*)images[0]->channels_[c]->data_, 1,
                              images[0]->width_, opts.gamma, images[0]->bpp_);
-        if (opts.output_bpp != images[0]->bpp_)
+        if (opts.output_bpp != images[0]->bpp_) {
           output_pyramid->Multiply(
               0, opts.gamma ? (opts.output_bpp == 8 ? 1.0f / 66049 : 66049)
                             : (opts.output_bpp == 8 ? 1.0f / 257 : 257));
+        }
 
         delete images[0]->channels_[c];
-        images[0]->channels_[c] = NULL;
+        images[0]->channels_[c] = nullptr;
 
         timing.copy_time += timer.Read();
       }
@@ -1067,13 +1130,13 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       /***********************************************************************
        * Wrapping
        ***********************************************************************/
-      if (opts.wrap) {
+      if (opts.wrap != 0) {
         timer.Start();
 
         int p = 0;
 
         for (int w = 1; w <= 2; ++w) {
-          if (opts.wrap & w) {
+          if ((opts.wrap & w) != 0) {
             if (w == 1) {
               utils::SwapH(output_pyramid);
             } else {
@@ -1105,18 +1168,20 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
                   threadpool->Queue([=] {
                     for (int y = sy; y < ey; ++y) {
                       int in_line = y - y_offset;
-                      if (in_line < 0)
+                      if (in_line < 0) {
                         in_line = 0;
-                      else if (in_line > in_level.height - 1)
+                      } else if (in_line > in_level.height - 1) {
                         in_line = in_level.height - 1;
+                      }
                       float* input_p =
-                          in_level.data + (size_t)in_line * in_level.pitch;
+                          in_level.data + (std::size_t)in_line * in_level.pitch;
                       float* output_p =
-                          out_level.data + (size_t)y * out_level.pitch;
+                          out_level.data + (std::size_t)y * out_level.pitch;
 
                       utils::CompositeLine(
-                          input_p, output_p, wp + (level == 0), x_offset,
-                          in_level.width, out_level.width, out_level.pitch,
+                          input_p, output_p, wp + static_cast<int>(level == 0),
+                          x_offset, in_level.width, out_level.width,
+                          out_level.pitch,
                           wrap_pyramids[p]->masks[level]->data_,
                           wrap_pyramids[p]->masks[level]->rows_[y]);
                     }
@@ -1145,7 +1210,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       /***********************************************************************
        * Offset correction
        ***********************************************************************/
-      if (total_pixels) {
+      if (total_pixels != 0u) {
         double channel_total = 0;  // must be a double
         float* data = output_pyramid->GetData();
         xor_mask.Start();
@@ -1154,7 +1219,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
           int x = 0;
           while (x < width) {
             uint32_t v = xor_mask.ReadForwards32();
-            if (v & 0x80000000) {
+            if ((v & 0x80000000) != 0u) {
               v = x + v & 0x7fffffff;
               while (x < (int)v) {
                 channel_total += data[x++];
@@ -1188,8 +1253,8 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       timer.Start();
 
       try {
-        output_channels[c] = memory::MapAlloc::Alloc(((size_t)width * height)
-                                                     << (opts.output_bpp >> 4));
+        output_channels[c] = memory::MapAlloc::Alloc(
+            ((std::size_t)width * height) << (opts.output_bpp >> 4));
       } catch (char* e) {
         printf("%s\n", e);
         exit(EXIT_FAILURE);

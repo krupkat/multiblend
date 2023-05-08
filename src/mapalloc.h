@@ -13,35 +13,35 @@ class MapAlloc {
  private:
   class MapAllocObject {
    public:
-    MapAllocObject(size_t size, int alignment);
+    MapAllocObject(std::size_t size, int alignment);
     ~MapAllocObject();
     void* GetPointer();
-    size_t GetSize() { return size_; }
-    bool IsFile();
+    [[nodiscard]] std::size_t GetSize() const { return size_; }
+    [[nodiscard]] bool IsFile() const;
 
    private:
 #ifdef _WIN32
-    HANDLE file_ = NULL;
-    HANDLE map_ = NULL;
+    HANDLE file_ = nullptr;
+    HANDLE map_ = nullptr;
 #else
     int file_ = 0;
 #endif
-    void* pointer_ = NULL;
-    size_t size_;
+    void* pointer_ = nullptr;
+    std::size_t size_;
   };
 
   static std::vector<MapAllocObject*> objects_;
   static char tmpdir_[256];
   static char filename_[512];
   static int suffix_;
-  static size_t cache_threshold_;
-  static size_t total_allocated_;
+  static std::size_t cache_threshold_;
+  static std::size_t total_allocated_;
 
  public:
-  static void* Alloc(size_t size, int alignment = 16);
+  static void* Alloc(std::size_t size, int alignment = 16);
   static void Free(void* p);
-  static size_t GetSize(void* p);
-  static void CacheThreshold(size_t threshold);
+  static std::size_t GetSize(void* p);
+  static void CacheThreshold(std::size_t limit);
   static void SetTmpdir(const char* _tmpdir);
   static bool LastFile() { return objects_.back()->IsFile(); }
   // static bool last_mapped;

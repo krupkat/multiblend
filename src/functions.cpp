@@ -1,9 +1,9 @@
 #include "src/functions.h"
 
 #include <chrono>
+#include <cstdarg>
+#include <cstdint>
 #include <cstring>
-#include <stdarg.h>
-#include <stdint.h>
 #include <vector>
 
 #include "src/pyramid.h"
@@ -43,10 +43,14 @@ void die(const char* error, ...) {
 /***********************************************************************
  * ShrinkMasks
  ***********************************************************************/
-int Squish(uint32_t* in, uint32_t* out, int in_width, int out_width) {
+int Squish(const uint32_t* in, uint32_t* out, int in_width, int out_width) {
   float current_val;
   uint32_t cur;
-  float a, b, c, d, e;
+  float a;
+  float b;
+  float c;
+  float d;
+  float e;
   int last_int = -1;
 
   int in_p = 0;
@@ -57,9 +61,9 @@ int Squish(uint32_t* in, uint32_t* out, int in_width, int out_width) {
   int out_count;
 
   cur = in[in_p++];
-  if (cur & 0x80000000) {
+  if ((cur & 0x80000000) != 0u) {
     in_count = cur & 0x00ffffff;
-    if (cur & 0x20000000) {
+    if ((cur & 0x20000000) != 0u) {
       current_val = ((float*)in)[in_p++];
     } else {
       last_int = (cur >> 30) & 1;
@@ -88,7 +92,9 @@ int Squish(uint32_t* in, uint32_t* out, int in_width, int out_width) {
     out[out_p++] = (cur & 0xff000000) | out_count;
     current_val = (float)last_int;
   } else {
-    if (out_count > 1) out[out_p++] = (cur & 0xa0000000) | out_count;
+    if (out_count > 1) {
+      out[out_p++] = (cur & 0xa0000000) | out_count;
+    }
     ((float*)out)[out_p++] = current_val;
   }
   wrote = out_count;
@@ -104,12 +110,12 @@ int Squish(uint32_t* in, uint32_t* out, int in_width, int out_width) {
     // loop always starts needing to read two more pixels
 
     // read d
-    if (!in_count && read < in_width) {
+    if ((in_count == 0) && read < in_width) {
       cur = in[in_p++];
-      if (cur & 0x80000000) {  // float
+      if ((cur & 0x80000000) != 0u) {  // float
         in_count = cur & 0x00ffffff;
         read += in_count;
-        if (cur & 0x20000000) {  // repeated float
+        if ((cur & 0x20000000) != 0u) {  // repeated float
           last_int = -1;
           current_val = *((float*)&in[in_p++]);
         } else {
@@ -124,7 +130,9 @@ int Squish(uint32_t* in, uint32_t* out, int in_width, int out_width) {
       }
     }
 
-    if (read == in_width) in_count = 0x7fffffff;
+    if (read == in_width) {
+      in_count = 0x7fffffff;
+    }
 
     if (in_count >= 2) {
       d = e = current_val;
@@ -134,10 +142,10 @@ int Squish(uint32_t* in, uint32_t* out, int in_width, int out_width) {
       d = current_val;
 
       cur = in[in_p++];
-      if (cur & 0x80000000) {
+      if ((cur & 0x80000000) != 0u) {
         in_count = cur & 0x00ffffff;
         read += in_count;
-        if (cur & 0x20000000) {
+        if ((cur & 0x20000000) != 0u) {
           last_int = -1;
           current_val = ((float*)in)[in_p++];
         } else {
@@ -162,7 +170,9 @@ int Squish(uint32_t* in, uint32_t* out, int in_width, int out_width) {
 
     if (c_read == in_p && in_count >= 4) {
       out_count = in_count >> 1;
-      if (out_count > (out_width - wrote)) out_count = out_width - wrote;
+      if (out_count > (out_width - wrote)) {
+        out_count = out_width - wrote;
+      }
       if (last_int >= 0) {
         out[out_p++] = ((0x2 | last_int) << 30) | out_count;
       } else {
@@ -192,7 +202,9 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
   float vals[5];
   int min_count;
 
-  for (int i = 0; i < 5; ++i) real_lines[i] = new uint32_t[masks[0]->width_];
+  for (auto& real_line : real_lines) {
+    real_line = new uint32_t[masks[0]->width_];
+  }
 
   for (int l = 1; l < n_levels; ++l) {
     int in_width = masks[l - 1]->width_;
@@ -213,10 +225,10 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
     while (wrote < out_width) {
       cur = real_lines[0][pointer[0]++];
       masks[l]->Write32(cur);
-      if (!(cur & 0x80000000)) {
+      if ((cur & 0x80000000) == 0u) {
         ++wrote;
       } else {
-        if (cur & 0x20000000) {
+        if ((cur & 0x20000000) != 0u) {
           masks[l]->Write32(real_lines[0][pointer[0]++]);
         }
         wrote += cur & 0x00ffffff;
@@ -247,13 +259,13 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
       while (wrote < out_width) {
         min_count = 0x7fffffff;
         for (i = 0; i < 5; ++i) {
-          if (!count[i]) {
+          if (count[i] == 0) {
             cur = lines[i][pointer[i]++];
-            if (!(cur & 0x80000000)) {
+            if ((cur & 0x80000000) == 0u) {
               vals[i] = *((float*)&cur);
               count[i] = 1;
             } else {
-              if (cur & 0x20000000) {
+              if ((cur & 0x20000000) != 0u) {
                 vals[i] = ((float*)lines[i])[pointer[i]++];
               } else {
                 last_int = (cur >> 30) & 1;
@@ -263,7 +275,9 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
             }
           }
 
-          if (count[i] < min_count) min_count = count[i];
+          if (count[i] < min_count) {
+            min_count = count[i];
+          }
         }
 
         float val = (vals[0] + vals[4]) * 0.0625f +
@@ -283,7 +297,9 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
         }
 
         wrote += min_count;
-        for (i = 0; i < 5; ++i) count[i] -= min_count;
+        for (i = 0; i < 5; ++i) {
+          count[i] -= min_count;
+        }
       }
 
       if (y == 1) {
@@ -318,29 +334,31 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
     }
   }
 
-  for (i = 0; i < 5; ++i) delete[] real_lines[i];
+  for (i = 0; i < 5; ++i) {
+    delete[] real_lines[i];
+  }
 }
 
 /***********************************************************************
  * Composite line
  ***********************************************************************/
-void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
+void CompositeLine(const float* input_p, float* output_p, int i, int x_offset,
                    int in_level_width, int out_level_width, int out_level_pitch,
-                   uint8_t* _mask, size_t mask_p) {
+                   uint8_t* _mask, std::size_t mask_p) {
   int x = 0;
   int mask_count;
   float current_val;
   int last_int;
 
   mask_p >>= 2;
-  uint32_t* mask = (uint32_t*)_mask;
+  auto* mask = (uint32_t*)_mask;
 
   while (x < out_level_width) {
     uint32_t cur = mask[mask_p++];
     last_int = -1;
-    if (cur & 0x80000000) {
+    if ((cur & 0x80000000) != 0u) {
       mask_count = cur & 0x0fffffff;
-      if (cur & 0x20000000) {
+      if ((cur & 0x20000000) != 0u) {
         current_val = ((float*)mask)[mask_p++];
       } else {
         last_int = (cur >> 30) & 1;
@@ -353,7 +371,9 @@ void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
     int lim = x + mask_count;
 
     if (last_int == 0) {
-      if (i == 0) memset(&output_p[x], 0, mask_count << 2);
+      if (i == 0) {
+        memset(&output_p[x], 0, mask_count << 2);
+      }
       x += mask_count;
     } else if (last_int == 1) {
       if (x < x_offset) {
@@ -378,28 +398,31 @@ void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
       if (x < x_offset) {
         float f = input_p[0] * current_val;
         while (x < lim && x < x_offset) {
-          if (i == 0)
+          if (i == 0) {
             output_p[x++] = f;
-          else
+          } else {
             output_p[x++] += f;
+          }
         }
       }
 
       while (x < lim && x < x_offset + in_level_width) {
         float f = input_p[x - x_offset] * current_val;
-        if (i == 0)
+        if (i == 0) {
           output_p[x++] = f;
-        else
+        } else {
           output_p[x++] += f;
+        }
       }
 
       if (x < lim) {
         float f = input_p[in_level_width - 1] * current_val;
         while (x < lim) {
-          if (i == 0)
+          if (i == 0) {
             output_p[x++] = f;
-          else
+          } else {
             output_p[x++] += f;
+          }
         }
       }
     }
@@ -418,7 +441,7 @@ void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
  ***********************************************************************/
 void ReadInpaintDT(Flex* flex, int& current_count, int& current_step,
                    uint32_t& dt_val) {
-  if (current_count) {
+  if (current_count != 0) {
     --current_count;
     dt_val += current_step;
   } else {
@@ -426,28 +449,27 @@ void ReadInpaintDT(Flex* flex, int& current_count, int& current_step,
     if (_byte == 255) {
       dt_val = flex->ReadBackwards32();
       return;
-    } else {
-      current_step = ((_byte & 7) - 3);
-      if (!(_byte & 0x80)) {  // 0b0ccccsss
-        current_count = _byte >> 3;
-      } else if (!(_byte & 0x40)) {  // 0b10ssssss
-        current_step = (_byte & 0x3f);
-        current_count = 0;
-      } else if (!(_byte & 0x20)) {  // 0b11000000
-        current_count = flex->ReadBackwards8();
-      } else if (!(_byte & 0x10)) {  // 0b11100000
-        current_count = flex->ReadBackwards16();
-      } else {  // if (!(_byte & 0x08)) {
-        current_count = flex->ReadBackwards32();
-      }
-      dt_val += current_step;
     }
+    current_step = ((_byte & 7) - 3);
+    if ((_byte & 0x80) == 0) {  // 0b0ccccsss
+      current_count = _byte >> 3;
+    } else if ((_byte & 0x40) == 0) {  // 0b10ssssss
+      current_step = (_byte & 0x3f);
+      current_count = 0;
+    } else if ((_byte & 0x20) == 0) {  // 0b11000000
+      current_count = flex->ReadBackwards8();
+    } else if ((_byte & 0x10) == 0) {  // 0b11100000
+      current_count = flex->ReadBackwards16();
+    } else {  // if (!(_byte & 0x08)) {
+      current_count = flex->ReadBackwards32();
+    }
+    dt_val += current_step;
   }
 }
 
 void ReadSeamDT(Flex* flex, int& current_count, int64_t& current_step,
                 uint64_t& dt_val) {
-  if (current_count) {
+  if (current_count != 0) {
     --current_count;
     dt_val += current_step;
   } else {
@@ -455,22 +477,21 @@ void ReadSeamDT(Flex* flex, int& current_count, int64_t& current_step,
     if (_byte == 255) {
       dt_val = flex->ReadBackwards64();
       return;
-    } else {
-      current_step = ((int64_t)(_byte & 7) - 3) << 32;
-      if (!(_byte & 0x80)) {  // 0b0ccccsss
-        current_count = _byte >> 3;
-      } else if (!(_byte & 0x40)) {  // 0b10ssssss
-        current_step = (int64_t)(_byte & 0x3f) << 32;
-        current_count = 0;
-      } else if (!(_byte & 0x20)) {  // 0b11000000
-        current_count = flex->ReadBackwards8();
-      } else if (!(_byte & 0x10)) {  // 0b11100000
-        current_count = flex->ReadBackwards16();
-      } else {  // if (!(_byte & 0x08)) {
-        current_count = flex->ReadBackwards32();
-      }
-      dt_val += current_step;
     }
+    current_step = ((int64_t)(_byte & 7) - 3) << 32;
+    if ((_byte & 0x80) == 0) {  // 0b0ccccsss
+      current_count = _byte >> 3;
+    } else if ((_byte & 0x40) == 0) {  // 0b10ssssss
+      current_step = (int64_t)(_byte & 0x3f) << 32;
+      current_count = 0;
+    } else if ((_byte & 0x20) == 0) {  // 0b11000000
+      current_count = flex->ReadBackwards8();
+    } else if ((_byte & 0x10) == 0) {  // 0b11100000
+      current_count = flex->ReadBackwards16();
+    } else {  // if (!(_byte & 0x08)) {
+      current_count = flex->ReadBackwards32();
+    }
+    dt_val += current_step;
   }
 }
 
@@ -478,7 +499,7 @@ void ReadSeamDT(Flex* flex, int& current_count, int64_t& current_step,
  * Seam line compress
  ***********************************************************************/
 void cwrite(int current_count, int current_step, uint8_t* output, int& p) {
-  if (current_count) {
+  if (current_count != 0) {
     if (--current_count < 16) {
       output[p++] = current_count << 3 | current_step;
     } else if (current_count < 256) {
@@ -498,7 +519,7 @@ void cwrite(int current_count, int current_step, uint8_t* output, int& p) {
 
 #define CWRITE cwrite(current_count, current_step, output, p);
 
-int CompressDTLine(uint32_t* input, uint8_t* output, int width) {
+int CompressDTLine(const uint32_t* input, uint8_t* output, int width) {
   int current_step = -100;
   int current_count = 0;
 
@@ -508,14 +529,20 @@ int CompressDTLine(uint32_t* input, uint8_t* output, int width) {
   uint32_t left_val;
   uint32_t right_val;
 
-  while (!(left_val = input[x++]) && x < width)
+  while (((left_val = input[x++]) == 0u) && x < width) {
     ;
-  if (!left_val) return p;
+  }
+  if (left_val == 0u) {
+    return p;
+  }
 
   while (x < width) {
-    while (!(right_val = input[x++]) && x < width)
+    while (((right_val = input[x++]) == 0u) && x < width) {
       ;
-    if (!right_val) break;
+    }
+    if (right_val == 0u) {
+      break;
+    }
 
     if ((step = (int)(left_val - right_val) + 3) < 67 && step >= 0) {
       if (step <= 7) {
@@ -553,7 +580,7 @@ int CompressDTLine(uint32_t* input, uint8_t* output, int width) {
   return p;
 }
 
-int CompressSeamLine(uint64_t* input, uint8_t* output, int width) {
+int CompressSeamLine(const uint64_t* input, uint8_t* output, int width) {
   int current_step = -100;
   int current_count = 0;
 
@@ -563,16 +590,22 @@ int CompressSeamLine(uint64_t* input, uint8_t* output, int width) {
   uint64_t left_val;
   uint64_t right_val;
 
-  while (!((right_val = input[--x]) & 0xffffffff00000000) && x > 0)
+  while ((((right_val = input[--x]) & 0xffffffff00000000) == 0u) && x > 0) {
     ;
-  if (!(right_val & 0xffffffff00000000)) return p;
+  }
+  if ((right_val & 0xffffffff00000000) == 0u) {
+    return p;
+  }
 
   while (x > 0) {
-    while (!((left_val = input[--x]) & 0xffffffff00000000) && x > 0)
+    while ((((left_val = input[--x]) & 0xffffffff00000000) == 0u) && x > 0) {
       ;
-    if (!(left_val & 0xffffffff00000000)) break;
+    }
+    if ((left_val & 0xffffffff00000000) == 0u) {
+      break;
+    }
 
-    if (!((right_val ^ left_val) & 0xffffffff) &&
+    if ((((right_val ^ left_val) & 0xffffffff) == 0u) &&
         (step = ((int64_t)(right_val - left_val) >> 32) + 3) < 67 &&
         step >= 0) {  // was <= 7
       if (step <= 7) {
@@ -620,7 +653,7 @@ void SwapUnswapH(Pyramid* py, bool unswap) {
   int minor_bytes = (width >> 1) << 2;
   int major_bytes = ((width + 1) >> 1) << 2;
   float* data = py->GetData();
-  uint8_t* temp = (uint8_t*)malloc(major_bytes);
+  auto* temp = (uint8_t*)malloc(major_bytes);
 
   for (int y = 0; y < height; ++y) {
     if (unswap) {
@@ -646,15 +679,15 @@ void UnswapH(Pyramid* py) { SwapUnswapH(py, true); }
 void SwapUnswapV(Pyramid* py, bool unswap) {
   int height = py->GetHeight();
   int byte_pitch = py->GetPitch() << 2;
-  uint8_t* temp = (uint8_t*)malloc(byte_pitch);
+  auto* temp = (uint8_t*)malloc(byte_pitch);
   int half_height = height >> 1;
 
-  if (height & 1) {
-    uint8_t* temp2 = (uint8_t*)malloc(byte_pitch);
+  if ((height & 1) != 0) {
+    auto* temp2 = (uint8_t*)malloc(byte_pitch);
     if (unswap) {
-      uint8_t* upper =
+      auto* upper =
           (uint8_t*)(py->GetData() + ((int64_t)height >> 1) * py->GetPitch());
-      uint8_t* lower =
+      auto* lower =
           (uint8_t*)(py->GetData() + ((int64_t)height - 1) * py->GetPitch());
 
       memcpy(temp, upper, byte_pitch);
@@ -670,8 +703,8 @@ void SwapUnswapV(Pyramid* py, bool unswap) {
 
       memcpy(lower, temp, byte_pitch);
     } else {
-      uint8_t* upper = (uint8_t*)py->GetData();
-      uint8_t* lower =
+      auto* upper = (uint8_t*)py->GetData();
+      auto* lower =
           (uint8_t*)(py->GetData() + ((int64_t)height >> 1) * py->GetPitch());
 
       memcpy(temp, lower, byte_pitch);
@@ -690,8 +723,8 @@ void SwapUnswapV(Pyramid* py, bool unswap) {
 
     free(temp2);
   } else {
-    uint8_t* upper = (uint8_t*)py->GetData();
-    uint8_t* lower =
+    auto* upper = (uint8_t*)py->GetData();
+    auto* lower =
         (uint8_t*)(py->GetData() + (int64_t)half_height * py->GetPitch());
     for (int y = 0; y < half_height; ++y) {
       memcpy(temp, upper, byte_pitch);

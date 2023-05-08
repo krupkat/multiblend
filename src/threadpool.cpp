@@ -17,10 +17,10 @@ Threadpool::Threadpool(int threads) {
 
   for (int i = 0; i < n_threads_; ++i) {
 #ifdef _WIN32
-    threads_[i].handle = CreateThread(NULL, 1, (LPTHREAD_START_ROUTINE)Thread,
-                                      &threads_[i], 0, NULL);
+    threads_[i].handle = CreateThread(
+        nullptr, 1, (LPTHREAD_START_ROUTINE)Thread, &threads_[i], 0, nullptr);
 #else
-    pthread_create(&threads_[i].handle, NULL, TP_Thread, &threads_[i]);
+    pthread_create(&threads_[i].handle, nullptr, TP_Thread, &threads_[i]);
 #endif
     threads_[i].main_mutex = &main_mutex_;
     threads_[i].return_mutex = &return_mutex_;
@@ -51,7 +51,7 @@ Threadpool::~Threadpool() {
 #ifdef _WIN32
     WaitForSingleObject(threads_[i].handle, INFINITE);
 #else
-    pthread_join(threads_[i].handle, NULL);
+    pthread_join(threads_[i].handle, nullptr);
 #endif
   }
 }
@@ -69,14 +69,16 @@ void* TP_Thread(void* param) {
   while (true) {
     {
       std::unique_lock<std::mutex> mlock(*P->main_mutex);
-      P->main_cond->wait(mlock, [=] { return P->queue->size() || P->stop; });
-      if (P->queue->size()) {
+      P->main_cond->wait(mlock, [=] { return !P->queue->empty() || P->stop; });
+      if (!P->queue->empty()) {
         P->function = P->queue->front();
         P->queue->pop_front();
         P->free = false;
       }
     }
-    if (P->stop) break;
+    if (P->stop) {
+      break;
+    }
 
     P->function();
 
@@ -87,25 +89,33 @@ void* TP_Thread(void* param) {
     P->return_cond->notify_all();
   }
 
+#ifdef _WIN32
   return 0;
+#else
+  return nullptr;
+#endif
 }
 
 /**********************************************************************
  * Wait
  **********************************************************************/
 void Threadpool::Wait() {
-  if (!queue_.size()) {
+  if (queue_.empty()) {
     int i;
     for (i = 0; i < n_threads_; ++i) {
-      if (!threads_[i].free) break;
+      if (!threads_[i].free) {
+        break;
+      }
     }
-    if (i == n_threads_) return;
+    if (i == n_threads_) {
+      return;
+    }
   }
 
   {
     std::unique_lock<std::mutex> rlock(return_mutex_);
     return_cond_.wait(rlock, [this] {
-      if (queue_.size()) {
+      if (!queue_.empty()) {
         return false;
       }
       for (int i = 0; i < n_threads_; ++i) {

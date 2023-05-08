@@ -14,7 +14,7 @@ class Pyramid {
     int width, height;
     int pitch;
     int m128_pitch;
-    size_t bytes;
+    std::size_t bytes;
     float* data;
     int x;
     int y;
@@ -30,7 +30,7 @@ class Pyramid {
   __m128** lines_;
   bool shared_;
   bool no_alloc_;
-  float* lut_ = NULL;
+  float* lut_ = nullptr;
   int lut_bits_ = 0;
   bool lut_gamma_ = false;
   int out_max_;
@@ -47,23 +47,26 @@ class Pyramid {
                               int ey);
   void CopyPlanarThread_32bit(__m128* src_p, int pitch, bool gamma, int sy,
                               int ey);
-  void Subsample_Squeeze(__m128* in, __m128* Out, int m128_pitch_in,
-                         int m128_pitch_out, __m128* mul);
-  void ShrinkThread(__m128* line, __m128* hi, __m128* lo, int m128_pitch_hi,
-                    int m128_pitch_lo, int first_bad_line, int height_odd,
-                    int sy, int ey, const bool x_shift, const bool y_shift);
+  static void Subsample_Squeeze(__m128* in, __m128* Out, int m128_pitch_in,
+                                int m128_pitch_out, __m128* mul);
+  static void ShrinkThread(__m128* line, __m128* hi, __m128* lo,
+                           int m128_pitch_hi, int m128_pitch_lo,
+                           int first_bad_line, int height_odd, int sy, int ey,
+                           bool x_shift, bool y_shift);
 
-  void Squeeze(__m128* line, __m128* lo, int m128_pitch_lo, int m128_pitch_hi,
-               __m128 final_mul, bool x_shift);  // was __forceinline
-  void LaplaceThreadWrapper(Level* upper_level, Level* lower_level, int sy,
-                            int ey);
-  void LaplaceThread(Level* upper_level, Level* lower_evel, int sy, int ey,
-                     __m128* temp1, __m128* temp2, __m128* temp3);
-  void FuseThread(__m128* a, __m128* b, __m128* m, int m128_pitch, int sy,
-                  int ey, bool pre, int black);
+  static void Squeeze(__m128* line, __m128* lo, int m128_pitch_lo,
+                      int m128_pitch_hi, __m128 final_mul,
+                      bool x_shift);  // was __forceinline
+  static void LaplaceThreadWrapper(Level* upper_level, Level* lower_level,
+                                   int sy, int ey);
+  static void LaplaceThread(Level* upper_level, Level* lower_level, int sy,
+                            int ey, __m128* temp1, __m128* temp2,
+                            __m128* temp3);
+  static void FuseThread(__m128* a, __m128* b, __m128* m, int m128_pitch,
+                         int sy, int ey, bool pre, int black);
   void LaplaceCollapse(int n_levels, bool Collapse);
 
-  size_t total_bytes_ = 0;
+  std::size_t total_bytes_ = 0;
 
 #define PLL(X) [](float* p, __m128 d, __m128 z, __m128 m) { return X; }
 #define N _mm_load_ps(p)
@@ -91,9 +94,9 @@ class Pyramid {
                       bool chroma, int step, int offset);
 
  public:
-  Pyramid(int width, int height, int _levels = 0, Pyramid* share = NULL);
+  Pyramid(int width, int height, int _levels = 0, Pyramid* share = nullptr);
   Pyramid(int width, int height, int _levels, int x, int y, bool no_alloc,
-          Pyramid* share = NULL);
+          Pyramid* share = nullptr);
   ~Pyramid();
   static int DefaultNumLevels(int width, int height) {
     return 8; /* (int)ceil(log2(max(width, height))); */
@@ -134,7 +137,7 @@ class Pyramid {
                             int m128_pitch_lo);
   static void LaplaceExpandShifted(__m128* hi, __m128* lo, int m128_pitch_hi,
                                    int m128_pitch_lo);
-  size_t GetTotalBytes() { return total_bytes_; }
+  [[nodiscard]] std::size_t GetTotalBytes() const { return total_bytes_; }
   std::vector<Level>& GetLevels() { return levels_; };
   Level& GetLevel(int level) { return levels_[level]; };
   void Png(const char* filename);
@@ -156,8 +159,9 @@ void GetExpandedLine(const Pyramid::Level& level, __m128* temp, int y);
  ***********************************************************************/
 template <typename F>
 void Pyramid::OutPlanar8 _OP_ {
-  int x, y;
-  uint8_t* dst_p = (uint8_t*)_dst_p;
+  int x;
+  int y;
+  auto* dst_p = (uint8_t*)_dst_p;
   uint8_t black = chroma ? 0x80 : 0x00;
 
   __m128 zeroes = _mm_setzero_ps();
@@ -175,7 +179,7 @@ void Pyramid::OutPlanar8 _OP_ {
       _mm_set_epi32(0x80808080, 0x80808080, 0x80808080, 0x0c080400);
   __m128i pixels;
   __m128* p_p;
-  __m128* p_pt = (__m128*)levels_[level].data;
+  auto* p_pt = (__m128*)levels_[level].data;
 
   __m128i* dst_pp_m;
   int* dst_pp_i;
@@ -188,13 +192,17 @@ void Pyramid::OutPlanar8 _OP_ {
   int singles = levels_[level].width & 3;
 
   if (level) {
-    if (sy == 0) sy++;
-    if (ey == levels_[level].height) ey--;
+    if (sy == 0) {
+      sy++;
+    }
+    if (ey == levels_[level].height) {
+      ey--;
+    }
   }
 
-  dst_p += (size_t)(sy - (level ? 1 : 0)) * pitch;
+  dst_p += (std::size_t)(sy - (level ? 1 : 0)) * pitch;
 
-  p_pt += (size_t)m128_pitch * sy;
+  p_pt += (std::size_t)m128_pitch * sy;
 
   __m128 dither_add;
 
@@ -241,7 +249,9 @@ void Pyramid::OutPlanar8 _OP_ {
       *dst_pp_b++ = (uint8_t)_mm_extract_epi8(a, 0);
       if (singles > 1) {
         *dst_pp_b++ = (uint8_t)_mm_extract_epi8(a, 4);
-        if (singles == 3) *dst_pp_b++ = (uint8_t)_mm_extract_epi8(a, 8);
+        if (singles == 3) {
+          *dst_pp_b++ = (uint8_t)_mm_extract_epi8(a, 8);
+        }
       }
     }
 
@@ -261,8 +271,9 @@ void Pyramid::OutPlanar8 _OP_ {
  ***********************************************************************/
 template <typename F>
 void Pyramid::OutPlanar16 _OP_ {
-  int x, y;
-  uint16_t* dst_p = (uint16_t*)_dst_p;
+  int x;
+  int y;
+  auto* dst_p = (uint16_t*)_dst_p;
   uint16_t black = chroma ? 0x8000 : 0x0000;
 
   __m128 zeroes = _mm_setzero_ps();
@@ -274,7 +285,7 @@ void Pyramid::OutPlanar16 _OP_ {
       _mm_set_epi32(0x0d0c0908, 0x05040100, 0x80808080, 0x80808080);
   __m128i pixels;
   __m128* p_p;
-  __m128* p_pt = (__m128*)levels_[level].data;
+  auto* p_pt = (__m128*)levels_[level].data;
 
   __m128i* dst_pp_m;
   uint16_t* dst_pp_w;
@@ -286,13 +297,17 @@ void Pyramid::OutPlanar16 _OP_ {
   int singles = levels_[level].width & 3;
 
   if (level) {
-    if (sy == 0) sy++;
-    if (ey == levels_[level].height) ey--;
+    if (sy == 0) {
+      sy++;
+    }
+    if (ey == levels_[level].height) {
+      ey--;
+    }
   }
 
-  dst_p += (sy - (level ? 1 : 0)) * pitch;
+  dst_p += (static_cast<ptrdiff_t>(sy - (level ? 1 : 0))) * pitch;
 
-  p_pt += m128_pitch * sy;
+  p_pt += static_cast<ptrdiff_t>(m128_pitch) * sy;
 
   __m128 dither_add;
 
@@ -338,7 +353,9 @@ void Pyramid::OutPlanar16 _OP_ {
       *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 0);
       if (singles > 1) {
         *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 2);
-        if (singles == 3) *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 4);
+        if (singles == 3) {
+          *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 4);
+        }
       }
     }
 
@@ -361,8 +378,9 @@ void Pyramid::OutPlanar16 _OP_ {
 
 template <typename F>
 void Pyramid::OutPlanar32 _OP_ {
-  int x, y;
-  __m128* dst_p = (__m128*)_dst_p;
+  int x;
+  int y;
+  auto* dst_p = (__m128*)_dst_p;
 
   __m128 zeroes;
   __m128 maxes;
@@ -378,7 +396,7 @@ void Pyramid::OutPlanar32 _OP_ {
     maxes = _mm_set_ps1(1.0f);
   }
 
-  __m128* p_p = (__m128*)levels_[level].data;
+  auto* p_p = (__m128*)levels_[level].data;
 
   float* dst_pp_f;
 
@@ -388,13 +406,17 @@ void Pyramid::OutPlanar32 _OP_ {
   int wipes = (fours << 2) - levels_[level].width;
 
   if (level) {
-    if (sy == 0) sy++;
-    if (ey == levels_[level].height) ey--;
+    if (sy == 0) {
+      sy++;
+    }
+    if (ey == levels_[level].height) {
+      ey--;
+    }
   }
 
-  dst_p += (sy - (level ? 1 : 0)) * pitch;
+  dst_p += (static_cast<ptrdiff_t>(sy - (level ? 1 : 0))) * pitch;
 
-  p_p += m128_pitch * sy;
+  p_p += static_cast<ptrdiff_t>(m128_pitch) * sy;
 
   for (y = sy; y < ey; y++) {
     for (x = 0; x < fours; x++) {
@@ -427,20 +449,26 @@ void Pyramid::OutPlanar32 _OP_ {
 template <typename T, typename F>
 void Pyramid::OutInterleaved(T dst_p, F _loader, int pitch, int sy, int ey,
                              int level, bool chroma, int step, int offset) {
-  int x, y;
+  int x;
+  int y;
 
   __m128 zeroes = _mm_setzero_ps();
   __m128 maxes = _mm_set_ps1(sizeof(*dst_p) == 1 ? 255.0f : 65535.0f);
 
   if (level) {
-    if (sy == 0) sy++;
-    if (ey == levels_[level].height) ey--;
+    if (sy == 0) {
+      sy++;
+    }
+    if (ey == levels_[level].height) {
+      ey--;
+    }
   }
 
   dst_p += (sy - (level ? 1 : 0)) * pitch + offset;
 
   int m128_pitch = levels_[level].pitch >> 2;
-  __m128* p_p = (__m128*)levels_[level].data + m128_pitch * sy;
+  __m128* p_p =
+      (__m128*)levels_[level].data + static_cast<ptrdiff_t>(m128_pitch) * sy;
   T dst_pp;
 
   __m128i a;
@@ -526,10 +554,10 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
   int bytes = sizeof(*dst_p);
   int eb = (int)(levels_[level].bands.size() - 1);
 
-  typedef
-      typename std::conditional<sizeof(*dst_p) == 1, uint8_t*, uint16_t*>::type
-          Type;  // used to avoid generating a float* version of OutInterleaved
-                 // which would cause warnings
+  using Type =
+      typename std::conditional<sizeof(*dst_p) == 1, uint8_t*, uint16_t*>::type;
+  // used to avoid generating a float* version of OutInterleaved which would
+  // cause warnings
 
   int s = (gamma ? 1 : 0) | (dither && bytes != 4 ? 2 : 0) | (clamp ? 4 : 0);
 

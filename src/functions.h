@@ -1,8 +1,8 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 #include <cstring>
-#include <stdint.h>
 #include <vector>
 
 #include "src/pyramid.h"
@@ -25,15 +25,14 @@ class Flex {
   Flex(const Flex& other) = delete;
   Flex& operator=(const Flex& other) = delete;
 
-  Flex(Flex&& other) { *this = std::move(other); }
-  Flex& operator=(Flex&& other) {
+  Flex(Flex&& other) noexcept { *this = std::move(other); }
+  Flex& operator=(Flex&& other) noexcept {
     if (this != &other) {
-      if (data_) {
+      if (data_ != nullptr) {
         free(data_);
       }
-      if (rows_) {
-        delete[] rows_;
-      }
+
+      delete[] rows_;
 
       data_ = other.data_;
       width_ = other.width_;
@@ -56,7 +55,9 @@ class Flex {
 
   void NextLine() {
     end_p_ = p_;
-    if (y_ < height_ - 1) rows_[++y_] = p_;
+    if (y_ < height_ - 1) {
+      rows_[++y_] = p_;
+    }
 
     if (p_ + (width_ << 2) > size_) {
       if (y_ == 0) {
@@ -98,7 +99,7 @@ class Flex {
       if (white == mask_white_) {
         mask_count_ += count;
       } else {
-        Write32((mask_white_ << 31) | mask_count_);
+        Write32((static_cast<int>(mask_white_) << 31) | mask_count_);
         mask_count_ = count;
         mask_white_ = white;
       }
@@ -106,10 +107,12 @@ class Flex {
   }
 
   void MaskFinalise() {
-    if (mask_count_) Write32((mask_white_ << 31) | mask_count_);
+    if (mask_count_ != 0) {
+      Write32((static_cast<int>(mask_white_) << 31) | mask_count_);
+    }
   }
 
-  void IncrementLast32(int inc) { *((uint32_t*)&data_[p_ - 4]) += inc; }
+  void IncrementLast32(int inc) const { *((uint32_t*)&data_[p_ - 4]) += inc; }
 
   uint8_t ReadBackwards8() { return data_[--p_]; }
   uint16_t ReadBackwards16() { return *((uint16_t*)&data_[p_ -= 2]); }
@@ -132,15 +135,14 @@ class Flex {
   void End() { p_ = end_p_; }
 
   ~Flex() {
-    if (data_) {
+    if (data_ != nullptr) {
       free(data_);
     }
-    if (rows_) {
-      delete[] rows_;
-    }
+
+    delete[] rows_;
   }
 
-  uint8_t* data_ = NULL;
+  uint8_t* data_ = nullptr;
   int width_;
   int height_;
   int* rows_ = nullptr;
@@ -180,9 +182,9 @@ void die(const char* error, ...);
 
 void ShrinkMasks(std::vector<Flex*>& masks, int n_levels);
 
-void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
+void CompositeLine(const float* input_p, float* output_p, int i, int x_offset,
                    int in_level_width, int out_level_width, int out_level_pitch,
-                   uint8_t* _mask, size_t mask_p);
+                   uint8_t* _mask, std::size_t mask_p);
 
 /***********************************************************************
  * Seam macro
@@ -206,7 +208,7 @@ void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
     mc = C;                                                          \
     current_i = I;                                                   \
   } else {                                                           \
-    mc += C;                                                         \
+    mc += (C);                                                       \
   }
 // end macro
 
@@ -216,9 +218,9 @@ void ReadInpaintDT(Flex* flex, int& current_count, int& current_step,
 void ReadSeamDT(Flex* flex, int& current_count, int64_t& current_step,
                 uint64_t& dt_val);
 
-int CompressDTLine(uint32_t* input, uint8_t* output, int width);
+int CompressDTLine(const uint32_t* input, uint8_t* output, int width);
 
-int CompressSeamLine(uint64_t* input, uint8_t* output, int width);
+int CompressSeamLine(const uint64_t* input, uint8_t* output, int width);
 
 void SwapH(Pyramid* py);
 
