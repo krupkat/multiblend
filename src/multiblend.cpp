@@ -268,8 +268,9 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
             }
           }
 
-          if (images[i]->mask_count_ < min_count)
+          if (images[i]->mask_count_ < min_count) {
             min_count = images[i]->mask_count_;
+          }
           if (images[i]->mask_state_ == 0u) {  // mask_state is inverted
             ++xor_count;
             xor_image = i;
@@ -478,8 +479,9 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
           }
         }
 
-        if (images[i]->mask_count_ < min_count)
+        if (images[i]->mask_count_ < min_count) {
           min_count = images[i]->mask_count_;
+        }
         if (images[i]->mask_state_ == 0u) {
           ++xor_count;
           xor_image = i;
@@ -495,8 +497,9 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       xor_mask.MaskWrite(min_count, xor_count == 1);
 
       if (xor_count == 1) {
-        if (xor_map != nullptr)
+        if (xor_map != nullptr) {
           memset(&xor_map->line_[x], xor_image, min_count);
+        }
 
         size_t p = (y - images[xor_image]->ypos_) * images[xor_image]->width_ +
                    (x - images[xor_image]->xpos_);
@@ -884,8 +887,9 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               py->masks[0]->Write32(0xc0000000 | py->GetWidth());
             } else {
               py->masks[0]->Write32(0xc0000000 | py->GetWidth());
-              if (py->GetWidth() != width)
+              if (py->GetWidth() != width) {
                 py->masks[0]->Write32(0x80000000 | (width - py->GetWidth()));
+              }
             }
           }
           py->masks[0]->NextLine();
@@ -918,8 +922,9 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
       }
 
       for (auto& py : wrap_pyramids) {
-        if (l < py->GetNLevels())
+        if (l < py->GetNLevels()) {
           max_bytes = std::max(max_bytes, py->GetLevel(l).bytes);
+        }
       }
 
       float* temp;
@@ -988,10 +993,11 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
           images[i]->pyramid_->Copy((uint8_t*)images[i]->channels_[c]->data_, 1,
                                     images[i]->width_, opts.gamma,
                                     images[i]->bpp_);
-          if (opts.output_bpp != images[i]->bpp_)
+          if (opts.output_bpp != images[i]->bpp_) {
             images[i]->pyramid_->Multiply(
                 0, opts.gamma ? (opts.output_bpp == 8 ? 1.0f / 66049 : 66049)
                               : (opts.output_bpp == 8 ? 1.0f / 257 : 257));
+          }
 
           delete images[i]->channels_[c];
           images[i]->channels_[c] = NULL;
@@ -1024,10 +1030,11 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               threadpool->Queue([=] {
                 for (int y = sy; y < ey; ++y) {
                   int in_line = y - y_offset;
-                  if (in_line < 0)
+                  if (in_line < 0) {
                     in_line = 0;
-                  else if (in_line > in_level.height - 1)
+                  } else if (in_line > in_level.height - 1) {
                     in_line = in_level.height - 1;
+                  }
                   float* input_p =
                       in_level.data + (size_t)in_line * in_level.pitch;
                   float* output_p =
@@ -1056,10 +1063,11 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
 
         output_pyramid->Copy((uint8_t*)images[0]->channels_[c]->data_, 1,
                              images[0]->width_, opts.gamma, images[0]->bpp_);
-        if (opts.output_bpp != images[0]->bpp_)
+        if (opts.output_bpp != images[0]->bpp_) {
           output_pyramid->Multiply(
               0, opts.gamma ? (opts.output_bpp == 8 ? 1.0f / 66049 : 66049)
                             : (opts.output_bpp == 8 ? 1.0f / 257 : 257));
+        }
 
         delete images[0]->channels_[c];
         images[0]->channels_[c] = NULL;
@@ -1108,10 +1116,11 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
                   threadpool->Queue([=] {
                     for (int y = sy; y < ey; ++y) {
                       int in_line = y - y_offset;
-                      if (in_line < 0)
+                      if (in_line < 0) {
                         in_line = 0;
-                      else if (in_line > in_level.height - 1)
+                      } else if (in_line > in_level.height - 1) {
                         in_line = in_level.height - 1;
+                      }
                       float* input_p =
                           in_level.data + (size_t)in_line * in_level.pitch;
                       float* output_p =

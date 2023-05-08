@@ -1,5 +1,6 @@
 Checks: >
   -*,
-  readability-implicit-bool-conversion
+  readability-implicit-bool-conversion,
+  google-readability-braces-around-statements
 
 HeaderFilterRegex: ".*multiblend.*src.*"

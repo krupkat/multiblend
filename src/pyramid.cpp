@@ -26,10 +26,11 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
 
   int n_levels = DefaultNumLevels(width, height);
   if (_levels != 0) {
-    if (_levels < 0)
+    if (_levels < 0) {
       n_levels -= _levels;
-    else
+    } else {
       n_levels = _levels;
+    }
   }
 
   int b, req_alignment;
@@ -440,8 +441,9 @@ void Pyramid::CopyPlanarThread_32bit(__m128* src_p, int pitch, bool gamma,
         _mm_store_ps((float*)&rp_p[x], _mm_mul_ps(pixels, pixels));
       }
       float copy = ((float*)rp_p)[levels_[0].width - 1];
-      for (x = levels_[0].width; x < levels_[0].pitch; ++x)
+      for (x = levels_[0].width; x < levels_[0].pitch; ++x) {
         ((float*)rp_p)[x] = copy;
+      }
       src_p += pitch;
       rp_p += levels_[0].m128_pitch;
     }
@@ -451,8 +453,9 @@ void Pyramid::CopyPlanarThread_32bit(__m128* src_p, int pitch, bool gamma,
     for (y = sy; y < ey; ++y) {
       memcpy(rp_p, src_p, copy_bytes);
       float copy = ((float*)rp_p)[levels_[0].width - 1];
-      for (x = levels_[0].width; x < levels_[0].pitch; ++x)
+      for (x = levels_[0].width; x < levels_[0].pitch; ++x) {
         ((float*)rp_p)[x] = copy;
+      }
       src_p += pitch;
       rp_p += levels_[0].m128_pitch;
     }
@@ -799,10 +802,11 @@ void Pyramid::LaplaceCollapse(int n_levels, bool Collapse) {
   int j, l;
 
   for (j = 0; j < n_levels - 1; ++j) {
-    if (Collapse)
+    if (Collapse) {
       l = (n_levels - 2) - j;
-    else
+    } else {
       l = j;
+    }
 
     for (int t = 0; t < (int)levels_[l].bands.size() - 1; ++t) {
       threadpool_->Queue([=, this] {
@@ -1448,10 +1452,11 @@ void Pyramid::Png(const char* filename) {
       line += levels_[0].pitch;
       data += levels_[l].pitch;
     }
-    if ((l & 1) != 0)
+    if ((l & 1) != 0) {
       px += levels_[l].pitch + 1;
-    else
+    } else {
       py += levels_[l].height + 1;
+    }
   }
 
   io::png::Pnger::Quick((char*)filename, temp, width, height, width,

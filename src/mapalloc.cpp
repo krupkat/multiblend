@@ -55,8 +55,9 @@ size_t MapAlloc::GetSize(void* p) {
 void MapAlloc::SetTmpdir(const char* _tmpdir) {
   strcpy_s(tmpdir_, _tmpdir);
   size_t l = strlen(tmpdir_);
-  while (tmpdir_[l - 1] == '\\' || tmpdir_[l - 1] == '/' && l > 0)
+  while (tmpdir_[l - 1] == '\\' || tmpdir_[l - 1] == '/' && l > 0) {
     tmpdir_[--l] = 0;
+  }
 }
 
 /***********************************************************************

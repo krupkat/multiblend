@@ -86,8 +86,9 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
   png_set_IHDR(png_ptr_, info_ptr_, width, height, bpp, type,
                PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
                PNG_FILTER_TYPE_DEFAULT);
-  if (type == PNG_COLOR_TYPE_PALETTE)
+  if (type == PNG_COLOR_TYPE_PALETTE) {
     png_set_PLTE(png_ptr_, info_ptr_, palette_, 256);
+  }
 
   png_write_info(png_ptr_, info_ptr_);
   png_set_compression_level(png_ptr_, compression < 0 ? 3 : compression);

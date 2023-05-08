@@ -106,8 +106,9 @@ class Flex {
   }
 
   void MaskFinalise() {
-    if (mask_count_ != 0)
+    if (mask_count_ != 0) {
       Write32((static_cast<int>(mask_white_) << 31) | mask_count_);
+    }
   }
 
   void IncrementLast32(int inc) { *((uint32_t*)&data_[p_ - 4]) += inc; }

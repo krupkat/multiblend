@@ -230,10 +230,10 @@ int main(int argc, char* argv[]) {
         utils::die("Error: Missing parameters");
       }
       if ((strcmp(my_argv[pos + 1], "none") == 0) ||
-          (strcmp(my_argv[pos + 1], "open") == 0))
+          (strcmp(my_argv[pos + 1], "open") == 0)) {
         ++pos;
-      else if ((strcmp(my_argv[pos + 1], "horizontal") == 0) ||
-               (strcmp(my_argv[pos + 1], "h") == 0)) {
+      } else if ((strcmp(my_argv[pos + 1], "horizontal") == 0) ||
+                 (strcmp(my_argv[pos + 1], "h") == 0)) {
         wrap = 1;
         ++pos;
       } else if ((strcmp(my_argv[pos + 1], "vertical") == 0) ||
@@ -244,8 +244,9 @@ int main(int argc, char* argv[]) {
                  (strcmp(my_argv[pos + 1], "hv") == 0)) {
         wrap = 3;
         ++pos;
-      } else
+      } else {
         wrap = 1;
+      }
     } else if (strcmp(my_argv[pos], "--cache-threshold") == 0) {
       if (pos + 1 >= (int)my_argv.size()) {
         utils::die("Error: Missing parameters");
@@ -281,50 +282,50 @@ int main(int argc, char* argv[]) {
       }
       memory::MapAlloc::CacheThreshold(threshold);
     } else if ((strcmp(my_argv[pos], "--nomask") == 0) ||
-               (strcmp(my_argv[pos], "--no-mask") == 0))
+               (strcmp(my_argv[pos], "--no-mask") == 0)) {
       no_mask = true;
-    else if ((strcmp(my_argv[pos], "--timing") == 0) ||
-             (strcmp(my_argv[pos], "--timings") == 0))
+    } else if ((strcmp(my_argv[pos], "--timing") == 0) ||
+               (strcmp(my_argv[pos], "--timings") == 0)) {
       timing = true;
-    else if (strcmp(my_argv[pos], "--bigtiff") == 0)
+    } else if (strcmp(my_argv[pos], "--bigtiff") == 0) {
       big_tiff = true;
-    else if (strcmp(my_argv[pos], "--bgr") == 0)
+    } else if (strcmp(my_argv[pos], "--bgr") == 0) {
       bgr = true;
-    else if (strcmp(my_argv[pos], "--wideblend") == 0)
+    } else if (strcmp(my_argv[pos], "--wideblend") == 0) {
       wideblend = true;
-    else if (strcmp(my_argv[pos], "--reverse") == 0)
+    } else if (strcmp(my_argv[pos], "--reverse") == 0) {
       reverse = true;
-    else if (strcmp(my_argv[pos], "--gamma") == 0)
+    } else if (strcmp(my_argv[pos], "--gamma") == 0) {
       gamma = true;
-    else if ((strcmp(my_argv[pos], "--no-dither") == 0) ||
-             (strcmp(my_argv[pos], "--nodither") == 0))
+    } else if ((strcmp(my_argv[pos], "--no-dither") == 0) ||
+               (strcmp(my_argv[pos], "--nodither") == 0)) {
       dither = false;
-    //  else if (!strcmp(my_argv[i], "--force"))     force_coverage =
-    // true;
-    else if (strncmp(my_argv[pos], "-f", 2) == 0)
+      //  else if (!strcmp(my_argv[i], "--force"))     force_coverage =
+      // true;
+    } else if (strncmp(my_argv[pos], "-f", 2) == 0) {
       utils::Output(0, "ignoring Enblend option -f\n");
-    else if (strcmp(my_argv[pos], "-a") == 0)
+    } else if (strcmp(my_argv[pos], "-a") == 0) {
       utils::Output(0, "ignoring Enblend option -a\n");
-    else if (strcmp(my_argv[pos], "--no-ciecam") == 0)
+    } else if (strcmp(my_argv[pos], "--no-ciecam") == 0) {
       utils::Output(0, "ignoring Enblend option --no-ciecam\n");
-    else if (strcmp(my_argv[pos], "--primary-seam-generator") == 0) {
+    } else if (strcmp(my_argv[pos], "--primary-seam-generator") == 0) {
       utils::Output(0, "ignoring Enblend option --primary-seam-generator\n");
       ++pos;
     }
 
     else if (strcmp(my_argv[pos], "--compression") == 0) {
       if (++pos < (int)my_argv.size()) {
-        if (strcmp(my_argv[pos], "0") == 0)
+        if (strcmp(my_argv[pos], "0") == 0) {
           jpeg_quality = 0;
-        else if (atoi(my_argv[pos]) > 0)
+        } else if (atoi(my_argv[pos]) > 0) {
           jpeg_quality = atoi(my_argv[pos]);
-        else if (_stricmp(my_argv[pos], "lzw") == 0)
+        } else if (_stricmp(my_argv[pos], "lzw") == 0) {
           compression = COMPRESSION_LZW;
-        else if (_stricmp(my_argv[pos], "packbits") == 0)
+        } else if (_stricmp(my_argv[pos], "packbits") == 0) {
           compression = COMPRESSION_PACKBITS;
-        //    else if (_stricmp(my_argv[i], "deflate")
-        //== 0) compression = COMPRESSION_DEFLATE;
-        else if (_stricmp(my_argv[pos], "none") == 0) {
+          //    else if (_stricmp(my_argv[i], "deflate")
+          //== 0) compression = COMPRESSION_DEFLATE;
+        } else if (_stricmp(my_argv[pos], "none") == 0) {
           compression = COMPRESSION_NONE;
         } else {
           utils::die("Error: Unknown compression codec %s", my_argv[pos]);
@@ -333,31 +334,31 @@ int main(int argc, char* argv[]) {
         utils::die("Error: Missing parameter value");
       }
     } else if ((strcmp(my_argv[pos], "-v") == 0) ||
-               (strcmp(my_argv[pos], "--verbose") == 0))
+               (strcmp(my_argv[pos], "--verbose") == 0)) {
       ++utils::verbosity;
-    else if ((strcmp(my_argv[pos], "-q") == 0) ||
-             (strcmp(my_argv[pos], "--quiet") == 0))
+    } else if ((strcmp(my_argv[pos], "-q") == 0) ||
+               (strcmp(my_argv[pos], "--quiet") == 0)) {
       --utils::verbosity;
-    else if (((strcmp(my_argv[pos], "--saveseams") == 0) ||
-              (strcmp(my_argv[pos], "--save-seams") == 0)) &&
-             pos < (int)my_argv.size() - 1)
+    } else if (((strcmp(my_argv[pos], "--saveseams") == 0) ||
+                (strcmp(my_argv[pos], "--save-seams") == 0)) &&
+               pos < (int)my_argv.size() - 1) {
       seamsave_filename = my_argv[++pos];
-    else if (((strcmp(my_argv[pos], "--loadseams") == 0) ||
-              (strcmp(my_argv[pos], "--load-seams") == 0)) &&
-             pos < (int)my_argv.size() - 1)
+    } else if (((strcmp(my_argv[pos], "--loadseams") == 0) ||
+                (strcmp(my_argv[pos], "--load-seams") == 0)) &&
+               pos < (int)my_argv.size() - 1) {
       seamload_filename = my_argv[++pos];
-    else if (((strcmp(my_argv[pos], "--savexor") == 0) ||
-              (strcmp(my_argv[pos], "--save-xor") == 0)) &&
-             pos < (int)my_argv.size() - 1)
+    } else if (((strcmp(my_argv[pos], "--savexor") == 0) ||
+                (strcmp(my_argv[pos], "--save-xor") == 0)) &&
+               pos < (int)my_argv.size() - 1) {
       xor_filename = my_argv[++pos];
-    else if ((strcmp(my_argv[pos], "--tempdir") == 0) ||
-             (strcmp(my_argv[pos], "--tmpdir") == 0) &&
-                 pos < (int)my_argv.size() - 1)
+    } else if ((strcmp(my_argv[pos], "--tempdir") == 0) ||
+               (strcmp(my_argv[pos], "--tmpdir") == 0) &&
+                   pos < (int)my_argv.size() - 1) {
       memory::MapAlloc::SetTmpdir(my_argv[++pos]);
-    else if (strcmp(my_argv[pos], "--all-threads") == 0)
+    } else if (strcmp(my_argv[pos], "--all-threads") == 0) {
       all_threads = true;
-    else if ((strcmp(my_argv[pos], "-o") == 0) ||
-             (strcmp(my_argv[pos], "--output") == 0)) {
+    } else if ((strcmp(my_argv[pos], "-o") == 0) ||
+               (strcmp(my_argv[pos], "--output") == 0)) {
       if (++pos < (int)my_argv.size()) {
         output_filename = my_argv[pos];
         char* ext = strrchr(output_filename, '.');

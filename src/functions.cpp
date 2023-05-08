@@ -378,28 +378,31 @@ void CompositeLine(float* input_p, float* output_p, int i, int x_offset,
       if (x < x_offset) {
         float f = input_p[0] * current_val;
         while (x < lim && x < x_offset) {
-          if (i == 0)
+          if (i == 0) {
             output_p[x++] = f;
-          else
+          } else {
             output_p[x++] += f;
+          }
         }
       }
 
       while (x < lim && x < x_offset + in_level_width) {
         float f = input_p[x - x_offset] * current_val;
-        if (i == 0)
+        if (i == 0) {
           output_p[x++] = f;
-        else
+        } else {
           output_p[x++] += f;
+        }
       }
 
       if (x < lim) {
         float f = input_p[in_level_width - 1] * current_val;
         while (x < lim) {
-          if (i == 0)
+          if (i == 0) {
             output_p[x++] = f;
-          else
+          } else {
             output_p[x++] += f;
+          }
         }
       }
     }
@@ -508,13 +511,15 @@ int CompressDTLine(uint32_t* input, uint8_t* output, int width) {
   uint32_t left_val;
   uint32_t right_val;
 
-  while (((left_val = input[x++]) == 0u) && x < width)
+  while (((left_val = input[x++]) == 0u) && x < width) {
     ;
+  }
   if (left_val == 0u) return p;
 
   while (x < width) {
-    while (((right_val = input[x++]) == 0u) && x < width)
+    while (((right_val = input[x++]) == 0u) && x < width) {
       ;
+    }
     if (right_val == 0u) break;
 
     if ((step = (int)(left_val - right_val) + 3) < 67 && step >= 0) {
@@ -563,13 +568,15 @@ int CompressSeamLine(uint64_t* input, uint8_t* output, int width) {
   uint64_t left_val;
   uint64_t right_val;
 
-  while ((((right_val = input[--x]) & 0xffffffff00000000) == 0u) && x > 0)
+  while ((((right_val = input[--x]) & 0xffffffff00000000) == 0u) && x > 0) {
     ;
+  }
   if ((right_val & 0xffffffff00000000) == 0u) return p;
 
   while (x > 0) {
-    while ((((left_val = input[--x]) & 0xffffffff00000000) == 0u) && x > 0)
+    while ((((left_val = input[--x]) & 0xffffffff00000000) == 0u) && x > 0) {
       ;
+    }
     if ((left_val & 0xffffffff00000000) == 0u) break;
 
     if ((((right_val ^ left_val) & 0xffffffff) == 0u) &&
