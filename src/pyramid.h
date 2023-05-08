@@ -300,9 +300,9 @@ void Pyramid::OutPlanar16 _OP_ {
     }
   }
 
-  dst_p += (sy - (level ? 1 : 0)) * pitch;
+  dst_p += (static_cast<ptrdiff_t>(sy - (level ? 1 : 0))) * pitch;
 
-  p_pt += m128_pitch * sy;
+  p_pt += static_cast<ptrdiff_t>(m128_pitch) * sy;
 
   __m128 dither_add;
 
@@ -408,9 +408,9 @@ void Pyramid::OutPlanar32 _OP_ {
     }
   }
 
-  dst_p += (sy - (level ? 1 : 0)) * pitch;
+  dst_p += (static_cast<ptrdiff_t>(sy - (level ? 1 : 0))) * pitch;
 
-  p_p += m128_pitch * sy;
+  p_p += static_cast<ptrdiff_t>(m128_pitch) * sy;
 
   for (y = sy; y < ey; y++) {
     for (x = 0; x < fours; x++) {
@@ -460,7 +460,8 @@ void Pyramid::OutInterleaved(T dst_p, F _loader, int pitch, int sy, int ey,
   dst_p += (sy - (level ? 1 : 0)) * pitch + offset;
 
   int m128_pitch = levels_[level].pitch >> 2;
-  __m128* p_p = (__m128*)levels_[level].data + m128_pitch * sy;
+  __m128* p_p =
+      (__m128*)levels_[level].data + static_cast<ptrdiff_t>(m128_pitch) * sy;
   T dst_pp;
 
   __m128i a;

@@ -528,11 +528,11 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               uint16_t v;
               while ((total_count--) != 0) {
                 v = ((uint8_t*)images[xor_image]->channels_[0]->data_)[p];
-                channel_totals[0] += v * v;
+                channel_totals[0] += static_cast<long>(v) * v;
                 v = ((uint8_t*)images[xor_image]->channels_[1]->data_)[p];
-                channel_totals[1] += v * v;
+                channel_totals[1] += static_cast<long>(v) * v;
                 v = ((uint8_t*)images[xor_image]->channels_[2]->data_)[p];
-                channel_totals[2] += v * v;
+                channel_totals[2] += static_cast<long>(v) * v;
                 ++p;
               }
             } break;
@@ -540,11 +540,11 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               uint32_t v;
               while ((total_count--) != 0) {
                 v = ((uint16_t*)images[xor_image]->channels_[0]->data_)[p];
-                channel_totals[0] += v * v;
+                channel_totals[0] += static_cast<unsigned long>(v) * v;
                 v = ((uint16_t*)images[xor_image]->channels_[1]->data_)[p];
-                channel_totals[1] += v * v;
+                channel_totals[1] += static_cast<unsigned long>(v) * v;
                 v = ((uint16_t*)images[xor_image]->channels_[2]->data_)[p];
-                channel_totals[2] += v * v;
+                channel_totals[2] += static_cast<unsigned long>(v) * v;
                 ++p;
               }
             } break;

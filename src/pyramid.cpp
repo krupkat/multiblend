@@ -211,10 +211,10 @@ void Pyramid::CopyInterleavedThread_8bit(uint8_t* src_p, int step, int pitch,
   int x, y;
   uint8_t* src_pp;
 
-  src_p += sy * pitch;
+  src_p += static_cast<ptrdiff_t>(sy) * pitch;
 
   float* p_p = levels_[0].data;
-  p_p += sy * levels_[0].pitch;
+  p_p += static_cast<ptrdiff_t>(sy) * levels_[0].pitch;
 
   for (y = sy; y < ey; ++y) {
     src_pp = src_p;
@@ -235,10 +235,10 @@ void Pyramid::CopyInterleavedThread_16bit(uint16_t* src_p, int step, int pitch,
   int x, y;
   uint16_t* src_pp;
 
-  src_p += sy * pitch;
+  src_p += static_cast<ptrdiff_t>(sy) * pitch;
 
   float* p_p = levels_[0].data;
-  p_p += sy * levels_[0].pitch;
+  p_p += static_cast<ptrdiff_t>(sy) * levels_[0].pitch;
 
   for (y = sy; y < ey; ++y) {
     src_pp = src_p;
@@ -272,8 +272,8 @@ void Pyramid::CopyPlanarThread_8bit(uint8_t* src_p, int pitch, bool gamma,
   int ones = (levels_[0].width & 3);
   int extras = levels_[0].pitch - levels_[0].width;
 
-  src_p += sy * pitch;
-  rp_p += sy * levels_[0].m128_pitch;
+  src_p += static_cast<ptrdiff_t>(sy) * pitch;
+  rp_p += static_cast<ptrdiff_t>(sy) * levels_[0].m128_pitch;
 
   int g;
 
@@ -373,8 +373,8 @@ void Pyramid::CopyPlanarThread_16bit(uint16_t* src_p, int pitch, bool gamma,
   int ones = (levels_[0].width & 7);
   int extras = levels_[0].pitch - levels_[0].width;
 
-  src_p += sy * pitch;
-  rp_p += sy * levels_[0].m128_pitch;
+  src_p += static_cast<ptrdiff_t>(sy) * pitch;
+  rp_p += static_cast<ptrdiff_t>(sy) * levels_[0].m128_pitch;
 
   int g;
 
@@ -431,8 +431,8 @@ void Pyramid::CopyPlanarThread_32bit(__m128* src_p, int pitch, bool gamma,
 
   auto* rp_p = (__m128*)levels_[0].data;
 
-  src_p += sy * pitch;
-  rp_p += sy * levels_[0].m128_pitch;
+  src_p += static_cast<ptrdiff_t>(sy) * pitch;
+  rp_p += static_cast<ptrdiff_t>(sy) * levels_[0].m128_pitch;
 
   if (gamma) {
     int fours = (levels_[0].width + 3) >> 2;
@@ -670,9 +670,9 @@ void Pyramid::ShrinkThread(__m128* line, __m128* hi, __m128* lo,
       sy = 3;
     }
   } else {
-    lo += m128_pitch_lo * sy;
+    lo += static_cast<ptrdiff_t>(m128_pitch_lo) * sy;
     hi +=
-        m128_pitch_hi *
+        static_cast<ptrdiff_t>(m128_pitch_hi) *
         (((sy - 1) << 1) -
          static_cast<int>(
              y_shift));  // because hi has a missing line compared to lo, lo's
@@ -738,7 +738,7 @@ void Pyramid::ShrinkThread(__m128* line, __m128* hi, __m128* lo,
     hi += (m128_pitch_hi << 1);
 
     // last line
-    hi -= m128_pitch_hi * (3 - height_odd);
+    hi -= static_cast<ptrdiff_t>(m128_pitch_hi) * (3 - height_odd);
     memcpy(line, hi, m128_pitch_hi << 4);
     Squeeze(line, lo, m128_pitch_lo, m128_pitch_hi, _16th, x_shift);
     ++y;
@@ -942,7 +942,7 @@ void Pyramid::LaplaceLine3(__m128* hi, __m128* temp1, __m128* temp2,
 }
 
 __m128* GetLine(const Pyramid::Level& level, int y) {
-  return (__m128*)(level.data + y * level.pitch);
+  return (__m128*)(level.data + static_cast<ptrdiff_t>(y) * level.pitch);
 }
 
 void GetExpandedLine(const Pyramid::Level& level, __m128* temp, int y) {
@@ -973,7 +973,8 @@ void Pyramid::LaplaceThreadWrapper(Level* upper_level, Level* lower_level,
 void Pyramid::LaplaceThread(Level* upper_level, Level* lower_level, int sy,
                             int ey, __m128* temp1, __m128* temp2,
                             __m128* temp3) {
-  __m128* hi = (__m128*)upper_level->data + sy * upper_level->m128_pitch;
+  __m128* hi = (__m128*)upper_level->data +
+               static_cast<ptrdiff_t>(sy) * upper_level->m128_pitch;
 
   int lo_y = sy >> 1;
 
@@ -1057,8 +1058,9 @@ void Pyramid::Add(float add, int levels) {
 
     for (int t = 0; t < (int)levels_[l].bands.size() - 1; ++t) {
       threadpool_->Queue([=, this]() {
-        __m128* data = (__m128*)levels_[l].data +
-                       levels_[l].bands[t] * levels_[l].m128_pitch;
+        __m128* data =
+            (__m128*)levels_[l].data +
+            static_cast<ptrdiff_t>(levels_[l].bands[t]) * levels_[l].m128_pitch;
         for (int y = levels_[l].bands[t]; y < levels_[l].bands[t + 1]; ++y) {
           for (int x = 0; x < levels_[l].m128_pitch; ++x) {
             _mm_store_ps((float*)&data[x], _mm_add_ps(__add, data[x]));
@@ -1128,8 +1130,8 @@ void Pyramid::Multiply(int level, float mul) {
     return;
   }
   if (mul == 0) {
-    ZeroMemory(levels_[level].data,
-               levels_[level].height * levels_[level].pitch * sizeof(float));
+    ZeroMemory(levels_[level].data, static_cast<long>(levels_[level].height) *
+                                        levels_[level].pitch * sizeof(float));
     return;
   }
 
@@ -1295,8 +1297,8 @@ void Pyramid::Blend(Pyramid* b) {
     return;
   }
   memcpy(levels_[GetNLevels() - 1].data, b->levels_[GetNLevels() - 1].data,
-         levels_[GetNLevels() - 1].height * levels_[GetNLevels() - 1].pitch *
-             sizeof(float));
+         static_cast<long>(levels_[GetNLevels() - 1].height) *
+             levels_[GetNLevels() - 1].pitch * sizeof(float));
 }
 
 /***********************************************************************
@@ -1326,7 +1328,8 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
   int x, y;
   int i;
   int o;
-  float* line0 = levels_[0].data + sy * levels_[0].pitch;
+  float* line0 =
+      levels_[0].data + static_cast<ptrdiff_t>(sy) * levels_[0].pitch;
   float* line1 = line0 + levels_[0].pitch;
   float* line2 = line1 + levels_[0].pitch;
   float* line3 = line2 + levels_[0].pitch;
@@ -1449,13 +1452,13 @@ void Pyramid::Png(const char* filename) {
   int width = levels_[0].pitch;
   int height =
       levels_[0].height + (levels_.size() > 1 ? 1 + levels_[1].height : 0);
-  auto* temp = (uint8_t*)calloc(width * height, 1);
+  auto* temp = (uint8_t*)calloc(static_cast<long>(width) * height, 1);
 
   int px = 0, py = 0;
 
   for (int l = 0; l < (int)levels_.size(); ++l) {
     auto* data = (float*)levels_[l].data;
-    uint8_t* line = temp + py * levels_[0].pitch + px;
+    uint8_t* line = temp + static_cast<ptrdiff_t>(py) * levels_[0].pitch + px;
     for (int y = 0; y < levels_[l].height; ++y) {
       for (int x = 0; x < levels_[l].pitch; ++x) {
         int f = (int)floor(data[x] + 0.5);

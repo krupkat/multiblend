@@ -633,7 +633,9 @@ int main(int argc, char* argv[]) {
         output_type == io::ImageType::MB_JPEG) {
       scanlines = new JSAMPROW[ROWS_PER_STRIP];
       for (int i = 0; i < ROWS_PER_STRIP; ++i) {
-        scanlines[i] = (JSAMPROW) & ((uint8_t*)strip)[i * bytes_per_row];
+        scanlines[i] =
+            (JSAMPROW) &
+            ((uint8_t*)strip)[static_cast<ptrdiff_t>(i) * bytes_per_row];
       }
     }
 

@@ -336,7 +336,8 @@ void Image::Read(void* data, bool gamma) {
           }
         }
 
-        p = ((uint32_t*)data) + tiff_width_ * tiff_u_height_;
+        p = ((uint32_t*)data) +
+            static_cast<ptrdiff_t>(tiff_width_) * tiff_u_height_;
         for (y = tiff_u_height_ - 1; y >= 0; --y) {
           for (x = tiff_width_ - 1; x >= 0; --x) {
             if (*--p >= 0xff000000) {
@@ -352,7 +353,7 @@ void Image::Read(void* data, bool gamma) {
           std::swap(left, right);
         }
 
-        p = ((uint32_t*)data) + tiff_width_ * top;
+        p = ((uint32_t*)data) + static_cast<ptrdiff_t>(tiff_width_) * top;
         for (y = top; y <= bottom; ++y) {
           for (x = 0; x < left; ++x) {
             if (p[x] >= 0xff000000) {
@@ -387,7 +388,9 @@ void Image::Read(void* data, bool gamma) {
           p += tiff_width_ << 2;
         }
 
-        p = ((uint16_t*)data) + (tiff_width_ << 2) * (tiff_u_height_ - 1) + 3;
+        p = ((uint16_t*)data) +
+            (static_cast<ptrdiff_t>(tiff_width_ << 2)) * (tiff_u_height_ - 1) +
+            3;
         for (y = tiff_u_height_ - 1; y >= 0; --y) {
           for (x = tiff_width_ - 1; x >= 0; --x) {
             if (p[x << 2] == 0xffff) {
@@ -405,7 +408,8 @@ void Image::Read(void* data, bool gamma) {
           std::swap(left, right);
         }
 
-        p = ((uint16_t*)data) + (tiff_width_ << 2) * top + 3;
+        p = ((uint16_t*)data) +
+            (static_cast<ptrdiff_t>(tiff_width_ << 2)) * top + 3;
         for (y = top; y <= bottom; ++y) {
           for (x = 0; x < left; ++x) {
             if (p[x << 2] == 0xffff) {
@@ -462,9 +466,11 @@ void Image::Read(void* data, bool gamma) {
     uint32_t* bitmap32 = nullptr;
     uint64_t* bitmap64 = nullptr;
     if (bpp_ == 8) {
-      bitmap32 = ((uint32_t*)data) + top * tiff_width_ + left;
+      bitmap32 =
+          ((uint32_t*)data) + static_cast<ptrdiff_t>(top) * tiff_width_ + left;
     } else {
-      bitmap64 = ((uint64_t*)data) + top * tiff_width_ + left;
+      bitmap64 =
+          ((uint64_t*)data) + static_cast<ptrdiff_t>(top) * tiff_width_ + left;
     }
 
     for (y = 0; y < height_; ++y) {
@@ -764,7 +770,8 @@ void Image::Read(void* data, bool gamma) {
   if (spp_ == 4) {
     switch (bpp_) {
       case 8: {
-        uint32_t* line = ((uint32_t*)data) + top * tiff_width_ + left;
+        uint32_t* line = ((uint32_t*)data) +
+                         static_cast<ptrdiff_t>(top) * tiff_width_ + left;
         int p = 0;
         for (y = 0; y < height_; ++y) {
           for (x = 0; x < width_; ++x) {
@@ -778,7 +785,8 @@ void Image::Read(void* data, bool gamma) {
         }
       } break;
       case 16: {
-        uint64_t* line = ((uint64_t*)data) + top * tiff_width_ + left;
+        uint64_t* line = ((uint64_t*)data) +
+                         static_cast<ptrdiff_t>(top) * tiff_width_ + left;
         int p = 0;
         for (y = 0; y < height_; ++y) {
           for (x = 0; x < width_; ++x) {
@@ -865,7 +873,7 @@ void Image::MaskPng(int i) {
 
   for (int l = 0; l < (int)masks_.size(); ++l) {
     auto* data = (uint32_t*)masks_[l]->data_;
-    uint8_t* line = temp + py * masks_[0]->width_ + px;
+    uint8_t* line = temp + static_cast<ptrdiff_t>(py) * masks_[0]->width_ + px;
     for (int y = 0; y < masks_[l]->height_; ++y) {
       int x = 0;
       while (x < masks_[l]->width_) {

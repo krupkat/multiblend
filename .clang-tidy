@@ -4,6 +4,7 @@ Checks: >
   google-readability-braces-around-statements,
   readability-braces-around-statements,
   modernize-use-nullptr,
-  modernize-use-auto
+  modernize-use-auto,
+  bugprone-implicit-widening-of-multiplication-result
 
 HeaderFilterRegex: ".*multiblend.*src.*"
