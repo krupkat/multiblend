@@ -40,7 +40,8 @@ namespace io = mb::io;
 namespace memory = mb::memory;
 
 int main(int argc, char* argv[]) {
-  mb::utils::Timer timer_all, timer;
+  mb::utils::Timer timer_all;
+  mb::utils::Timer timer;
   timer_all.Start();
 
   TIFFSetWarningHandler(nullptr);
@@ -436,7 +437,8 @@ int main(int argc, char* argv[]) {
 
   while (pos < (int)my_argv.size()) {
     if (images.size() != 0u) {
-      int x, y;
+      int x;
+      int y;
       int n = 0;
       sscanf_s(my_argv[pos], "%d,%d%n", &x, &y, &n);
       if (my_argv[pos][n] == 0) {

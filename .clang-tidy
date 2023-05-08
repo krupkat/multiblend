@@ -5,6 +5,7 @@ Checks: >
   readability-braces-around-statements,
   modernize-use-nullptr,
   modernize-use-auto,
-  bugprone-implicit-widening-of-multiplication-result
+  bugprone-implicit-widening-of-multiplication-result,
+  readability-isolate-declaration
 
 HeaderFilterRegex: ".*multiblend.*src.*"

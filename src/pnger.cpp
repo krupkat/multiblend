@@ -23,7 +23,9 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
 
     double base = 2;
     double rad;
-    double r, g, b;
+    double r;
+    double g;
+    double b;
 
     for (int i = 0; i < 255; ++i) {
       rad = base;

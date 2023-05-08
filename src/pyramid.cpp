@@ -33,7 +33,8 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
     }
   }
 
-  int b, req_alignment;
+  int b;
+  int req_alignment;
 
   b = 0;
   req_alignment = 2;
@@ -208,7 +209,8 @@ void Pyramid::Copy(uint8_t* src_p, int step, int pitch, bool gamma, int bits) {
 
 void Pyramid::CopyInterleavedThread_8bit(uint8_t* src_p, int step, int pitch,
                                          int sy, int ey) {
-  int x, y;
+  int x;
+  int y;
   uint8_t* src_pp;
 
   src_p += static_cast<ptrdiff_t>(sy) * pitch;
@@ -232,7 +234,8 @@ void Pyramid::CopyInterleavedThread_8bit(uint8_t* src_p, int step, int pitch,
 
 void Pyramid::CopyInterleavedThread_16bit(uint16_t* src_p, int step, int pitch,
                                           int sy, int ey) {
-  int x, y;
+  int x;
+  int y;
   uint16_t* src_pp;
 
   src_p += static_cast<ptrdiff_t>(sy) * pitch;
@@ -256,7 +259,8 @@ void Pyramid::CopyInterleavedThread_16bit(uint16_t* src_p, int step, int pitch,
 
 void Pyramid::CopyPlanarThread_8bit(uint8_t* src_p, int pitch, bool gamma,
                                     int sy, int ey) {
-  int x, y;
+  int x;
+  int y;
   __m128i pixels;
   __m128 fpixels;
   __m128i shuffle =
@@ -356,7 +360,8 @@ void Pyramid::CopyPlanarThread_8bit(uint8_t* src_p, int pitch, bool gamma,
 
 void Pyramid::CopyPlanarThread_16bit(uint16_t* src_p, int pitch, bool gamma,
                                      int sy, int ey) {
-  int x, y;
+  int x;
+  int y;
 
   __m128i pixels;
   __m128 fpixels;
@@ -425,7 +430,8 @@ void Pyramid::CopyPlanarThread_16bit(uint16_t* src_p, int pitch, bool gamma,
 
 void Pyramid::CopyPlanarThread_32bit(__m128* src_p, int pitch, bool gamma,
                                      int sy, int ey) {
-  int x, y;
+  int x;
+  int y;
 
   pitch >>= 2;
 
@@ -468,7 +474,8 @@ void Pyramid::CopyPlanarThread_32bit(__m128* src_p, int pitch, bool gamma,
  * subsample
  ***********************************************************************/
 void Pyramid::Subsample(int sub_w, int sub_h, Pyramid* source) {
-  int x, y;
+  int x;
+  int y;
   int p = 0;
   auto* in = (__m128*)source->levels_[0].data;
   auto* out = (__m128*)levels_[0].data;
@@ -538,7 +545,12 @@ void Pyramid::Subsample_Squeeze(__m128* in, __m128* Out, int m128_pitch_in,
   int read = 0;
 
   int x;
-  __m128 a, b, c, d, e, f;
+  __m128 a;
+  __m128 b;
+  __m128 c;
+  __m128 d;
+  __m128 e;
+  __m128 f;
   __m128 three = _mm_set_ps1(3);
 
   b = _mm_load_ps((float*)&in[read++]);
@@ -618,7 +630,8 @@ void Pyramid::ShrinkThread(__m128* line, __m128* hi, __m128* lo,
                            int m128_pitch_hi, int m128_pitch_lo,
                            int first_bad_line, int height_odd, int sy, int ey,
                            const bool x_shift, const bool y_shift) {
-  int x, y;
+  int x;
+  int y;
 
   const __m128 four = _mm_set_ps1(4);
   const __m128 six = _mm_set_ps1(6);
@@ -750,7 +763,16 @@ void Pyramid::Squeeze(__m128* line, __m128* lo, int m128_pitch_lo,
   int hi_x = 0;
   int lo_x = 0;
 
-  __m128 a, b, c, d, e, f, g, h, i, j;
+  __m128 a;
+  __m128 b;
+  __m128 c;
+  __m128 d;
+  __m128 e;
+  __m128 f;
+  __m128 g;
+  __m128 h;
+  __m128 i;
+  __m128 j;
 
   const __m128 four = _mm_set_ps1(4);
   const __m128 six = _mm_set_ps1(6);
@@ -805,7 +827,8 @@ void Pyramid::Squeeze(__m128* line, __m128* lo, int m128_pitch_lo,
  * laplace (gaussian)
  ***********************************************************************/
 void Pyramid::LaplaceCollapse(int n_levels, bool Collapse) {
-  int j, l;
+  int j;
+  int l;
 
   for (j = 0; j < n_levels - 1; ++j) {
     if (Collapse) {
@@ -827,7 +850,8 @@ void Pyramid::LaplaceCollapse(int n_levels, bool Collapse) {
 
 void Pyramid::LaplaceExpand(__m128* hi, __m128* lo, int m128_pitch_hi,
                             int m128_pitch_lo) {
-  __m128 p, q;
+  __m128 p;
+  __m128 q;
 
   const __m128 expand0 = _mm_set_ps(0, 0.125f, 0.75f, 0.125f);
   const __m128 expand1 = _mm_set_ps(0, 0.5f, 0.5f, 0);
@@ -871,7 +895,9 @@ void Pyramid::LaplaceExpand(__m128* hi, __m128* lo, int m128_pitch_hi,
 
 void Pyramid::LaplaceExpandShifted(__m128* hi, __m128* lo, int m128_pitch_hi,
                                    int m128_pitch_lo) {
-  __m128 p, q, t;
+  __m128 p;
+  __m128 q;
+  __m128 t;
 
   const __m128 expand0 = _mm_set_ps(0, 0.5f, 0.5f, 0);
   const __m128 expand1 = _mm_set_ps(0.125, 0.75f, 0.125f, 0);
@@ -1009,7 +1035,8 @@ void Pyramid::LaplaceThread(Level* upper_level, Level* lower_level, int sy,
  * Average (top level)
  ***********************************************************************/
 float Pyramid::Average() {
-  int x, y;
+  int x;
+  int y;
   int fours = levels_[0].width >> 2;
 
   __m128 m128_total = {0};
@@ -1079,7 +1106,8 @@ void Pyramid::Add(float add, int levels) {
  ***********************************************************************/
 void Pyramid::MultiplyAndAdd(float add, float mul, int levels) {
   int i;
-  int x, y;
+  int x;
+  int y;
   __m128 __add = _mm_set_ps1(add);
   __m128 __mul = _mm_set_ps1(mul);
 
@@ -1102,7 +1130,8 @@ void Pyramid::MultiplyAndAdd(float add, float mul, int levels) {
  * Multiply, add, clamp
  ***********************************************************************/
 void Pyramid::MultiplyAddClamp(float add, float mul, int level) {
-  int x, y;
+  int x;
+  int y;
   __m128 __add = _mm_set_ps1(add);
   __m128 __mul = _mm_set_ps1(mul);
   __m128 __min = _mm_set_ps1(1.0f);
@@ -1135,7 +1164,8 @@ void Pyramid::Multiply(int level, float mul) {
     return;
   }
 
-  int x, y;
+  int x;
+  int y;
   __m128 __mul = _mm_set_ps1(mul);
 
   auto* data = (__m128*)levels_[level].data;
@@ -1153,7 +1183,8 @@ void Pyramid::Multiply(int level, float mul) {
  * multiply_by_pyramid
  ***********************************************************************/
 void Pyramid::MultplyByPyramid(Pyramid* b) {
-  int x, y;
+  int x;
+  int y;
 
   for (int l = 0; l < (int)levels_.size() - 1; ++l) {
     auto* data = (__m128*)levels_[l].data;
@@ -1325,7 +1356,8 @@ void Pyramid::BlurX(float radius, Pyramid* transpose) {
 }
 
 void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
-  int x, y;
+  int x;
+  int y;
   int i;
   int o;
   float* line0 =
@@ -1334,14 +1366,16 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
   float* line2 = line1 + levels_[0].pitch;
   float* line3 = line2 + levels_[0].pitch;
   float* out = transpose->levels_[0].data + sy;
-  __m128 temp1, temp2;
+  __m128 temp1;
+  __m128 temp2;
 
   int iradius = (int)floor(radius);
   __m128 irp1 = _mm_set_ps1((float)(iradius + 1));
   __m128 mul = _mm_set_ps1(radius - iradius);
   __m128 acc;
 
-  int left, right;
+  int left;
+  int right;
 
   int fours = (ey - sy + 3) >>
               2;  // +3 is probably not necessary because all bands are mod 4
@@ -1454,7 +1488,8 @@ void Pyramid::Png(const char* filename) {
       levels_[0].height + (levels_.size() > 1 ? 1 + levels_[1].height : 0);
   auto* temp = (uint8_t*)calloc(static_cast<long>(width) * height, 1);
 
-  int px = 0, py = 0;
+  int px = 0;
+  int py = 0;
 
   for (int l = 0; l < (int)levels_.size(); ++l) {
     auto* data = (float*)levels_[l].data;

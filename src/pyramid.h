@@ -156,7 +156,8 @@ void GetExpandedLine(const Pyramid::Level& level, __m128* temp, int y);
  ***********************************************************************/
 template <typename F>
 void Pyramid::OutPlanar8 _OP_ {
-  int x, y;
+  int x;
+  int y;
   auto* dst_p = (uint8_t*)_dst_p;
   uint8_t black = chroma ? 0x80 : 0x00;
 
@@ -267,7 +268,8 @@ void Pyramid::OutPlanar8 _OP_ {
  ***********************************************************************/
 template <typename F>
 void Pyramid::OutPlanar16 _OP_ {
-  int x, y;
+  int x;
+  int y;
   auto* dst_p = (uint16_t*)_dst_p;
   uint16_t black = chroma ? 0x8000 : 0x0000;
 
@@ -373,7 +375,8 @@ void Pyramid::OutPlanar16 _OP_ {
 
 template <typename F>
 void Pyramid::OutPlanar32 _OP_ {
-  int x, y;
+  int x;
+  int y;
   auto* dst_p = (__m128*)_dst_p;
 
   __m128 zeroes;
@@ -443,7 +446,8 @@ void Pyramid::OutPlanar32 _OP_ {
 template <typename T, typename F>
 void Pyramid::OutInterleaved(T dst_p, F _loader, int pitch, int sy, int ey,
                              int level, bool chroma, int step, int offset) {
-  int x, y;
+  int x;
+  int y;
 
   __m128 zeroes = _mm_setzero_ps();
   __m128 maxes = _mm_set_ps1(sizeof(*dst_p) == 1 ? 255.0f : 65535.0f);

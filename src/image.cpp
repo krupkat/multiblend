@@ -37,7 +37,8 @@ Image::~Image() {
 ************************************************************************
 ***********************************************************************/
 void Image::Open() {
-  float tiff_xpos, tiff_ypos;
+  float tiff_xpos;
+  float tiff_ypos;
   uint16_t compression;
 
   char* ext = strrchr(filename_, '.');
@@ -242,7 +243,8 @@ void Image::Open() {
       png_read_info(png_ptr_, info_ptr);
 
       int png_colour;
-      uint32_t png_width, png_height;
+      uint32_t png_width;
+      uint32_t png_height;
       int _bpp;
       png_get_IHDR(png_ptr_, info_ptr, &png_width, &png_height, &_bpp,
                    &png_colour, nullptr, nullptr, nullptr);
@@ -316,8 +318,12 @@ void Image::Read(void* data, bool gamma) {
   /***********************************************************************
    * Trim
    ***********************************************************************/
-  int x, y;
-  int top, left, bottom, right;
+  int x;
+  int y;
+  int top;
+  int left;
+  int bottom;
+  int right;
 
   if (spp_ == 4) {
     switch (bpp_) {
@@ -441,7 +447,10 @@ void Image::Read(void* data, bool gamma) {
      * Inpaint
      ***********************************************************************/
     int temp_copy;
-    uint32_t a, b, c, d;
+    uint32_t a;
+    uint32_t b;
+    uint32_t c;
+    uint32_t d;
     uint32_t* this_line = nullptr;
     uint32_t* prev_line = nullptr;
     mt::Threadpool* threadpool = mt::Threadpool::GetInstance();
@@ -868,7 +877,8 @@ void Image::MaskPng(int i) {
   auto* temp = (uint8_t*)malloc(size);
   memset(temp, 32, size);
 
-  int px = 0, py = 0;
+  int px = 0;
+  int py = 0;
   uint32_t cur;
 
   for (int l = 0; l < (int)masks_.size(); ++l) {

@@ -188,7 +188,10 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
   int stop;
 
   uint64_t best;
-  uint64_t a, b, c, d;
+  uint64_t a;
+  uint64_t b;
+  uint64_t c;
+  uint64_t d;
 
 #define DT_MAX 0x9000000000000000
   uint64_t* prev_line = nullptr;
@@ -803,8 +806,10 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
    * Seam load
    ***********************************************************************/
   if (opts.seamload_filename != nullptr) {
-    int png_depth, png_colour;
-    png_uint_32 png_width, png_height;
+    int png_depth;
+    int png_colour;
+    png_uint_32 png_width;
+    png_uint_32 png_height;
     uint8_t sig[8];
     png_structp png_ptr;
     png_infop info_ptr;

@@ -46,7 +46,11 @@ void die(const char* error, ...) {
 int Squish(uint32_t* in, uint32_t* out, int in_width, int out_width) {
   float current_val;
   uint32_t cur;
-  float a, b, c, d, e;
+  float a;
+  float b;
+  float c;
+  float d;
+  float e;
   int last_int = -1;
 
   int in_p = 0;
