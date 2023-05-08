@@ -28,7 +28,11 @@ if __name__ == "__main__":
             seen_diagnostics.add(diagnostic_hash)
             dedup["Diagnostics"].append(diagnostic)
 
-    os.rename(args.fixes_path, args.fixes_path + ".original")
+    backup_filename = args.fixes_path + ".original"
+    if os.path.exists(backup_filename):
+        os.remove(backup_filename)
+
+    os.rename(args.fixes_path, backup_filename)
 
     with open(args.fixes_path, "w") as output_file:
         yaml.safe_dump(dedup, output_file)

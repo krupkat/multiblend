@@ -39,6 +39,7 @@ namespace utils = mb::utils;
 namespace io = mb::io;
 namespace memory = mb::memory;
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 int main(int argc, char* argv[]) {
   mb::utils::Timer timer_all;
   mb::utils::Timer timer;

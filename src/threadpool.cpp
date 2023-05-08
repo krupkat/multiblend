@@ -17,8 +17,8 @@ Threadpool::Threadpool(int threads) {
 
   for (int i = 0; i < n_threads_; ++i) {
 #ifdef _WIN32
-    threads_[i].handle = CreateThread(NULL, 1, (LPTHREAD_START_ROUTINE)Thread,
-                                      &threads_[i], 0, NULL);
+    threads_[i].handle = CreateThread(
+        nullptr, 1, (LPTHREAD_START_ROUTINE)Thread, &threads_[i], 0, nullptr);
 #else
     pthread_create(&threads_[i].handle, nullptr, TP_Thread, &threads_[i]);
 #endif
@@ -89,7 +89,11 @@ void* TP_Thread(void* param) {
     P->return_cond->notify_all();
   }
 
+#ifdef _WIN32
+  return 0;
+#else
   return nullptr;
+#endif
 }
 
 /**********************************************************************

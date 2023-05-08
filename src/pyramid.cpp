@@ -1160,7 +1160,7 @@ void Pyramid::Multiply(int level, float mul) {
     return;
   }
   if (mul == 0) {
-    ZeroMemory(levels_[level].data, static_cast<long>(levels_[level].height) *
+    ZeroMemory(levels_[level].data, static_cast<size_t>(levels_[level].height) *
                                         levels_[level].pitch * sizeof(float));
     return;
   }

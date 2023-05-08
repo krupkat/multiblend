@@ -1,11 +1,11 @@
 #include "src/mapalloc.h"
 
 #include <cstring>
+#include <stdexcept>
 
 #ifndef _WIN32
 #include <cerrno>
 #include <cstdlib>
-#include <stdexcept>
 #include <unistd.h>
 
 #include <sys/mman.h>
@@ -72,7 +72,7 @@ MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
 
   if (pointer_ == nullptr) {
 #ifdef _WIN32
-    if (!tmpdir_[0]) {
+    if (tmpdir_[0] == 0) {
       GetTempPath(256, tmpdir_);
       size_t l = strlen(tmpdir_);
       while (tmpdir_[l - 1] == '\\' || tmpdir_[l - 1] == '/' && l > 0) {
@@ -82,17 +82,19 @@ MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
 
     while (true) {
       sprintf_s(filename_, "%s\\_mb%05d.tmp", tmpdir_, suffix_++);
-      file_ = CreateFile(filename_, GENERIC_ALL, 0, NULL, CREATE_NEW,
+      file_ = CreateFile(filename_, GENERIC_ALL, 0, nullptr, CREATE_NEW,
                          FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE |
                              FILE_FLAG_SEQUENTIAL_SCAN,
-                         NULL);
-      if (file_ != INVALID_HANDLE_VALUE) break;
+                         nullptr);
+      if (file_ != INVALID_HANDLE_VALUE) {
+        break;
+      }
       if (GetLastError() != 80) {
         char buf[256];
         FormatMessage(
-            FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+            FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr,
             GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), buf,
-            sizeof(buf), NULL);
+            sizeof(buf), nullptr);
         sprintf_s(filename_, "Could not create temp file in %s\\: %s", tmpdir_,
                   buf);
         throw(std::runtime_error(filename_));
@@ -105,16 +107,16 @@ MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
       }
     }
 
-    map_ = CreateFileMapping(file_, NULL, PAGE_READWRITE, size >> 32,
-                             size & 0xffffffff, NULL);
-    if (!map_) {
+    map_ = CreateFileMapping(file_, nullptr, PAGE_READWRITE, size >> 32,
+                             size & 0xffffffff, nullptr);
+    if (map_ == nullptr) {
       sprintf_s(filename_, "Could not allocate %zu temporary bytes in %s", size,
                 tmpdir_);
       throw(std::runtime_error(filename_));
     }
 
     pointer_ = MapViewOfFile(map_, FILE_MAP_ALL_ACCESS, 0, 0, 0);
-    if (!pointer_) {
+    if (pointer_ == nullptr) {
       sprintf_s(filename_, "Could not map view of temporary file");
       throw(std::runtime_error(filename_));
     }
@@ -162,7 +164,7 @@ MapAlloc::MapAllocObject::MapAllocObject(size_t size, int alignment)
 
 MapAlloc::MapAllocObject::~MapAllocObject() {
 #ifdef _WIN32
-  if (!file_) {
+  if (file_ == nullptr) {
     _aligned_free(pointer_);
     total_allocated_ -= size_;
   } else {
@@ -182,6 +184,6 @@ MapAlloc::MapAllocObject::~MapAllocObject() {
 
 void* MapAlloc::MapAllocObject::GetPointer() { return pointer_; }
 
-bool MapAlloc::MapAllocObject::IsFile() const { return !(file_ == 0); }
+bool MapAlloc::MapAllocObject::IsFile() const { return !(file_ == nullptr); }
 
 }  // namespace multiblend::memory
