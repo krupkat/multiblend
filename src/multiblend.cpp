@@ -7,6 +7,44 @@
 
 namespace multiblend {
 
+/***********************************************************************
+ * Seam macro
+ ***********************************************************************/
+struct RecordState {
+  int mc = 0;
+  int prev_i = -1;
+  int current_i = -1;
+};
+
+void Record(int tmp, int count, int x, RecordState& state,
+            std::vector<io::Image*>& images, io::png::Pnger* seam_map) {
+  if (tmp == state.current_i) {
+    state.mc += count;
+    return;
+  }
+
+  int n_images = (int)images.size();
+
+  if (state.mc > 0) {
+    if (seam_map) {
+      memset(&seam_map->line_[x - state.mc], state.current_i, state.mc);
+    }
+    for (int i = 0; i < n_images; ++i) {
+      if (i == state.current_i) {
+        images[i]->masks_[0]->Write32(0xc0000000 | state.mc);
+      } else if (i == state.prev_i || state.prev_i == -1) {
+        images[i]->masks_[0]->Write32(0x80000000 | state.mc);
+      } else {
+        images[i]->masks_[0]->IncrementLast32(state.mc);
+      }
+    }
+  }
+
+  state.prev_i = state.current_i;
+  state.mc = count;
+  state.current_i = tmp;
+}
+
 struct PyramidWithMasks : public Pyramid {
  public:
   using Pyramid::Pyramid;
@@ -478,10 +516,8 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
     }
 
     int x = 0;
-    int mc = 0;
-    int prev_i = -1;
-    int current_i = -1;
     int best_temp;
+    RecordState state;
 
     while (x < width) {
       min_count = width - x;
@@ -582,7 +618,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
         }
 
         if (opts.seamload_filename == nullptr) {
-          RECORD(xor_image, min_count);
+          Record(xor_image, min_count, x, state, images, seam_map);
           while (x < stop) {
             this_line[x++] = xor_image;
           }
@@ -624,7 +660,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               }
 
               best_temp = best & 0xffffffff;
-              RECORD(best_temp, 1);
+              Record(best_temp, 1, x, state, images, seam_map);
               this_line[x++] = best;
             }
           } else {
@@ -658,7 +694,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               }
 
               best_temp = best & 0xffffffff;
-              RECORD(best_temp, 1);
+              Record(best_temp, 1, x, state, images, seam_map);
               this_line[x++] = best;
 
               if (x == stop) {
@@ -719,7 +755,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               }
 
               best_temp = best & 0xffffffff;
-              RECORD(best_temp, 1);
+              Record(best_temp, 1, x, state, images, seam_map);
               this_line[x++] = best;  // best;
 
               a = b + 0x100000000;
@@ -754,7 +790,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               }
 
               best_temp = best & 0xffffffff;
-              RECORD(best_temp, 1);
+              Record(best_temp, 1, x, state, images, seam_map);
               this_line[x++] = best;  // best;
 
               last_pixel = false;
@@ -771,7 +807,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
     }
 
     if (opts.seamload_filename == nullptr) {
-      RECORD(-1, 0);
+      Record(-1, 0, x, state, images, seam_map);
 
       for (int i = 0; i < n_images; ++i) {
         images[i]->masks_[0]->NextLine();
@@ -856,20 +892,17 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
     for (int y = 0; y < height; ++y) {
       png_read_row(png_ptr, png_line, nullptr);
 
-      int ms = 0;
-      int mc = 0;
-      int prev_i = -1;
-      int current_i = -1;
+      int x = 0;
+      RecordState state;
 
-      int x = 0;  // Used in the RECORD macro
       for (x = 0; x < width; ++x) {
         if (png_line[x] > n_images) {
           utils::die("Error: Bad pixel found in seam file: %d,%d", x, y);
         }
-        RECORD(png_line[x], 1);
+        Record(png_line[x], 1, x, state, images, seam_map);
       }
 
-      RECORD(-1, 0);
+      Record(-1, 0, x, state, images, seam_map);
 
       for (int i = 0; i < n_images; ++i) {
         images[i]->masks_[0]->NextLine();

@@ -186,32 +186,6 @@ void CompositeLine(const float* input_p, float* output_p, int i, int x_offset,
                    int in_level_width, int out_level_width, int out_level_pitch,
                    uint8_t* _mask, std::size_t mask_p);
 
-/***********************************************************************
- * Seam macro
- ***********************************************************************/
-// Record macro
-#define RECORD(I, C)                                                 \
-  if ((I) != current_i) {                                            \
-    if (mc > 0) {                                                    \
-      if (seam_map) memset(&seam_map->line_[x - mc], current_i, mc); \
-      for (int i = 0; i < n_images; ++i) {                           \
-        if (i == current_i) {                                        \
-          images[i]->masks_[0]->Write32(0xc0000000 | mc);            \
-        } else if (i == prev_i || prev_i == -1) {                    \
-          images[i]->masks_[0]->Write32(0x80000000 | mc);            \
-        } else {                                                     \
-          images[i]->masks_[0]->IncrementLast32(mc);                 \
-        }                                                            \
-      }                                                              \
-    }                                                                \
-    prev_i = current_i;                                              \
-    mc = C;                                                          \
-    current_i = I;                                                   \
-  } else {                                                           \
-    mc += (C);                                                       \
-  }
-// end macro
-
 void ReadInpaintDT(Flex* flex, int& current_count, int& current_step,
                    uint32_t& dt_val);
 
