@@ -64,7 +64,7 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
       }
     }
 
-    levels_.push_back({width, height, pitch, pitch >> 2, bytes, data, x, y,
+    levels_.push_back({n, width, height, pitch, pitch >> 2, bytes, data, x, y,
                        x_shift, y_shift,
                        n != 0 ? levels_[n - 1].x_shift : false,
                        n != 0 ? levels_[n - 1].m128_pitch : 0});
@@ -1517,5 +1517,739 @@ void Pyramid::Png(const char* filename) {
 
   free(temp);
 }
+
+/***********************************************************************
+************************************************************************
+* Output
+************************************************************************
+***********************************************************************/
+namespace {
+/***********************************************************************
+ * 8-bit planar
+ ***********************************************************************/
+template <typename F>
+void OutPlanar8(void* dst_vp, F loader, int pitch, const Pyramid::Level& level,
+                int band, bool chroma) {
+  int x;
+  int y;
+  auto* dst_p = (uint8_t*)dst_vp;
+  uint8_t black = chroma ? 0x80 : 0x00;
+
+  __m128 zeroes = _mm_setzero_ps();
+  __m128 maxes = _mm_set_ps1(255.0f);
+
+  __m128i shuffle1 =
+      _mm_set_epi32(0x80808080, 0x80808080, 0x80808080, 0x0c080400);
+  __m128i shuffle2 =
+      _mm_set_epi32(0x80808080, 0x80808080, 0x0c080400, 0x80808080);
+  __m128i shuffle3 =
+      _mm_set_epi32(0x80808080, 0x0c080400, 0x80808080, 0x80808080);
+  __m128i shuffle4 =
+      _mm_set_epi32(0x0c080400, 0x80808080, 0x80808080, 0x80808080);
+  __m128i four_shuffle =
+      _mm_set_epi32(0x80808080, 0x80808080, 0x80808080, 0x0c080400);
+  __m128i pixels;
+  __m128* p_p;
+  auto* p_pt = (__m128*)level.data;
+
+  __m128i* dst_pp_m;
+  int* dst_pp_i;
+  uint8_t* dst_pp_b;
+
+  int m128_pitch = level.pitch >> 2;
+
+  int sixteens = level.width >> 4;
+  int fours = (level.width >> 2) - (sixteens << 2);
+  int singles = level.width & 3;
+
+  int sy = level.bands[band];
+  int ey = level.bands[band + 1];
+
+  if (level.id > 0) {
+    if (sy == 0) {
+      sy++;
+    }
+    if (ey == level.height) {
+      ey--;
+    }
+  }
+
+  dst_p += (std::size_t)(sy - (level.id ? 1 : 0)) * pitch;
+
+  p_pt += (std::size_t)m128_pitch * sy;
+
+  __m128 dither_add;
+
+  auto load = [&]() -> __m128 {
+    return loader((float*)p_p++, dither_add, zeroes, maxes);
+  };
+
+  for (y = sy; y < ey; y++) {
+    switch (y & 3) {
+      case 0:
+        dither_add = _mm_set_ps(0.4999f, 0.0f, 0.375f, -0.125f);
+        break;
+      case 1:
+        dither_add = _mm_set_ps(-0.25f, 0.25f, -0.375f, 0.125f);
+        break;
+      case 2:
+        dither_add = _mm_set_ps(0.3125f, -0.1875f, 0.4375f, -0.0625f);
+        break;
+      case 3:
+        dither_add = _mm_set_ps(-0.4375f, 0.0625f, -0.3125f, 0.1875f);
+        break;
+    }
+
+    dst_pp_m = (__m128i*)dst_p;
+    p_p = p_pt;
+    for (x = 0; x < sixteens; ++x) {
+      pixels = _mm_shuffle_epi8(_mm_cvtps_epi32(load()), shuffle1);
+      pixels = _mm_or_si128(
+          pixels, _mm_shuffle_epi8(_mm_cvtps_epi32(load()), shuffle2));
+      pixels = _mm_or_si128(
+          pixels, _mm_shuffle_epi8(_mm_cvtps_epi32(load()), shuffle3));
+      pixels = _mm_or_si128(
+          pixels, _mm_shuffle_epi8(_mm_cvtps_epi32(load()), shuffle4));
+
+      _mm_storeu_si128(dst_pp_m++, pixels);
+    }
+
+    dst_pp_i = (int*)dst_pp_m;
+    for (x = 0; x < fours; ++x) {
+      *dst_pp_i++ = _mm_cvtsi128_si32(
+          _mm_shuffle_epi8(_mm_cvtps_epi32(load()), four_shuffle));
+    }
+
+    if (singles) {
+      dst_pp_b = (uint8_t*)dst_pp_i;
+      __m128i a;
+      a = _mm_cvtps_epi32(load());
+      *dst_pp_b++ = (uint8_t)_mm_extract_epi8(a, 0);
+      if (singles > 1) {
+        *dst_pp_b++ = (uint8_t)_mm_extract_epi8(a, 4);
+        if (singles == 3) {
+          *dst_pp_b++ = (uint8_t)_mm_extract_epi8(a, 8);
+        }
+      }
+    }
+
+    if (level.id > 0) {
+      memcpy(dst_p, dst_p + 1, level.width - 2);
+      dst_p[level.width - 1] = (uint8_t)black;
+      dst_p[level.width - 2] = (uint8_t)black;
+    }
+
+    p_pt += m128_pitch;
+    dst_p += pitch;
+  }
+};
+
+/***********************************************************************
+ * 16-bit planar
+ ***********************************************************************/
+template <typename F>
+void OutPlanar16(void* dst_vp, F loader, int pitch, const Pyramid::Level& level,
+                 int band, bool chroma) {
+  int x;
+  int y;
+  auto* dst_p = (uint16_t*)dst_vp;
+  uint16_t black = chroma ? 0x8000 : 0x0000;
+
+  __m128 zeroes = _mm_setzero_ps();
+  __m128 maxes = _mm_set_ps1(65535.0f);
+
+  __m128i shuffle1 =
+      _mm_set_epi32(0x80808080, 0x80808080, 0x0d0c0908, 0x05040100);
+  __m128i shuffle2 =
+      _mm_set_epi32(0x0d0c0908, 0x05040100, 0x80808080, 0x80808080);
+  __m128i pixels;
+  __m128* p_p;
+  auto* p_pt = (__m128*)level.data;
+
+  __m128i* dst_pp_m;
+  uint16_t* dst_pp_w;
+
+  int m128_pitch = level.pitch >> 2;
+
+  int eights = level.width >> 3;
+  int four = level.width & 4;
+  int singles = level.width & 3;
+
+  int sy = level.bands[band];
+  int ey = level.bands[band + 1];
+
+  if (level.id > 0) {
+    if (sy == 0) {
+      sy++;
+    }
+    if (ey == level.height) {
+      ey--;
+    }
+  }
+
+  dst_p += (static_cast<ptrdiff_t>(sy - (level.id ? 1 : 0))) * pitch;
+
+  p_pt += static_cast<ptrdiff_t>(m128_pitch) * sy;
+
+  __m128 dither_add;
+
+  auto load = [&]() -> __m128 {
+    return loader((float*)p_p++, dither_add, zeroes, maxes);
+  };
+
+  for (y = sy; y < ey; y++) {
+    switch (y & 3) {
+      case 0:
+        dither_add = _mm_set_ps(0.4999f, 0.0f, 0.375f, -0.125f);
+        break;
+      case 1:
+        dither_add = _mm_set_ps(-0.25f, 0.25f, -0.375f, 0.125f);
+        break;
+      case 2:
+        dither_add = _mm_set_ps(0.3125f, -0.1875f, 0.4375f, -0.0625f);
+        break;
+      case 3:
+        dither_add = _mm_set_ps(-0.4375f, 0.0625f, -0.3125f, 0.1875f);
+        break;
+    }
+
+    dst_pp_m = (__m128i*)dst_p;
+    p_p = p_pt;
+    for (x = 0; x < eights; ++x) {
+      pixels = _mm_shuffle_epi8(_mm_cvtps_epi32(load()), shuffle1);
+      pixels = _mm_or_si128(
+          pixels, _mm_shuffle_epi8(_mm_cvtps_epi32(load()), shuffle2));
+
+      _mm_storeu_si128(dst_pp_m++, pixels);
+    }
+
+    __m128i a;
+
+    dst_pp_w = (uint16_t*)dst_pp_m;
+    if (four) {
+      a = _mm_cvtps_epi32(load());
+      *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 0);
+      *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 2);
+      *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 4);
+      *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 6);
+    }
+
+    if (singles) {
+      a = _mm_cvtps_epi32(load());
+      *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 0);
+      if (singles > 1) {
+        *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 2);
+        if (singles == 3) {
+          *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 4);
+        }
+      }
+    }
+
+    if (level.id > 0) {
+      memcpy(dst_p, dst_p + 1, (level.width - 2) << 1);
+      dst_p[level.width - 1] = black;
+      dst_p[level.width - 2] = black;
+    }
+
+    p_pt += m128_pitch;
+    dst_p += pitch;
+  }
+}
+
+/***********************************************************************
+ * 32-bit planar
+ ***********************************************************************/
+
+template <typename F>
+void OutPlanar32(void* dst_vp, F loader, int pitch, const Pyramid::Level& level,
+                 int band, bool chroma) {
+  int x;
+  int y;
+  auto* dst_p = (__m128*)dst_vp;
+
+  __m128 zeroes;
+  __m128 maxes;
+  __m128 dither_add = _mm_set_ps1(0.0f);
+
+  pitch >>= 2;  // number of floats to number of __m128s
+
+  if (chroma) {
+    zeroes = _mm_set_ps1(-0.5f);
+    maxes = _mm_set_ps1(0.5f);
+  } else {
+    zeroes = _mm_set_ps1(0.0f);
+    maxes = _mm_set_ps1(1.0f);
+  }
+
+  auto* p_p = (__m128*)level.data;
+
+  auto load = [&]() -> __m128 {
+    return loader((float*)&p_p[x], dither_add, zeroes, maxes);
+  };
+
+  float* dst_pp_f;
+
+  int m128_pitch = level.pitch >> 2;
+
+  int fours = (level.width + 3) >> 2;
+  int wipes = (fours << 2) - level.width;
+
+  int sy = level.bands[band];
+  int ey = level.bands[band + 1];
+
+  if (level.id > 0) {
+    if (sy == 0) {
+      sy++;
+    }
+    if (ey == level.height) {
+      ey--;
+    }
+  }
+
+  dst_p += (static_cast<ptrdiff_t>(sy - (level.id ? 1 : 0))) * pitch;
+
+  p_p += static_cast<ptrdiff_t>(m128_pitch) * sy;
+
+  for (y = sy; y < ey; y++) {
+    for (x = 0; x < fours; x++) {
+      dst_p[x] = load();
+    }
+
+    if (wipes) {
+      dst_pp_f = (float*)&dst_p[x];
+      int w = wipes;
+      while (w) {
+        *--dst_pp_f = 0;
+        w--;
+      }
+    }
+
+    if (level.id > 0) {
+      memcpy(dst_p, ((float*)dst_p) + 1, (level.width - 2) << 2);
+      ((float*)dst_p)[level.width - 1] = 0.0f;
+      ((float*)dst_p)[level.width - 2] = 0.0f;
+    }
+
+    p_p += m128_pitch;
+    dst_p += pitch;
+  }
+}
+
+/***********************************************************************
+ * Interleaved
+ ***********************************************************************/
+template <typename T, typename F>
+void OutInterleaved(T dst_p, F loader, int pitch, const Pyramid::Level& level,
+                    int band, bool chroma, int step, int offset) {
+  int x;
+  int y;
+
+  __m128 zeroes = _mm_setzero_ps();
+  __m128 maxes = _mm_set_ps1(sizeof(*dst_p) == 1 ? 255.0f : 65535.0f);
+
+  int sy = level.bands[band];
+  int ey = level.bands[band + 1];
+
+  if (level.id > 0) {
+    if (sy == 0) {
+      sy++;
+    }
+    if (ey == level.height) {
+      ey--;
+    }
+  }
+
+  dst_p += (sy - (level.id ? 1 : 0)) * pitch + offset;
+
+  int m128_pitch = level.pitch >> 2;
+  __m128* p_p = (__m128*)level.data + static_cast<ptrdiff_t>(m128_pitch) * sy;
+  T dst_pp;
+
+  __m128i a;
+  int fours = level.width >> 2;
+  int singles = level.width & 3;
+
+  if (level.id > 0) {
+    singles--;
+    if (singles < 0) {
+      singles = 3;
+      fours--;
+    }
+  }
+
+  __m128 dither_add;
+
+  auto load = [&]() -> __m128 {
+    return loader((float*)&p_p[x], dither_add, zeroes, maxes);
+  };
+
+  // loop
+  for (y = sy; y < ey; y++) {
+    switch (y & 3) {
+      case 0:
+        dither_add = _mm_set_ps(0.4999f, 0.0f, 0.375f, -0.125f);
+        break;
+      case 1:
+        dither_add = _mm_set_ps(-0.25f, 0.25f, -0.375f, 0.125f);
+        break;
+      case 2:
+        dither_add = _mm_set_ps(0.3125f, -0.1875f, 0.4375f, -0.0625f);
+        break;
+      case 3:
+        dither_add = _mm_set_ps(-0.4375f, 0.0625f, -0.3125f, 0.1875f);
+        break;
+    }
+
+    dst_pp = dst_p;
+    x = 0;
+    if (level.id > 0) {
+      a = _mm_cvtps_epi32(load());
+      *dst_pp = _mm_extract_epi16(a, 2);
+      dst_pp += step;
+      *dst_pp = _mm_extract_epi16(a, 4);
+      dst_pp += step;
+      *dst_pp = _mm_extract_epi16(a, 6);
+      dst_pp += step;
+      x++;
+    }
+
+    for (; x < fours; x++) {
+      a = _mm_cvtps_epi32(load());
+      *dst_pp = _mm_extract_epi16(a, 0);
+      dst_pp += step;
+      *dst_pp = _mm_extract_epi16(a, 2);
+      dst_pp += step;
+      *dst_pp = _mm_extract_epi16(a, 4);
+      dst_pp += step;
+      *dst_pp = _mm_extract_epi16(a, 6);
+      dst_pp += step;
+    }
+
+    if (singles) {
+      a = _mm_cvtps_epi32(load());
+      *dst_pp = _mm_extract_epi8(a, 0);
+      if (singles > 1) {
+        dst_pp += step;
+        *dst_pp = _mm_extract_epi16(a, 2);
+        if (singles == 3) {
+          dst_pp += step;
+          *dst_pp = _mm_extract_epi16(a, 2);
+        }
+      }
+    }
+
+    p_p += m128_pitch;
+    dst_p += pitch;
+  }
+}
+
+/***********************************************************************
+ * Loaders
+ ***********************************************************************/
+
+enum class Transform {
+  kNone,
+  kGamma,
+  kDither,
+  kClamp,
+  kDitherGamma,
+  kClampGamma,
+  kClampDither,
+  kClampDitherGamma,
+};
+
+template <Transform mode>
+struct Loader {
+  __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
+                    __m128 maxes) {
+    return _mm_load_ps(src_p);
+  }
+};
+
+template <>
+struct Loader<Transform::kGamma> {
+  __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
+                    __m128 maxes) {
+    return _mm_sqrt_ps(_mm_load_ps(src_p));
+  }
+};
+
+template <>
+struct Loader<Transform::kDither> {
+  __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
+                    __m128 maxes) {
+    return _mm_add_ps(_mm_load_ps(src_p), dither_add);
+  }
+};
+
+template <>
+struct Loader<Transform::kClamp> {
+  __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
+                    __m128 maxes) {
+    return _mm_min_ps(_mm_max_ps(_mm_load_ps(src_p), zeroes), maxes);
+  }
+};
+
+template <>
+struct Loader<Transform::kDitherGamma> {
+  __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
+                    __m128 maxes) {
+    return _mm_add_ps(_mm_sqrt_ps(_mm_load_ps(src_p)), dither_add);
+  }
+};
+
+template <>
+struct Loader<Transform::kClampGamma> {
+  __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
+                    __m128 maxes) {
+    return _mm_min_ps(_mm_max_ps(_mm_sqrt_ps(_mm_load_ps(src_p)), zeroes),
+                      maxes);
+  }
+};
+
+template <>
+struct Loader<Transform::kClampDither> {
+  __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
+                    __m128 maxes) {
+    return _mm_min_ps(
+        _mm_max_ps(_mm_add_ps(_mm_load_ps(src_p), dither_add), zeroes), maxes);
+  }
+};
+
+template <>
+struct Loader<Transform::kClampDitherGamma> {
+  __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
+                    __m128 maxes) {
+    return _mm_min_ps(
+        _mm_max_ps(_mm_add_ps(_mm_sqrt_ps(_mm_load_ps(src_p)), dither_add),
+                   zeroes),
+        maxes);
+  }
+};
+
+}  // namespace
+
+/***********************************************************************
+ * Out
+ ***********************************************************************/
+template <typename T>
+void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
+                  int level, int step, int offset, bool chroma) {
+  int bytes = sizeof(*dst_p);
+  int eb = (int)(levels_[level].bands.size() - 1);
+
+  using Type =
+      typename std::conditional<sizeof(*dst_p) == 1, uint8_t*, uint16_t*>::type;
+  // used to avoid generating a float* version of OutInterleaved which would
+  // cause warnings
+
+  int s = (gamma ? 1 : 0) | (dither && bytes != 4 ? 2 : 0) | (clamp ? 4 : 0);
+
+  if (step) {  // interleaved
+    for (int band = 0; band < eb; ++band) {
+      switch (s) {
+        case 0:
+          threadpool_->Queue([=, this] {
+            OutInterleaved((Type)dst_p, Loader<Transform::kNone>{}, pitch,
+                           levels_[level], band, chroma, step, offset);
+          });
+          break;
+        case 1:
+          threadpool_->Queue([=, this] {
+            OutInterleaved((Type)dst_p, Loader<Transform::kGamma>{}, pitch,
+                           levels_[level], band, chroma, step, offset);
+          });
+          break;
+        case 2:
+          threadpool_->Queue([=, this] {
+            OutInterleaved((Type)dst_p, Loader<Transform::kDither>{}, pitch,
+                           levels_[level], band, chroma, step, offset);
+          });
+          break;
+        case 3:
+          threadpool_->Queue([=, this] {
+            OutInterleaved((Type)dst_p, Loader<Transform::kDitherGamma>{},
+                           pitch, levels_[level], band, chroma, step, offset);
+          });
+          break;
+        case 4:
+          threadpool_->Queue([=, this] {
+            OutInterleaved((Type)dst_p, Loader<Transform::kClamp>{}, pitch,
+                           levels_[level], band, chroma, step, offset);
+          });
+          break;
+        case 5:
+          threadpool_->Queue([=, this] {
+            OutInterleaved((Type)dst_p, Loader<Transform::kClampGamma>{}, pitch,
+                           levels_[level], band, chroma, step, offset);
+          });
+          break;
+        case 6:
+          threadpool_->Queue([=, this] {
+            OutInterleaved((Type)dst_p, Loader<Transform::kClampDither>{},
+                           pitch, levels_[level], band, chroma, step, offset);
+          });
+          break;
+        case 7:
+          threadpool_->Queue([=, this] {
+            OutInterleaved((Type)dst_p, Loader<Transform::kClampDitherGamma>{},
+                           pitch, levels_[level], band, chroma, step, offset);
+          });
+          break;
+      }
+    }
+  } else {  // planar
+    switch (bytes) {
+      case 1: {
+        for (int band = 0; band < eb; ++band) {
+          switch (s) {
+            case 0:
+              threadpool_->Queue([=, this] {
+                OutPlanar8(dst_p, Loader<Transform::kNone>{}, pitch,
+                           levels_[level], band, chroma);
+              });
+              break;
+            case 1:
+              threadpool_->Queue([=, this] {
+                OutPlanar8(dst_p, Loader<Transform::kGamma>{}, pitch,
+                           levels_[level], band, chroma);
+              });
+              break;
+            case 2:
+              threadpool_->Queue([=, this] {
+                OutPlanar8(dst_p, Loader<Transform::kDither>{}, pitch,
+                           levels_[level], band, chroma);
+              });
+              break;
+            case 3:
+              threadpool_->Queue([=, this] {
+                OutPlanar8(dst_p, Loader<Transform::kDitherGamma>{}, pitch,
+                           levels_[level], band, chroma);
+              });
+              break;
+            case 4:
+              threadpool_->Queue([=, this] {
+                OutPlanar8(dst_p, Loader<Transform::kClamp>{}, pitch,
+                           levels_[level], band, chroma);
+              });
+              break;
+            case 5:
+              threadpool_->Queue([=, this] {
+                OutPlanar8(dst_p, Loader<Transform::kClampGamma>{}, pitch,
+                           levels_[level], band, chroma);
+              });
+              break;
+            case 6:
+              threadpool_->Queue([=, this] {
+                OutPlanar8(dst_p, Loader<Transform::kClampDither>{}, pitch,
+                           levels_[level], band, chroma);
+              });
+              break;
+            case 7:
+              threadpool_->Queue([=, this] {
+                OutPlanar8(dst_p, Loader<Transform::kClampDitherGamma>{}, pitch,
+                           levels_[level], band, chroma);
+              });
+              break;
+          }
+        }
+      } break;
+      case 2: {
+        for (int band = 0; band < eb; ++band) {
+          switch (s) {
+            case 0:
+              threadpool_->Queue([=, this] {
+                OutPlanar16(dst_p, Loader<Transform::kNone>{}, pitch,
+                            levels_[level], band, chroma);
+              });
+              break;
+            case 1:
+              threadpool_->Queue([=, this] {
+                OutPlanar16(dst_p, Loader<Transform::kGamma>{}, pitch,
+                            levels_[level], band, chroma);
+              });
+              break;
+            case 2:
+              threadpool_->Queue([=, this] {
+                OutPlanar16(dst_p, Loader<Transform::kDither>{}, pitch,
+                            levels_[level], band, chroma);
+              });
+              break;
+            case 3:
+              threadpool_->Queue([=, this] {
+                OutPlanar16(dst_p, Loader<Transform::kDitherGamma>{}, pitch,
+                            levels_[level], band, chroma);
+              });
+              break;
+            case 4:
+              threadpool_->Queue([=, this] {
+                OutPlanar16(dst_p, Loader<Transform::kClamp>{}, pitch,
+                            levels_[level], band, chroma);
+              });
+              break;
+            case 5:
+              threadpool_->Queue([=, this] {
+                OutPlanar16(dst_p, Loader<Transform::kClampGamma>{}, pitch,
+                            levels_[level], band, chroma);
+              });
+              break;
+            case 6:
+              threadpool_->Queue([=, this] {
+                OutPlanar16(dst_p, Loader<Transform::kClampDither>{}, pitch,
+                            levels_[level], band, chroma);
+              });
+              break;
+            case 7:
+              threadpool_->Queue([=, this] {
+                OutPlanar16(dst_p, Loader<Transform::kClampDitherGamma>{},
+                            pitch, levels_[level], band, chroma);
+              });
+              break;
+          }
+        }
+      } break;
+      case 4: {
+        for (int band = 0; band < eb; ++band) {
+          switch (s) {
+            case 0:
+              threadpool_->Queue([=, this] {
+                OutPlanar32(dst_p, Loader<Transform::kNone>{}, pitch,
+                            levels_[level], band, chroma);
+              });
+              break;
+            case 1:
+              threadpool_->Queue([=, this] {
+                OutPlanar32(dst_p, Loader<Transform::kGamma>{}, pitch,
+                            levels_[level], band, chroma);
+              });
+              break;
+            case 4:
+              threadpool_->Queue([=, this] {
+                OutPlanar32(dst_p, Loader<Transform::kClamp>{}, pitch,
+                            levels_[level], band, chroma);
+              });
+              break;
+            case 5:
+              threadpool_->Queue([=, this] {
+                OutPlanar32(dst_p, Loader<Transform::kClampGamma>{}, pitch,
+                            levels_[level], band, chroma);
+              });
+              break;
+          }
+        }
+      } break;
+    }
+  }
+
+  threadpool_->Wait();
+}
+
+template void Pyramid::Out(uint16_t* dst_p, int pitch, bool gamma, bool dither,
+                           bool clamp, int level, int step, int offset,
+                           bool chroma);
+
+template void Pyramid::Out(uint8_t* dst_p, int pitch, bool gamma, bool dither,
+                           bool clamp, int level, int step, int offset,
+                           bool chroma);
 
 }  // namespace multiblend

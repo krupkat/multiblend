@@ -26,7 +26,7 @@ void Record(int tmp, int count, int x, RecordState& state,
   int n_images = (int)images.size();
 
   if (state.mc > 0) {
-    if (seam_map) {
+    if (seam_map != nullptr) {
       memset(&seam_map->line_[x - state.mc], state.current_i, state.mc);
     }
     for (int i = 0; i < n_images; ++i) {
