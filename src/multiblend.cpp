@@ -7,9 +7,6 @@
 
 namespace multiblend {
 
-#define MASKVAL(X) \
-  (((X)&0x7fffffffffffffff) | images[(X)&0xffffffff]->mask_state_)
-
 struct PyramidWithMasks : public Pyramid {
  public:
   using Pyramid::Pyramid;
@@ -22,6 +19,10 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
   TimingResult timing;
 
   int n_images = (int)images.size();
+
+  auto maskval = [&images](uint64_t x) {
+    return (x & 0x7fffffffffffffff) | images[x & 0xffffffff]->mask_state_;
+  };
 
   /***********************************************************************
    * Open images to get prelimary info
@@ -193,7 +194,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
   uint64_t c;
   uint64_t d;
 
-#define DT_MAX 0x9000000000000000
+  const uint64_t dt_max = 0x9000000000000000;
   uint64_t* prev_line = nullptr;
   uint64_t* this_line = nullptr;
   bool last_pixel = false;
@@ -293,11 +294,11 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
           if (y == height - 1) {   // bottom row
             if (x == width - 1) {  // first pixel(s)
               while (x > stop) {
-                this_line[x--] = DT_MAX;  // max
+                this_line[x--] = dt_max;  // max
               }
             } else {
               utemp = this_line[x + 1];
-              utemp = MASKVAL(utemp);
+              utemp = maskval(utemp);
               while (x > stop) {
                 utemp += 0x300000000;
                 this_line[x--] = utemp;  // was min(temp, DT_MAX) but this is
@@ -307,10 +308,10 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
           } else {                 // other rows
             if (x == width - 1) {  // first pixel(s)
               utemp = prev_line[x - 1] + 0x400000000;
-              a = MASKVAL(utemp);
+              a = maskval(utemp);
 
               utemp = prev_line[x] + 0x300000000;
-              b = MASKVAL(utemp);
+              b = maskval(utemp);
 
               d = a < b ? a : b;
 
@@ -328,13 +329,13 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               d += 0x300000000;
             } else {
               utemp = prev_line[x] + 0x300000000;
-              b = MASKVAL(utemp);
+              b = maskval(utemp);
 
               utemp = prev_line[x + 1] + 0x400000000;
-              c = MASKVAL(utemp);
+              c = maskval(utemp);
 
               utemp = this_line[x + 1] + 0x300000000;
-              d = MASKVAL(utemp);
+              d = maskval(utemp);
             }
 
             if (stop == -1) {
@@ -344,7 +345,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
 
             while (x > stop) {
               utemp = prev_line[x - 1] + 0x400000000;
-              a = MASKVAL(utemp);
+              a = maskval(utemp);
 
               if (a < d) {
                 d = a;
@@ -603,7 +604,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
 
               if (x > 0) {
                 utemp = this_line[x - 1] + 0x300000000;
-                d = MASKVAL(utemp);
+                d = maskval(utemp);
 
                 if (d < best) {
                   best = d;
@@ -633,13 +634,13 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               best = dt_val;
 
               utemp = *prev_line + 0x300000000;
-              b = MASKVAL(utemp);
+              b = maskval(utemp);
               if (b < best) {
                 best = b;
               }
 
               utemp = prev_line[1] + 0x400000000;
-              c = MASKVAL(utemp);
+              c = maskval(utemp);
               if (c < best) {
                 best = c;
               }
@@ -671,14 +672,14 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
               b = c - 0x100000000;
             } else {
               utemp = prev_line[x - 1] + 0x400000000;
-              a = MASKVAL(utemp);
+              a = maskval(utemp);
 
               utemp = prev_line[x] + 0x300000000;
-              b = MASKVAL(utemp);
+              b = maskval(utemp);
             }
 
             utemp = best + 0x300000000;
-            d = MASKVAL(utemp);
+            d = maskval(utemp);
 
             if (stop == width) {
               stop--;
@@ -687,7 +688,7 @@ Result Multiblend(std::vector<io::Image*>& images, Options opts) {
 
             while (x < stop) {
               utemp = prev_line[x + 1] + 0x400000000;
-              c = MASKVAL(utemp);
+              c = maskval(utemp);
 
               utils::ReadSeamDT(seam_flex, current_count, current_step, dt_val);
               best = dt_val;

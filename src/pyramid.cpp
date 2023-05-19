@@ -1337,15 +1337,6 @@ void Pyramid::Blend(Pyramid* b) {
 /***********************************************************************
  * approximate gaussian blur
  ***********************************************************************/
-#define BLUR_SSE_GET(y, x) \
-  y = _mm_set_ps(line3[x], line2[x], line1[x], line0[x])
-// #define BLUR_SSE_GET2(x) _mm_load_ps((float*)&transposed[x])
-#define BLUR_SSE_GET_LEFT                                                 \
-  temp1 = _mm_set_ps(line3[left], line2[left], line1[left], line0[left]); \
-  left++;
-#define BLUR_SSE_GET_RIGHT                                                    \
-  temp2 = _mm_set_ps(line3[right], line2[right], line1[right], line0[right]); \
-  right++;
 
 void Pyramid::BlurX(float radius, Pyramid* transpose) {
   for (int i = 0; i < (int)levels_[0].bands.size() - 1; ++i) {
@@ -1379,19 +1370,25 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
   int left;
   int right;
 
-  int fours = (ey - sy + 3) >>
-              2;  // +3 is probably not necessary because all bands are mod 4
+  auto blur_sse_get = [line3, line2, line1, line0](int x) {
+    return _mm_set_ps(line3[x], line2[x], line1[x], line0[x]);
+  };
+
+  // +3 is probably not necessary because all bands are mod 4
+  int fours = (ey - sy + 3) >> 2;
 
   if (iradius < levels_[0].width >> 1) {
     for (y = 0; y < fours; ++y) {
       acc = _mm_setzero_ps();
       left = 0;
 
-      BLUR_SSE_GET_LEFT;
+      temp1 = blur_sse_get(left);
+      left++;
 
       acc = _mm_mul_ps(temp1, irp1);
       for (right = 1; right < iradius + 1;) {
-        BLUR_SSE_GET_RIGHT;
+        temp2 = blur_sse_get(right);
+        right++;
         acc = _mm_add_ps(acc, temp2);
       }
 
@@ -1400,7 +1397,8 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
       right = iradius + 1;
 
       for (i = 0; i <= iradius; ++i) {
-        BLUR_SSE_GET_RIGHT;
+        temp2 = blur_sse_get(right);
+        right++;
         _mm_store_ps(
             &out[o],
             _mm_add_ps(acc, _mm_mul_ps(_mm_add_ps(temp1, temp2), mul)));
@@ -1410,12 +1408,14 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
       }
 
       while (right < levels_[0].width) {
-        BLUR_SSE_GET_RIGHT;
+        temp2 = blur_sse_get(right);
+        right++;
         _mm_store_ps(
             &out[o],
             _mm_add_ps(acc, _mm_mul_ps(_mm_add_ps(temp1, temp2), mul)));
         o += transpose->levels_[0].pitch;
-        BLUR_SSE_GET_LEFT
+        temp1 = blur_sse_get(left);
+        left++;
         acc = _mm_add_ps(_mm_sub_ps(temp2, temp1), acc);
         ++x;
       }
@@ -1425,7 +1425,8 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
             &out[o],
             _mm_add_ps(acc, _mm_mul_ps(_mm_add_ps(temp1, temp2), mul)));
         o += transpose->levels_[0].pitch;
-        BLUR_SSE_GET_LEFT;
+        temp1 = blur_sse_get(left);
+        left++;
         acc = _mm_add_ps(_mm_sub_ps(temp2, temp1), acc);
         ++x;
       }
@@ -1441,12 +1442,12 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
     for (y = 0; y < fours; ++y) {
       acc = _mm_setzero_ps();
 
-      BLUR_SSE_GET(temp1, 0);
+      temp1 = blur_sse_get(0);
       acc = _mm_mul_ps(temp1, irp1);
       right = 1;
       for (x = 1; x < iradius + 1; ++x) {
         if (right < levels_[0].width) {
-          BLUR_SSE_GET(temp2, right);
+          temp2 = blur_sse_get(right);
           ++right;
         }
         acc = _mm_add_ps(acc, temp2);
@@ -1458,7 +1459,7 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
 
       for (x = 0; x < levels_[0].width; ++x) {
         if (right < levels_[0].width) {
-          BLUR_SSE_GET(temp2, right);
+          temp2 = blur_sse_get(right);
           ++right;
         }
         _mm_store_ps(
@@ -1466,7 +1467,7 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
             _mm_add_ps(acc, _mm_mul_ps(_mm_add_ps(temp1, temp2), mul)));
         o += transpose->levels_[0].pitch;
         if (left > 0) {
-          BLUR_SSE_GET(temp1, left);
+          temp1 = blur_sse_get(left);
         }
         ++left;
         acc = _mm_add_ps(_mm_sub_ps(temp2, temp1), acc);
