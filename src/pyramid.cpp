@@ -2002,6 +2002,7 @@ template <>
 struct Loader<Transform::kClampGamma> {
   __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
                     __m128 maxes) {
+    // Originally: _mm_min_ps(_mm_sqrt_ps(_mm_max_ps(_mm_load_ps(p), z)), m)
     return _mm_min_ps(_mm_max_ps(_mm_sqrt_ps(_mm_load_ps(src_p)), zeroes),
                       maxes);
   }
@@ -2011,6 +2012,7 @@ template <>
 struct Loader<Transform::kClampDither> {
   __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
                     __m128 maxes) {
+    // Originally: _mm_min_ps(_mm_add_ps(_mm_max_ps(_mm_load_ps(p), z), d), m)
     return _mm_min_ps(
         _mm_max_ps(_mm_add_ps(_mm_load_ps(src_p), dither_add), zeroes), maxes);
   }
@@ -2020,6 +2022,8 @@ template <>
 struct Loader<Transform::kClampDitherGamma> {
   __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
                     __m128 maxes) {
+    // Originally:
+    // _mm_min_ps(_mm_add_ps(_mm_sqrt_ps(_mm_max_ps(_mm_load_ps(p), z)), d), m)
     return _mm_min_ps(
         _mm_max_ps(_mm_add_ps(_mm_sqrt_ps(_mm_load_ps(src_p)), dither_add),
                    zeroes),

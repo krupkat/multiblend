@@ -7,9 +7,8 @@
 
 namespace multiblend {
 
-/***********************************************************************
- * Seam macro
- ***********************************************************************/
+namespace {
+
 struct RecordState {
   int mc = 0;
   int prev_i = -1;
@@ -50,6 +49,7 @@ struct PyramidWithMasks : public Pyramid {
   using Pyramid::Pyramid;
   std::vector<utils::Flex*> masks;
 };
+}  // namespace
 
 Result Multiblend(std::vector<io::Image*>& images, Options opts) {
   utils::Timer timer;
