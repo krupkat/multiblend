@@ -59,34 +59,38 @@ Threadpool::~Threadpool() {
 /**********************************************************************
  * Threads
  **********************************************************************/
-#define P ((Threadpool::tp_struct*)param)
-
 #ifdef _WIN32
 DWORD WINAPI Threadpool::Thread(void* param) {
 #else
 void* TP_Thread(void* param) {
 #endif
+
+  auto* thread_state = (Threadpool::tp_struct*)param;
+
   while (true) {
     {
-      std::unique_lock<std::mutex> mlock(*P->main_mutex);
-      P->main_cond->wait(mlock, [=] { return !P->queue->empty() || P->stop; });
-      if (!P->queue->empty()) {
-        P->function = P->queue->front();
-        P->queue->pop_front();
-        P->free = false;
+      std::unique_lock<std::mutex> mlock(*thread_state->main_mutex);
+      thread_state->main_cond->wait(mlock, [=] {
+        return !thread_state->queue->empty() || thread_state->stop;
+      });
+      if (!thread_state->queue->empty()) {
+        thread_state->function = thread_state->queue->front();
+        thread_state->queue->pop_front();
+        thread_state->free = false;
       }
     }
-    if (P->stop) {
+    if (thread_state->stop) {
       break;
     }
 
-    P->function();
+    thread_state->function();
 
     {
-      std::lock_guard<std::mutex> mlock(*P->return_mutex);  // necessary
-      P->free = true;
+      std::lock_guard<std::mutex> mlock(
+          *thread_state->return_mutex);  // necessary
+      thread_state->free = true;
     }
-    P->return_cond->notify_all();
+    thread_state->return_cond->notify_all();
   }
 
 #ifdef _WIN32

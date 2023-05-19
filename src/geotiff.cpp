@@ -9,34 +9,31 @@ namespace multiblend::io::tiff {
 
 // some defintions for geotiff
 
-#define TIFFTAG_GEOPIXELSCALE 33550
-#define TIFFTAG_GEOTIEPOINTS 33922
-#define TIFFTAG_GEOTRANSMATRIX 34264
-#define TIFFTAG_GEOKEYDIRECTORY 34735
-#define TIFFTAG_GEODOUBLEPARAMS 34736
-#define TIFFTAG_GEOASCIIPARAMS 34736
+constexpr int kTifftagGeoPixelScale = 33550;
+constexpr int kTifftagGeoTiePoints = 33922;
+constexpr int kTifftagGeoTransMatrix = 34264;
+constexpr int kTifftagGeoKeyDirectory = 34735;
+constexpr int kTifftagGeoDoubleParams = 34736;
+constexpr int kTifftagGeoAsciiParams = 34737;
 
-#define TIFFTAG_GDAL_NODATA 42113
-
-#define TIFF_TRUE 1
-#define TIFF_FALSE 0
+constexpr int kTifftagGdalNoData = 42113;
 
 static const TIFFFieldInfo xtiffFieldInfo[] = {
     /* XXX Insert Your tags here */
-    {TIFFTAG_GEOPIXELSCALE, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, TIFF_TRUE,
-     TIFF_TRUE, (char*)"GeoPixelScale"},
-    {TIFFTAG_GEOTRANSMATRIX, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, TIFF_TRUE,
-     TIFF_TRUE, (char*)"GeoTransformationMatrix"},
-    {TIFFTAG_GEOTIEPOINTS, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, TIFF_TRUE,
-     TIFF_TRUE, (char*)"GeoTiePoints"},
-    {TIFFTAG_GEOKEYDIRECTORY, -1, -1, TIFF_SHORT, FIELD_CUSTOM, TIFF_TRUE,
-     TIFF_TRUE, (char*)"GeoKeyDirectory"},
-    {TIFFTAG_GEODOUBLEPARAMS, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, TIFF_TRUE,
-     TIFF_TRUE, (char*)"GeoDoubleParams"},
-    {TIFFTAG_GEOASCIIPARAMS, -1, -1, TIFF_ASCII, FIELD_CUSTOM, TIFF_TRUE,
-     TIFF_FALSE, (char*)"GeoASCIIParams"},
-    {TIFFTAG_GDAL_NODATA, -1, -1, TIFF_ASCII, FIELD_CUSTOM, TIFF_TRUE,
-     TIFF_FALSE, (char*)"GDALNoDataValue"}};
+    {kTifftagGeoPixelScale, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1,
+     (char*)"GeoPixelScale"},
+    {kTifftagGeoTransMatrix, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1,
+     (char*)"GeoTransformationMatrix"},
+    {kTifftagGeoTiePoints, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1,
+     (char*)"GeoTiePoints"},
+    {kTifftagGeoKeyDirectory, -1, -1, TIFF_SHORT, FIELD_CUSTOM, 1, 1,
+     (char*)"GeoKeyDirectory"},
+    {kTifftagGeoDoubleParams, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1,
+     (char*)"GeoDoubleParams"},
+    {kTifftagGeoAsciiParams, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0,
+     (char*)"GeoASCIIParams"},
+    {kTifftagGdalNoData, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0,
+     (char*)"GDALNoDataValue"}};
 
 void geotiff_register(TIFF* tif) {
   TIFFMergeFieldInfo(tif, xtiffFieldInfo,
@@ -54,7 +51,7 @@ int geotiff_read(TIFF* tiff, GeoTIFFInfo* info) {
   //  memset(info,0,sizeof(GeoTIFFInfo));
   geotiff_register(tiff);
 
-  if ((TIFFGetField(tiff, TIFFTAG_GEOPIXELSCALE, &nCount, &geo_scale) == 0) ||
+  if ((TIFFGetField(tiff, kTifftagGeoPixelScale, &nCount, &geo_scale) == 0) ||
       nCount < 2) {
     return 0;
   }
@@ -63,7 +60,7 @@ int geotiff_read(TIFF* tiff, GeoTIFFInfo* info) {
   info->YCellRes = geo_scale[1];
   double* tiepoints;
 
-  if ((TIFFGetField(tiff, TIFFTAG_GEOTIEPOINTS, &nCount, &tiepoints) == 0) ||
+  if ((TIFFGetField(tiff, kTifftagGeoTiePoints, &nCount, &tiepoints) == 0) ||
       nCount < 6) {
     return 0;
   }
@@ -73,7 +70,7 @@ int geotiff_read(TIFF* tiff, GeoTIFFInfo* info) {
   // left edge of upper left pixel
   char* nodata;
 
-  if (TIFFGetField(tiff, TIFFTAG_GDAL_NODATA, &nCount, &nodata) != 0) {
+  if (TIFFGetField(tiff, kTifftagGdalNoData, &nCount, &nodata) != 0) {
     info->nodata = std::atoi(nodata);
   }
 
@@ -89,15 +86,15 @@ int geotiff_write(TIFF* tiff, GeoTIFFInfo* info) {
   scale[0] = info->XCellRes;
   scale[1] = info->YCellRes;
   scale[2] = 0.0;
-  TIFFSetField(tiff, TIFFTAG_GEOPIXELSCALE, 3, scale);
+  TIFFSetField(tiff, kTifftagGeoPixelScale, 3, scale);
   double tiepoint[6];
   tiepoint[0] = tiepoint[1] = tiepoint[2] = tiepoint[5] = 0;
   tiepoint[3] = info->XGeoRef;
   tiepoint[4] = info->YGeoRef;
-  TIFFSetField(tiff, TIFFTAG_GEOTIEPOINTS, 6, tiepoint);
+  TIFFSetField(tiff, kTifftagGeoTiePoints, 6, tiepoint);
   char nodata[50];
   //  SNPRINTF(nodata,50,"%d",info->nodata);
-  TIFFSetField(tiff, TIFFTAG_GDAL_NODATA, nodata);
+  TIFFSetField(tiff, kTifftagGdalNoData, nodata);
   return 1;
 }
 

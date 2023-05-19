@@ -541,10 +541,10 @@ int main(int argc, char* argv[]) {
                                  .xor_filename = xor_filename,
                              });
 
-/***********************************************************************
- * Write
- ***********************************************************************/
-#define ROWS_PER_STRIP 64
+  /***********************************************************************
+   * Write
+   ***********************************************************************/
+  constexpr int rows_per_strip = 64;
 
   if (output_type != io::ImageType::MB_NONE) {
     utils::Output(1, "Writing %s...\n", output_filename);
@@ -561,10 +561,10 @@ int main(int argc, char* argv[]) {
     int bytes_per_pixel = spp << (result.output_bpp >> 4);
     int bytes_per_row = bytes_per_pixel * result.width;
 
-    int n_strips = (int)((result.height + ROWS_PER_STRIP - 1) / ROWS_PER_STRIP);
+    int n_strips = (int)((result.height + rows_per_strip - 1) / rows_per_strip);
     int remaining = result.height;
     void* strip =
-        malloc((ROWS_PER_STRIP * (int64_t)result.width) * bytes_per_pixel);
+        malloc((rows_per_strip * (int64_t)result.width) * bytes_per_pixel);
     void* oc_p[3] = {result.output_channels[0], result.output_channels[1],
                      result.output_channels[2]};
     if (bgr) {
@@ -577,7 +577,7 @@ int main(int argc, char* argv[]) {
         TIFFSetField(tiff_file, TIFFTAG_IMAGELENGTH, result.height);
         TIFFSetField(tiff_file, TIFFTAG_COMPRESSION, compression);
         TIFFSetField(tiff_file, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
-        TIFFSetField(tiff_file, TIFFTAG_ROWSPERSTRIP, ROWS_PER_STRIP);
+        TIFFSetField(tiff_file, TIFFTAG_ROWSPERSTRIP, rows_per_strip);
         TIFFSetField(tiff_file, TIFFTAG_BITSPERSAMPLE, result.output_bpp);
         if (result.no_mask) {
           TIFFSetField(tiff_file, TIFFTAG_SAMPLESPERPIXEL, 3);
@@ -634,8 +634,8 @@ int main(int argc, char* argv[]) {
 
     if (output_type == io::ImageType::MB_PNG ||
         output_type == io::ImageType::MB_JPEG) {
-      scanlines = new JSAMPROW[ROWS_PER_STRIP];
-      for (int i = 0; i < ROWS_PER_STRIP; ++i) {
+      scanlines = new JSAMPROW[rows_per_strip];
+      for (int i = 0; i < rows_per_strip; ++i) {
         scanlines[i] =
             (JSAMPROW) &
             ((uint8_t*)strip)[static_cast<ptrdiff_t>(i) * bytes_per_row];
@@ -646,7 +646,7 @@ int main(int argc, char* argv[]) {
 
     for (int s = 0; s < n_strips; ++s) {
       int strip_p = 0;
-      int rows = std::min(remaining, ROWS_PER_STRIP);
+      int rows = std::min(remaining, rows_per_strip);
 
       for (int strip_y = 0; strip_y < rows; ++strip_y) {
         int x = 0;
@@ -720,7 +720,7 @@ int main(int argc, char* argv[]) {
         } break;
       }
 
-      remaining -= ROWS_PER_STRIP;
+      remaining -= rows_per_strip;
     }
 
     switch (output_type) {

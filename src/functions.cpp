@@ -517,8 +517,6 @@ void cwrite(int current_count, int current_step, uint8_t* output, int& p) {
   }
 }
 
-#define CWRITE cwrite(current_count, current_step, output, p);
-
 int CompressDTLine(const uint32_t* input, uint8_t* output, int width) {
   int current_step = -100;
   int current_count = 0;
@@ -549,18 +547,18 @@ int CompressDTLine(const uint32_t* input, uint8_t* output, int width) {
         if (step == current_step) {
           ++current_count;
         } else {
-          CWRITE;
+          cwrite(current_count, current_step, output, p);
           current_step = step;
           current_count = 1;
         }
       } else {
-        CWRITE;
+        cwrite(current_count, current_step, output, p);
         output[p++] = 0x80 | (step - 3);
         current_step = -100;
         current_count = 0;
       }
     } else {
-      CWRITE;
+      cwrite(current_count, current_step, output, p);
       *((uint32_t*)&output[p]) = left_val;
       p += 4;
       output[p++] = -1;
@@ -571,7 +569,7 @@ int CompressDTLine(const uint32_t* input, uint8_t* output, int width) {
     left_val = right_val;
   }
 
-  CWRITE;
+  cwrite(current_count, current_step, output, p);
   *((uint32_t*)&output[p]) = left_val;
   p += 4;
 
@@ -612,18 +610,18 @@ int CompressSeamLine(const uint64_t* input, uint8_t* output, int width) {
         if (step == current_step) {
           ++current_count;
         } else {
-          CWRITE;
+          cwrite(current_count, current_step, output, p);
           current_step = (int)step;
           current_count = 1;
         }
       } else {
-        CWRITE;
+        cwrite(current_count, current_step, output, p);
         output[p++] = 0x80 | ((int)step - 3);
         current_step = -100;
         current_count = 0;
       }
     } else {
-      CWRITE;
+      cwrite(current_count, current_step, output, p);
       *((uint64_t*)&output[p]) = right_val;
       p += 8;
       output[p++] = -1;
@@ -634,7 +632,7 @@ int CompressSeamLine(const uint64_t* input, uint8_t* output, int width) {
     right_val = left_val;
   }
 
-  CWRITE;
+  cwrite(current_count, current_step, output, p);
   *((uint64_t*)&output[p]) = right_val;
   p += 8;
 
