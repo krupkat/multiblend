@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
+OPTION(MULTIBLEND_WITH_ASAN "Build with address sanitizer" OFF)
 
 project(Multiblend)
 include(CTest)
@@ -33,6 +34,11 @@ target_link_libraries(Multiblend
 
 if(NOT MSVC)
     target_compile_options(Multiblend PRIVATE -msse4.1)
+endif()
+
+if(MULTIBLEND_WITH_ASAN)
+  target_compile_options(Multiblend PRIVATE -fsanitize=address -g)
+  target_link_options(Multiblend PRIVATE -fsanitize=address)
 endif()
 
 if(BUILD_TESTING)
