@@ -47,4 +47,9 @@ class MapAlloc {
   // static bool last_mapped;
 };
 
+class MapAllocDeleter {
+ public:
+  void operator()(void* p) const { MapAlloc::Free(p); }
+};
+
 }  // namespace multiblend::memory

@@ -52,6 +52,6 @@ struct Result {
   TimingResult timing = {};
 };
 
-Result Multiblend(std::vector<io::Image*>& images, Options opts);
+Result Multiblend(std::vector<io::Image>& images, Options opts);
 
 }  // namespace multiblend

@@ -33,6 +33,11 @@ class Image {
   explicit Image(char* filename);
   ~Image();
 
+  Image(const Image&) = delete;
+  Image& operator=(const Image&) = delete;
+  Image(Image&&) = default;
+  Image& operator=(Image&&) = default;
+
   char* filename_;
   ImageType type_;
   int width_;

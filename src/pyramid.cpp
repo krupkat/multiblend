@@ -114,7 +114,7 @@ Pyramid::~Pyramid() {
   for (int i = 0; i < threadpool_->GetNThreads(); ++i) {
     _aligned_free(lines_[i]);
   }
-  delete lines_;
+  delete[] lines_;
 
   if (!shared_ && !no_alloc_) {
     for (auto it = levels_.begin(); it < levels_.end(); ++it) {
