@@ -191,9 +191,9 @@ int Squish(const uint32_t* in, uint32_t* out, int in_width, int out_width) {
   return in_p;
 }
 
-void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
+void ShrinkMasks(std::vector<Flex>& masks, int n_levels) {
   int i;
-  Flex flex_temp(masks[0]->width_, masks[0]->height_);
+  Flex flex_temp(masks[0].width_, masks[0].height_);
   uint32_t cur;
   uint32_t* lines[5];
   uint32_t* real_lines[5];
@@ -203,19 +203,19 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
   int min_count;
 
   for (auto& real_line : real_lines) {
-    real_line = new uint32_t[masks[0]->width_];
+    real_line = new uint32_t[masks[0].width_];
   }
 
   for (int l = 1; l < n_levels; ++l) {
-    int in_width = masks[l - 1]->width_;
+    int in_width = masks[l - 1].width_;
     int out_width = (in_width + 6) >> 1;
-    int out_height = (masks[l - 1]->height_ + 6) >> 1;
-    masks.push_back(new Flex(out_width, out_height));
+    int out_height = (masks[l - 1].height_ + 6) >> 1;
+    masks.push_back(Flex(out_width, out_height));
 
     int input_p = 0;
 
     // first line
-    input_p += Squish((uint32_t*)&masks[l - 1]->data_.get()[input_p],
+    input_p += Squish((uint32_t*)&masks[l - 1].data_.get()[input_p],
                       real_lines[0], in_width, out_width)
                << 2;
     int lines_read = 1;
@@ -224,12 +224,12 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
     pointer[0] = 0;
     while (wrote < out_width) {
       cur = real_lines[0][pointer[0]++];
-      masks[l]->Write32(cur);
+      masks[l].Write32(cur);
       if ((cur & 0x80000000) == 0u) {
         ++wrote;
       } else {
         if ((cur & 0x20000000) != 0u) {
-          masks[l]->Write32(real_lines[0][pointer[0]++]);
+          masks[l].Write32(real_lines[0][pointer[0]++]);
         }
         wrote += cur & 0x00ffffff;
       }
@@ -240,16 +240,16 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
     lines[3] = real_lines[3];
     lines[4] = real_lines[4];
 
-    input_p += Squish((uint32_t*)&masks[l - 1]->data_.get()[input_p], lines[3],
+    input_p += Squish((uint32_t*)&masks[l - 1].data_.get()[input_p], lines[3],
                       in_width, out_width)
                << 2;
-    input_p += Squish((uint32_t*)&masks[l - 1]->data_.get()[input_p], lines[4],
+    input_p += Squish((uint32_t*)&masks[l - 1].data_.get()[input_p], lines[4],
                       in_width, out_width)
                << 2;
     lines_read += 2;
 
-    for (int y = 1; y < masks[l]->height_; ++y) {
-      masks[l]->NextLine();
+    for (int y = 1; y < masks[l].height_; ++y) {
+      masks[l].NextLine();
 
       wrote = 0;
       pointer[0] = pointer[1] = pointer[2] = pointer[3] = pointer[4] = 0;
@@ -284,16 +284,16 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
                     (vals[1] + vals[3]) * 0.25f + vals[2] * 0.375f;
         if (val == 0 || val == 1) {
           if (min_count == 1) {
-            masks[l]->Write32(*((uint32_t*)&val));
+            masks[l].Write32(*((uint32_t*)&val));
           } else {
             int _int = (int)val;
-            masks[l]->Write32(0x80000000 | (_int << 30) | min_count);
+            masks[l].Write32(0x80000000 | (_int << 30) | min_count);
           }
         } else {
           if (min_count > 1) {
-            masks[l]->Write32(0xa0000000 | min_count);
+            masks[l].Write32(0xa0000000 | min_count);
           }
-          masks[l]->Write32(*((uint32_t*)&val));
+          masks[l].Write32(*((uint32_t*)&val));
         }
 
         wrote += min_count;
@@ -314,8 +314,8 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
       lines[1] = lines[3];
       lines[3] = temp;
 
-      if (lines_read < masks[l - 1]->height_) {
-        input_p += Squish((uint32_t*)&masks[l - 1]->data_.get()[input_p],
+      if (lines_read < masks[l - 1].height_) {
+        input_p += Squish((uint32_t*)&masks[l - 1].data_.get()[input_p],
                           lines[3], in_width, out_width)
                    << 2;
         ++lines_read;
@@ -323,8 +323,8 @@ void ShrinkMasks(std::vector<Flex*>& masks, int n_levels) {
         lines[3] = lines[2];
       }
 
-      if (lines_read < masks[l - 1]->height_) {
-        input_p += Squish((uint32_t*)&masks[l - 1]->data_.get()[input_p],
+      if (lines_read < masks[l - 1].height_) {
+        input_p += Squish((uint32_t*)&masks[l - 1].data_.get()[input_p],
                           lines[4], in_width, out_width)
                    << 2;
         ++lines_read;
@@ -439,15 +439,15 @@ void CompositeLine(const float* input_p, float* output_p, int i, int x_offset,
 /***********************************************************************
  * DT reader and macros
  ***********************************************************************/
-void ReadInpaintDT(Flex* flex, int& current_count, int& current_step,
+void ReadInpaintDT(Flex& flex, int& current_count, int& current_step,
                    uint32_t& dt_val) {
   if (current_count != 0) {
     --current_count;
     dt_val += current_step;
   } else {
-    uint8_t _byte = flex->ReadBackwards8();
+    uint8_t _byte = flex.ReadBackwards8();
     if (_byte == 255) {
-      dt_val = flex->ReadBackwards32();
+      dt_val = flex.ReadBackwards32();
       return;
     }
     current_step = ((_byte & 7) - 3);
@@ -457,25 +457,25 @@ void ReadInpaintDT(Flex* flex, int& current_count, int& current_step,
       current_step = (_byte & 0x3f);
       current_count = 0;
     } else if ((_byte & 0x20) == 0) {  // 0b11000000
-      current_count = flex->ReadBackwards8();
+      current_count = flex.ReadBackwards8();
     } else if ((_byte & 0x10) == 0) {  // 0b11100000
-      current_count = flex->ReadBackwards16();
+      current_count = flex.ReadBackwards16();
     } else {  // if (!(_byte & 0x08)) {
-      current_count = flex->ReadBackwards32();
+      current_count = flex.ReadBackwards32();
     }
     dt_val += current_step;
   }
 }
 
-void ReadSeamDT(Flex* flex, int& current_count, int64_t& current_step,
+void ReadSeamDT(Flex& flex, int& current_count, int64_t& current_step,
                 uint64_t& dt_val) {
   if (current_count != 0) {
     --current_count;
     dt_val += current_step;
   } else {
-    uint8_t _byte = flex->ReadBackwards8();
+    uint8_t _byte = flex.ReadBackwards8();
     if (_byte == 255) {
-      dt_val = flex->ReadBackwards64();
+      dt_val = flex.ReadBackwards64();
       return;
     }
     current_step = ((int64_t)(_byte & 7) - 3) << 32;
@@ -485,11 +485,11 @@ void ReadSeamDT(Flex* flex, int& current_count, int64_t& current_step,
       current_step = (int64_t)(_byte & 0x3f) << 32;
       current_count = 0;
     } else if ((_byte & 0x20) == 0) {  // 0b11000000
-      current_count = flex->ReadBackwards8();
+      current_count = flex.ReadBackwards8();
     } else if ((_byte & 0x10) == 0) {  // 0b11100000
-      current_count = flex->ReadBackwards16();
+      current_count = flex.ReadBackwards16();
     } else {  // if (!(_byte & 0x08)) {
-      current_count = flex->ReadBackwards32();
+      current_count = flex.ReadBackwards32();
     }
     dt_val += current_step;
   }

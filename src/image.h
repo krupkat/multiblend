@@ -40,7 +40,6 @@ class Channel {
 class Image {
  public:
   explicit Image(char* filename);
-  ~Image();
 
   Image(const Image&) = delete;
   Image& operator=(const Image&) = delete;
@@ -73,13 +72,14 @@ class Image {
 
   // std::size_t untrimmed_pixels;
   std::size_t untrimmed_bytes_;
-  utils::Flex* tiff_mask_;
-  float tiff_xres_, tiff_yres_;
+  std::unique_ptr<utils::Flex> tiff_mask_;
+  float tiff_xres_;
+  float tiff_yres_;
   uint64_t mask_state_;
   int mask_count_;
   int mask_limit_;
   bool seam_present_;
-  std::vector<utils::Flex*> masks_;
+  std::vector<utils::Flex> masks_;
 
   void MaskPng(int i);
 

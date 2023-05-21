@@ -154,16 +154,16 @@ void Output(int level, const char* fmt, ...);
 
 void die(const char* error, ...);
 
-void ShrinkMasks(std::vector<Flex*>& masks, int n_levels);
+void ShrinkMasks(std::vector<Flex>& masks, int n_levels);
 
 void CompositeLine(const float* input_p, float* output_p, int i, int x_offset,
                    int in_level_width, int out_level_width, int out_level_pitch,
                    uint8_t* _mask, std::size_t mask_p);
 
-void ReadInpaintDT(Flex* flex, int& current_count, int& current_step,
+void ReadInpaintDT(Flex& flex, int& current_count, int& current_step,
                    uint32_t& dt_val);
 
-void ReadSeamDT(Flex* flex, int& current_count, int64_t& current_step,
+void ReadSeamDT(Flex& flex, int& current_count, int64_t& current_step,
                 uint64_t& dt_val);
 
 int CompressDTLine(const uint32_t* input, uint8_t* output, int width);

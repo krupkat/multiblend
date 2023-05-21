@@ -31,11 +31,11 @@ void Record(int tmp, int count, int x, RecordState& state,
     }
     for (int i = 0; i < n_images; ++i) {
       if (i == state.current_i) {
-        images[i].masks_[0]->Write32(0xc0000000 | state.mc);
+        images[i].masks_[0].Write32(0xc0000000 | state.mc);
       } else if (i == state.prev_i || state.prev_i == -1) {
-        images[i].masks_[0]->Write32(0x80000000 | state.mc);
+        images[i].masks_[0].Write32(0x80000000 | state.mc);
       } else {
-        images[i].masks_[0]->IncrementLast32(state.mc);
+        images[i].masks_[0].IncrementLast32(state.mc);
       }
     }
   }
@@ -48,7 +48,7 @@ void Record(int tmp, int count, int x, RecordState& state,
 struct PyramidWithMasks : public Pyramid {
  public:
   using Pyramid::Pyramid;
-  std::vector<utils::Flex*> masks;
+  std::vector<utils::Flex> masks;
 };
 }  // namespace
 
@@ -240,7 +240,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   bool last_pixel = false;
   bool arbitrary_seam = false;
 
-  auto* seam_flex = new utils::Flex(width, height);
+  auto seam_flex = utils::Flex(width, height);
   int max_queue = 0;
 
   /***********************************************************************
@@ -290,8 +290,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       {  // make sure the last compression thread to use this chunk of memory
          // is finished
         std::unique_lock<std::mutex> mlock(*flex_mutex_p);
-        flex_cond_p->wait(mlock, [=] {
-          return seam_flex->y_ > (height - 1) - y - n_threads;
+        flex_cond_p->wait(mlock, [=, &seam_flex] {
+          return seam_flex.y_ > (height - 1) - y - n_threads;
         });
       }
 
@@ -424,7 +424,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       }
 
       if (y != 0) {
-        threadpool->Queue([=] {
+        threadpool->Queue([=, &seam_flex] {
           int p = utils::CompressSeamLine(this_line, comp, width);
           if (p > width) {
             printf("bad p: %d at line %d", p, y);
@@ -433,10 +433,11 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
           {
             std::unique_lock<std::mutex> mlock(*flex_mutex_p);
-            flex_cond_p->wait(
-                mlock, [=] { return seam_flex->y_ == (height - 1) - y; });
-            seam_flex->Copy(comp, p);
-            seam_flex->NextLine();
+            flex_cond_p->wait(mlock, [=, &seam_flex] {
+              return seam_flex.y_ == (height - 1) - y;
+            });
+            seam_flex.Copy(comp, p);
+            seam_flex.NextLine();
           }
           flex_cond_p->notify_all();
         });
@@ -472,7 +473,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
   // create top level masks
   for (int i = 0; i < n_images; ++i) {
-    images[i].masks_.push_back(new utils::Flex(width, height));
+    images[i].masks_.push_back(utils::Flex(width, height));
   }
 
   io::png::Pnger* xor_map =
@@ -810,7 +811,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       Record(-1, 0, x, state, images, seam_map);
 
       for (int i = 0; i < n_images; ++i) {
-        images[i].masks_[0]->NextLine();
+        images[i].masks_[0].NextLine();
       }
     }
 
@@ -905,7 +906,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       Record(-1, 0, x, state, images, seam_map);
 
       for (int i = 0; i < n_images; ++i) {
-        images[i].masks_[0]->NextLine();
+        images[i].masks_[0].NextLine();
       }
     }
 
@@ -963,22 +964,22 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     // masks
     for (auto& pyr : wrap_pyramids) {
       threadpool->Queue([=, &pyr] {
-        pyr.masks.push_back(new utils::Flex(width, height));
+        pyr.masks.push_back(utils::Flex(width, height));
         for (int y = 0; y < height; ++y) {
           if (y < pyr.GetY() || y >= pyr.GetY() + pyr.GetHeight()) {
-            pyr.masks[0]->Write32(0x80000000 | width);
+            pyr.masks[0].Write32(0x80000000 | width);
           } else {
             if (pyr.GetX() != 0) {
-              pyr.masks[0]->Write32(0x80000000 | pyr.GetX());
-              pyr.masks[0]->Write32(0xc0000000 | pyr.GetWidth());
+              pyr.masks[0].Write32(0x80000000 | pyr.GetX());
+              pyr.masks[0].Write32(0xc0000000 | pyr.GetWidth());
             } else {
-              pyr.masks[0]->Write32(0xc0000000 | pyr.GetWidth());
+              pyr.masks[0].Write32(0xc0000000 | pyr.GetWidth());
               if (pyr.GetWidth() != width) {
-                pyr.masks[0]->Write32(0x80000000 | (width - pyr.GetWidth()));
+                pyr.masks[0].Write32(0x80000000 | (width - pyr.GetWidth()));
               }
             }
           }
-          pyr.masks[0]->NextLine();
+          pyr.masks[0].NextLine();
         }
 
         ShrinkMasks(pyr.masks,
@@ -1132,8 +1133,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                   utils::CompositeLine(input_p, output_p, i, x_offset,
                                        in_level.width, out_level.width,
                                        out_level.pitch,
-                                       images[i].masks_[level]->data_.get(),
-                                       images[i].masks_[level]->rows_[y]);
+                                       images[i].masks_[level].data_.get(),
+                                       images[i].masks_[level].rows_[y]);
                 }
               });
             }
@@ -1218,8 +1219,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                           input_p, output_p, wp + static_cast<int>(level == 0),
                           x_offset, in_level.width, out_level.width,
                           out_level.pitch,
-                          wrap_pyramids[p].masks[level]->data_.get(),
-                          wrap_pyramids[p].masks[level]->rows_[y]);
+                          wrap_pyramids[p].masks[level].data_.get(),
+                          wrap_pyramids[p].masks[level].rows_[y]);
                     }
                   });
                 }

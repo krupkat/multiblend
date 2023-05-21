@@ -20,13 +20,6 @@ int hist_blu[256];
 
 Image::Image(char* filename) : filename_(filename) {}
 
-Image::~Image() {
-  for (auto it = masks_.begin(); it < masks_.end(); ++it) {
-    delete (*it);
-  }
-  masks_.clear();
-}
-
 /***********************************************************************
 ************************************************************************
 ** Open
@@ -453,8 +446,8 @@ void Image::Read(void* data, bool gamma) {
     uint32_t* prev_line = nullptr;
     mt::Threadpool* threadpool = mt::Threadpool::GetInstance();
 
-    tiff_mask_ = new utils::Flex(width_, height_);
-    auto* dt = new utils::Flex(width_, height_);
+    tiff_mask_ = std::make_unique<utils::Flex>(width_, height_);
+    auto dt = utils::Flex(width_, height_);
     int mc;
 
     int n_threads = (std::max)(2, threadpool->GetNThreads());
@@ -491,7 +484,7 @@ void Image::Read(void* data, bool gamma) {
       {  // make sure the last compression thread to use this chunk of memory is
          // finished
         std::unique_lock<std::mutex> mlock(*flex_mutex_p);
-        flex_cond_p->wait(mlock, [=] { return dt->y_ > y - n_threads; });
+        flex_cond_p->wait(mlock, [=, &dt] { return dt.y_ > y - n_threads; });
       }
 
       while (x < width_) {
@@ -613,13 +606,13 @@ void Image::Read(void* data, bool gamma) {
       }
 
       if (y < height_ - 1) {
-        threadpool->Queue([=, this] {
+        threadpool->Queue([=, this, &dt] {
           int p = utils::CompressDTLine(this_line, (uint8_t*)comp, width_);
           {
             std::unique_lock<std::mutex> mlock(*flex_mutex_p);
-            flex_cond_p->wait(mlock, [=] { return dt->y_ == y; });
-            dt->Copy((uint8_t*)comp, p);
-            dt->NextLine();
+            flex_cond_p->wait(mlock, [=, &dt] { return dt.y_ == y; });
+            dt.Copy((uint8_t*)comp, p);
+            dt.NextLine();
           }
           flex_cond_p->notify_all();
         });
@@ -757,7 +750,7 @@ void Image::Read(void* data, bool gamma) {
     width_ = tiff_width_;
     height_ = tiff_height_;
 
-    tiff_mask_ = new utils::Flex(width_, height_);
+    tiff_mask_ = std::make_unique<utils::Flex>(width_, height_);
 
     for (y = 0; y < height_; ++y) {
       tiff_mask_->Write32(0x80000000 | width_);
@@ -870,8 +863,8 @@ void Image::MaskPng(int i) {
   char filename[256];
   sprintf_s(filename, "masks-%d.png", i);
 
-  int width = masks_[0]->width_;
-  int height = masks_[0]->height_;  // +1 + masks[1]->height;
+  int width = masks_[0].width_;
+  int height = masks_[0].height_;  // +1 + masks[1]->height;
 
   std::size_t size = (std::size_t)width * height;
   auto* temp = (uint8_t*)malloc(size);
@@ -882,11 +875,11 @@ void Image::MaskPng(int i) {
   uint32_t cur;
 
   for (int l = 0; l < (int)masks_.size(); ++l) {
-    auto* data = (uint32_t*)masks_[l]->data_.get();
-    uint8_t* line = temp + static_cast<ptrdiff_t>(py) * masks_[0]->width_ + px;
-    for (int y = 0; y < masks_[l]->height_; ++y) {
+    auto* data = (uint32_t*)masks_[l].data_.get();
+    uint8_t* line = temp + static_cast<ptrdiff_t>(py) * masks_[0].width_ + px;
+    for (int y = 0; y < masks_[l].height_; ++y) {
       int x = 0;
-      while (x < masks_[l]->width_) {
+      while (x < masks_[l].width_) {
         float val;
         int count;
 
@@ -910,12 +903,12 @@ void Image::MaskPng(int i) {
         }
       }
 
-      line += masks_[0]->width_;
+      line += masks_[0].width_;
     }
     if ((l & 1) != 0) {
-      px += masks_[l]->width_ + 1;
+      px += masks_[l].width_ + 1;
     } else {
-      py += masks_[l]->height_ + 1;
+      py += masks_[l].height_ + 1;
     }
     break;
   }
