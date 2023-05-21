@@ -2,8 +2,11 @@
 
 #include <cstring>
 #include <immintrin.h>
+#include <memory>
 #include <vector>
 
+#include "src/aligned_ptr.h"
+#include "src/mapalloc.h"
 #include "src/threadpool.h"
 
 namespace multiblend {
@@ -17,7 +20,7 @@ class Pyramid {
     int pitch;
     int m128_pitch;
     std::size_t bytes;
-    float* data;
+    std::shared_ptr<float> data;
     int x;
     int y;
     bool x_shift;
@@ -29,10 +32,8 @@ class Pyramid {
 
  private:
   std::vector<Level> levels_;
-  __m128** lines_;
-  bool shared_;
-  bool no_alloc_;
-  float* lut_ = nullptr;
+  std::vector<memory::AlignedM128Ptr> lines_;
+  std::vector<float> lut_;
   int lut_bits_ = 0;
   bool lut_gamma_ = false;
   int out_max_;
@@ -71,10 +72,13 @@ class Pyramid {
   std::size_t total_bytes_ = 0;
 
  public:
-  Pyramid(int width, int height, int _levels = 0, Pyramid* share = nullptr);
-  Pyramid(int width, int height, int _levels, int x, int y, bool no_alloc,
-          Pyramid* share = nullptr);
-  ~Pyramid();
+  Pyramid(int width, int height, int _levels, int x, int y);
+
+  Pyramid(const Pyramid& other) = delete;
+  Pyramid& operator=(const Pyramid& other) = delete;
+  Pyramid(Pyramid&& other) = default;
+  Pyramid& operator=(Pyramid&& other) = default;
+
   static int DefaultNumLevels(int width, int height) {
     return 8; /* (int)ceil(log2(max(width, height))); */
   };
@@ -101,7 +105,7 @@ class Pyramid {
            int level = 0, int step = 0, int offset = 0, bool chroma = false);
   int GetNLevels() { return (int)levels_.size(); };
   int GetPitch(int level = 0) { return levels_[level].pitch; };
-  float* GetData(int level = 0) { return levels_[level].data; };
+  float* GetData(int level = 0) { return levels_[level].data.get(); };
   int GetWidth(int level = 0) { return levels_[level].width; };
   int GetHeight(int level = 0) { return levels_[level].height; };
   int GetX(int level = 0) { return levels_[level].x; };
@@ -115,8 +119,11 @@ class Pyramid {
   static void LaplaceExpandShifted(__m128* hi, __m128* lo, int m128_pitch_hi,
                                    int m128_pitch_lo);
   [[nodiscard]] std::size_t GetTotalBytes() const { return total_bytes_; }
-  std::vector<Level>& GetLevels() { return levels_; };
-  Level& GetLevel(int level) { return levels_[level]; };
+  [[nodiscard]] std::vector<Level>& GetLevels() { return levels_; };
+  [[nodiscard]] Level& GetLevel(int level) { return levels_[level]; };
+  [[nodiscard]] const Level& GetLevel(int level) const {
+    return levels_[level];
+  };
   void Png(const char* filename);
 };
 

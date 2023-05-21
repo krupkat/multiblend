@@ -22,6 +22,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <memory>
 #include <vector>
 
 #include <jpeglib.h>
@@ -50,7 +51,7 @@ int main(int argc, char* argv[]) {
   /***********************************************************************
    * Variables
    ***********************************************************************/
-  std::vector<io::Image*> images;
+  std::vector<io::Image> images;
   int fixed_levels = 0;
   int add_levels = 0;
 
@@ -443,13 +444,13 @@ int main(int argc, char* argv[]) {
       int n = 0;
       sscanf_s(my_argv[pos], "%d,%d%n", &x, &y, &n);
       if (my_argv[pos][n] == 0) {
-        images.back()->xpos_add_ = x;
-        images.back()->ypos_add_ = y;
+        images.back().xpos_add_ = x;
+        images.back().ypos_add_ = y;
         pos++;
         continue;
       }
     }
-    images.push_back(new io::Image(my_argv[pos++]));
+    images.emplace_back(my_argv[pos++]);
   }
 
   int n_images = (int)images.size();
@@ -554,7 +555,8 @@ int main(int argc, char* argv[]) {
     struct jpeg_compress_struct cinfo;
     struct jpeg_error_mgr jerr;
 
-    JSAMPARRAY scanlines = nullptr;
+    // JSAMPARRAY scanlines = nullptr;
+    std::unique_ptr<JSAMPROW[]> scanlines = nullptr;
 
     int spp = result.no_mask ? 3 : 4;
 
@@ -563,10 +565,11 @@ int main(int argc, char* argv[]) {
 
     int n_strips = (int)((result.height + rows_per_strip - 1) / rows_per_strip);
     int remaining = result.height;
-    void* strip =
-        malloc((rows_per_strip * (int64_t)result.width) * bytes_per_pixel);
-    void* oc_p[3] = {result.output_channels[0], result.output_channels[1],
-                     result.output_channels[2]};
+    auto strip = std::make_unique<uint8_t[]>(
+        (rows_per_strip * (int64_t)result.width) * bytes_per_pixel);
+    void* oc_p[3] = {result.output_channels[0].get(),
+                     result.output_channels[1].get(),
+                     result.output_channels[2].get()};
     if (bgr) {
       std::swap(oc_p[0], oc_p[2]);
     }
@@ -588,22 +591,22 @@ int main(int argc, char* argv[]) {
         }
 
         TIFFSetField(tiff_file, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
-        if (images[0]->tiff_xres_ != -1) {
-          TIFFSetField(tiff_file, TIFFTAG_XRESOLUTION, images[0]->tiff_xres_);
+        if (images[0].tiff_xres_ != -1) {
+          TIFFSetField(tiff_file, TIFFTAG_XRESOLUTION, images[0].tiff_xres_);
           TIFFSetField(tiff_file, TIFFTAG_XPOSITION,
-                       (float)(result.min_xpos / images[0]->tiff_xres_));
+                       (float)(result.min_xpos / images[0].tiff_xres_));
         }
-        if (images[0]->tiff_yres_ != -1) {
-          TIFFSetField(tiff_file, TIFFTAG_YRESOLUTION, images[0]->tiff_yres_);
+        if (images[0].tiff_yres_ != -1) {
+          TIFFSetField(tiff_file, TIFFTAG_YRESOLUTION, images[0].tiff_yres_);
           TIFFSetField(tiff_file, TIFFTAG_YPOSITION,
-                       (float)(result.min_ypos / images[0]->tiff_yres_));
+                       (float)(result.min_ypos / images[0].tiff_yres_));
         }
 
-        if (images[0]->geotiff_.set) {
+        if (images[0].geotiff_.set) {
           // if we got a georeferenced input, store the geotags in the output
-          io::tiff::GeoTIFFInfo info(images[0]->geotiff_);
-          info.XGeoRef = result.min_xpos * images[0]->geotiff_.XCellRes;
-          info.YGeoRef = -result.min_ypos * images[0]->geotiff_.YCellRes;
+          io::tiff::GeoTIFFInfo info(images[0].geotiff_);
+          info.XGeoRef = result.min_xpos * images[0].geotiff_.XCellRes;
+          info.YGeoRef = -result.min_ypos * images[0].geotiff_.YCellRes;
           utils::Output(1, "Output georef: UL: %f %f, pixel size: %f %f\n",
                         info.XGeoRef, info.YGeoRef, info.XCellRes,
                         info.YCellRes);
@@ -634,11 +637,10 @@ int main(int argc, char* argv[]) {
 
     if (output_type == io::ImageType::MB_PNG ||
         output_type == io::ImageType::MB_JPEG) {
-      scanlines = new JSAMPROW[rows_per_strip];
+      scanlines = std::make_unique<JSAMPROW[]>(rows_per_strip);
       for (int i = 0; i < rows_per_strip; ++i) {
-        scanlines[i] =
-            (JSAMPROW) &
-            ((uint8_t*)strip)[static_cast<ptrdiff_t>(i) * bytes_per_row];
+        scanlines[i] = (JSAMPROW) &
+                       (strip.get())[static_cast<ptrdiff_t>(i) * bytes_per_row];
       }
     }
 
@@ -657,22 +659,25 @@ int main(int argc, char* argv[]) {
             switch (result.output_bpp) {
               case 8: {
                 while (x < lim) {
-                  ((uint8_t*)strip)[strip_p++] = ((uint8_t*)(oc_p[0]))[x];
-                  ((uint8_t*)strip)[strip_p++] = ((uint8_t*)(oc_p[1]))[x];
-                  ((uint8_t*)strip)[strip_p++] = ((uint8_t*)(oc_p[2]))[x];
+                  (strip.get())[strip_p++] = ((uint8_t*)(oc_p[0]))[x];
+                  (strip.get())[strip_p++] = ((uint8_t*)(oc_p[1]))[x];
+                  (strip.get())[strip_p++] = ((uint8_t*)(oc_p[2]))[x];
                   if (!result.no_mask) {
-                    ((uint8_t*)strip)[strip_p++] = 0xff;
+                    (strip.get())[strip_p++] = 0xff;
                   }
                   ++x;
                 }
               } break;
               case 16: {
                 while (x < lim) {
-                  ((uint16_t*)strip)[strip_p++] = ((uint16_t*)(oc_p[0]))[x];
-                  ((uint16_t*)strip)[strip_p++] = ((uint16_t*)(oc_p[1]))[x];
-                  ((uint16_t*)strip)[strip_p++] = ((uint16_t*)(oc_p[2]))[x];
+                  ((uint16_t*)strip.get())[strip_p++] =
+                      ((uint16_t*)(oc_p[0]))[x];
+                  ((uint16_t*)strip.get())[strip_p++] =
+                      ((uint16_t*)(oc_p[1]))[x];
+                  ((uint16_t*)strip.get())[strip_p++] =
+                      ((uint16_t*)(oc_p[2]))[x];
                   if (!result.no_mask) {
-                    ((uint16_t*)strip)[strip_p++] = 0xffff;
+                    ((uint16_t*)strip.get())[strip_p++] = 0xffff;
                   }
                   ++x;
                 }
@@ -682,10 +687,10 @@ int main(int argc, char* argv[]) {
             std::size_t t = (std::size_t)cur * bytes_per_pixel;
             switch (result.output_bpp) {
               case 8: {
-                ZeroMemory(&((uint8_t*)strip)[strip_p], t);
+                ZeroMemory(&(strip.get())[strip_p], t);
               } break;
               case 16: {
-                ZeroMemory(&((uint16_t*)strip)[strip_p], t);
+                ZeroMemory(&((uint16_t*)strip.get())[strip_p], t);
               } break;
             }
             strip_p += cur * spp;
@@ -709,14 +714,14 @@ int main(int argc, char* argv[]) {
 
       switch (output_type) {
         case io::ImageType::MB_TIFF: {
-          TIFFWriteEncodedStrip(tiff_file, s, strip,
+          TIFFWriteEncodedStrip(tiff_file, s, strip.get(),
                                 rows * (int64_t)bytes_per_row);
         } break;
         case io::ImageType::MB_JPEG: {
-          jpeg_write_scanlines(&cinfo, scanlines, rows);
+          jpeg_write_scanlines(&cinfo, scanlines.get(), rows);
         } break;
         case io::ImageType::MB_PNG: {
-          png_file->WriteRows(scanlines, rows);
+          png_file->WriteRows(scanlines.get(), rows);
         } break;
       }
 

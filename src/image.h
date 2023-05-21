@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdio>
+#include <memory>
+#include <optional>
 
 #include <jpeglib.h>
 #include <png.h>
@@ -15,15 +17,22 @@ namespace multiblend::io {
 
 enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG };
 
+class JpegDecompressDeleter {
+ public:
+  void operator()(jpeg_decompress_struct* cinfo) const {
+    jpeg_finish_decompress(cinfo);
+    jpeg_destroy_decompress(cinfo);
+    delete cinfo;
+  }
+};
+
 class Channel {
  public:
   explicit Channel(std::size_t bytes) : bytes_(bytes) {
-    data_ = memory::MapAlloc::Alloc(bytes_);
+    data_ = memory::MapAllocPtr<void>{memory::MapAlloc::Alloc(bytes_)};
   };
 
-  ~Channel() { memory::MapAlloc::Free(data_); };
-
-  void* data_;
+  memory::MapAllocPtr<void> data_ = nullptr;
   std::size_t bytes_;
   FILE* file_ = nullptr;
 };
@@ -31,7 +40,11 @@ class Channel {
 class Image {
  public:
   explicit Image(char* filename);
-  ~Image();
+
+  Image(const Image&) = delete;
+  Image& operator=(const Image&) = delete;
+  Image(Image&&) = default;
+  Image& operator=(Image&&) = default;
 
   char* filename_;
   ImageType type_;
@@ -41,8 +54,8 @@ class Image {
   int ypos_;
   int xpos_add_ = 0;
   int ypos_add_ = 0;
-  std::vector<Channel*> channels_;
-  Pyramid* pyramid_ = nullptr;
+  std::vector<Channel> channels_;
+  std::optional<Pyramid> pyramid_;
   tiff::GeoTIFFInfo geotiff_;
   int tiff_width_;
   int tiff_height_;
@@ -59,21 +72,22 @@ class Image {
 
   // std::size_t untrimmed_pixels;
   std::size_t untrimmed_bytes_;
-  utils::Flex* tiff_mask_;
-  float tiff_xres_, tiff_yres_;
+  std::unique_ptr<utils::Flex> tiff_mask_;
+  float tiff_xres_;
+  float tiff_yres_;
   uint64_t mask_state_;
   int mask_count_;
   int mask_limit_;
   bool seam_present_;
-  std::vector<utils::Flex*> masks_;
+  std::vector<utils::Flex> masks_;
 
   void MaskPng(int i);
 
  private:
   TIFF* tiff_;
   FILE* file_;
-  struct jpeg_decompress_struct cinfo_;
-  struct jpeg_error_mgr jerr_;
+  std::unique_ptr<jpeg_decompress_struct, JpegDecompressDeleter> cinfo_;
+  jpeg_error_mgr jerr_;
   png_structp png_ptr_;
 };
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 
 #ifdef _WIN32
@@ -46,5 +47,13 @@ class MapAlloc {
   static bool LastFile() { return objects_.back()->IsFile(); }
   // static bool last_mapped;
 };
+
+class MapAllocDeleter {
+ public:
+  void operator()(void* p) const { MapAlloc::Free(p); }
+};
+
+template <typename TType>
+using MapAllocPtr = std::unique_ptr<TType, MapAllocDeleter>;
 
 }  // namespace multiblend::memory

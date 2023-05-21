@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <memory>
 
 #include "src/functions.h"
 #include "src/geotiff.h"
@@ -18,19 +19,6 @@ int hist_grn[256];
 int hist_blu[256];
 
 Image::Image(char* filename) : filename_(filename) {}
-
-Image::~Image() {
-  for (auto it = channels_.begin(); it < channels_.end(); ++it) {
-    delete (*it);
-  }
-  for (auto it = masks_.begin(); it < masks_.end(); ++it) {
-    delete (*it);
-  }
-  channels_.clear();
-  masks_.clear();
-
-  delete pyramid_;
-}
 
 /***********************************************************************
 ************************************************************************
@@ -192,22 +180,24 @@ void Image::Open() {
         utils::die("Could not open %s", filename_);
       }
 
-      cinfo_.err = jpeg_std_error(&jerr_);
-      jpeg_create_decompress(&cinfo_);
-      jpeg_stdio_src(&cinfo_, file_);
-      jpeg_read_header(&cinfo_, TRUE);
-      jpeg_start_decompress(&cinfo_);
+      cinfo_ = {new jpeg_decompress_struct{}, JpegDecompressDeleter{}};
 
-      if ((cinfo_.output_width == 0u) || (cinfo_.output_height == 0u)) {
+      cinfo_->err = jpeg_std_error(&jerr_);
+      jpeg_create_decompress(cinfo_.get());
+      jpeg_stdio_src(cinfo_.get(), file_);
+      jpeg_read_header(cinfo_.get(), TRUE);
+      jpeg_start_decompress(cinfo_.get());
+
+      if ((cinfo_->output_width == 0u) || (cinfo_->output_height == 0u)) {
         utils::die("Unknown JPEG format (%s)", filename_);
       }
 
-      if (cinfo_.out_color_components != 3) {
+      if (cinfo_->out_color_components != 3) {
         utils::die("Unknown JPEG format (%s)", filename_);
       }
 
-      tiff_width_ = cinfo_.output_width;
-      tiff_height_ = tiff_u_height_ = cinfo_.output_height;
+      tiff_width_ = cinfo_->output_width;
+      tiff_height_ = tiff_u_height_ = cinfo_->output_height;
 
       bpp_ = 8;
       spp_ = 3;
@@ -301,8 +291,8 @@ void Image::Read(void* data, bool gamma) {
     case ImageType::MB_JPEG: {
       auto* pointer = (uint8_t*)data;
 
-      while (cinfo_.output_scanline < cinfo_.output_height) {
-        jpeg_read_scanlines(&cinfo_, &pointer, 1);
+      while (cinfo_->output_scanline < cinfo_->output_height) {
+        jpeg_read_scanlines(cinfo_.get(), &pointer, 1);
         pointer += (tiff_width_ * spp_) << (bpp_ >> 4);
       }
     } break;
@@ -456,8 +446,8 @@ void Image::Read(void* data, bool gamma) {
     uint32_t* prev_line = nullptr;
     mt::Threadpool* threadpool = mt::Threadpool::GetInstance();
 
-    tiff_mask_ = new utils::Flex(width_, height_);
-    auto* dt = new utils::Flex(width_, height_);
+    tiff_mask_ = std::make_unique<utils::Flex>(width_, height_);
+    auto dt = utils::Flex(width_, height_);
     int mc;
 
     int n_threads = (std::max)(2, threadpool->GetNThreads());
@@ -494,7 +484,7 @@ void Image::Read(void* data, bool gamma) {
       {  // make sure the last compression thread to use this chunk of memory is
          // finished
         std::unique_lock<std::mutex> mlock(*flex_mutex_p);
-        flex_cond_p->wait(mlock, [=] { return dt->y_ > y - n_threads; });
+        flex_cond_p->wait(mlock, [=, &dt] { return dt.y_ > y - n_threads; });
       }
 
       while (x < width_) {
@@ -616,13 +606,13 @@ void Image::Read(void* data, bool gamma) {
       }
 
       if (y < height_ - 1) {
-        threadpool->Queue([=, this] {
+        threadpool->Queue([=, this, &dt] {
           int p = utils::CompressDTLine(this_line, (uint8_t*)comp, width_);
           {
             std::unique_lock<std::mutex> mlock(*flex_mutex_p);
-            flex_cond_p->wait(mlock, [=] { return dt->y_ == y; });
-            dt->Copy((uint8_t*)comp, p);
-            dt->NextLine();
+            flex_cond_p->wait(mlock, [=, &dt] { return dt.y_ == y; });
+            dt.Copy((uint8_t*)comp, p);
+            dt.NextLine();
           }
           flex_cond_p->notify_all();
         });
@@ -760,7 +750,7 @@ void Image::Read(void* data, bool gamma) {
     width_ = tiff_width_;
     height_ = tiff_height_;
 
-    tiff_mask_ = new utils::Flex(width_, height_);
+    tiff_mask_ = std::make_unique<utils::Flex>(width_, height_);
 
     for (y = 0; y < height_; ++y) {
       tiff_mask_->Write32(0x80000000 | width_);
@@ -774,7 +764,7 @@ void Image::Read(void* data, bool gamma) {
   std::size_t channel_bytes = ((std::size_t)width_ * height_) << (bpp_ >> 4);
 
   for (int c = 0; c < 3; ++c) {
-    channels_.push_back(new Channel(channel_bytes));
+    channels_.emplace_back(channel_bytes);
   }
 
   if (spp_ == 4) {
@@ -786,9 +776,9 @@ void Image::Read(void* data, bool gamma) {
         for (y = 0; y < height_; ++y) {
           for (x = 0; x < width_; ++x) {
             uint32_t pixel = line[x];
-            ((uint8_t*)channels_[0]->data_)[p + x] = pixel & 0xff;
-            ((uint8_t*)channels_[1]->data_)[p + x] = (pixel >> 8) & 0xff;
-            ((uint8_t*)channels_[2]->data_)[p + x] = (pixel >> 16) & 0xff;
+            ((uint8_t*)channels_[0].data_.get())[p + x] = pixel & 0xff;
+            ((uint8_t*)channels_[1].data_.get())[p + x] = (pixel >> 8) & 0xff;
+            ((uint8_t*)channels_[2].data_.get())[p + x] = (pixel >> 16) & 0xff;
           }
           p += width_;
           line += tiff_width_;
@@ -801,9 +791,11 @@ void Image::Read(void* data, bool gamma) {
         for (y = 0; y < height_; ++y) {
           for (x = 0; x < width_; ++x) {
             uint64_t pixel = line[x];
-            ((uint16_t*)channels_[0]->data_)[p + x] = pixel & 0xffff;
-            ((uint16_t*)channels_[1]->data_)[p + x] = (pixel >> 16) & 0xffff;
-            ((uint16_t*)channels_[2]->data_)[p + x] = (pixel >> 32) & 0xffff;
+            ((uint16_t*)channels_[0].data_.get())[p + x] = pixel & 0xffff;
+            ((uint16_t*)channels_[1].data_.get())[p + x] =
+                (pixel >> 16) & 0xffff;
+            ((uint16_t*)channels_[2].data_.get())[p + x] =
+                (pixel >> 32) & 0xffff;
           }
           p += width_;
           line += tiff_width_;
@@ -819,15 +811,15 @@ void Image::Read(void* data, bool gamma) {
         for (y = 0; y < height_; ++y) {
           for (x = 0; x < width_; ++x) {
             byte = *bytes++;
-            ((uint8_t*)channels_[0]->data_)[p] = byte;
+            ((uint8_t*)channels_[0].data_.get())[p] = byte;
             // channel_totals[0] += gamma ? byte*byte : byte;
 
             byte = *bytes++;
-            ((uint8_t*)channels_[1]->data_)[p] = byte;
+            ((uint8_t*)channels_[1].data_.get())[p] = byte;
             // channel_totals[1] += gamma ? byte * byte : byte;
 
             byte = *bytes++;
-            ((uint8_t*)channels_[2]->data_)[p] = byte;
+            ((uint8_t*)channels_[2].data_.get())[p] = byte;
             // channel_totals[2] += gamma ? byte * byte : byte;
 
             ++p;
@@ -841,15 +833,15 @@ void Image::Read(void* data, bool gamma) {
         for (y = 0; y < height_; ++y) {
           for (x = 0; x < width_; ++x) {
             word = *words++;
-            ((uint16_t*)channels_[0]->data_)[p] = word;
+            ((uint16_t*)channels_[0].data_.get())[p] = word;
             // channel_totals[0] += gamma ? word * word : word;
 
             word = *words++;
-            ((uint16_t*)channels_[1]->data_)[p] = word;
+            ((uint16_t*)channels_[1].data_.get())[p] = word;
             // channel_totals[1] += gamma ? word * word : word;
 
             word = *words++;
-            ((uint16_t*)channels_[2]->data_)[p] = word;
+            ((uint16_t*)channels_[2].data_.get())[p] = word;
             // channel_totals[2] += gamma ? word * word : word;
 
             ++p;
@@ -871,8 +863,8 @@ void Image::MaskPng(int i) {
   char filename[256];
   sprintf_s(filename, "masks-%d.png", i);
 
-  int width = masks_[0]->width_;
-  int height = masks_[0]->height_;  // +1 + masks[1]->height;
+  int width = masks_[0].width_;
+  int height = masks_[0].height_;  // +1 + masks[1]->height;
 
   std::size_t size = (std::size_t)width * height;
   auto* temp = (uint8_t*)malloc(size);
@@ -883,11 +875,11 @@ void Image::MaskPng(int i) {
   uint32_t cur;
 
   for (int l = 0; l < (int)masks_.size(); ++l) {
-    auto* data = (uint32_t*)masks_[l]->data_;
-    uint8_t* line = temp + static_cast<ptrdiff_t>(py) * masks_[0]->width_ + px;
-    for (int y = 0; y < masks_[l]->height_; ++y) {
+    auto* data = (uint32_t*)masks_[l].data_.get();
+    uint8_t* line = temp + static_cast<ptrdiff_t>(py) * masks_[0].width_ + px;
+    for (int y = 0; y < masks_[l].height_; ++y) {
       int x = 0;
-      while (x < masks_[l]->width_) {
+      while (x < masks_[l].width_) {
         float val;
         int count;
 
@@ -911,12 +903,12 @@ void Image::MaskPng(int i) {
         }
       }
 
-      line += masks_[0]->width_;
+      line += masks_[0].width_;
     }
     if ((l & 1) != 0) {
-      px += masks_[l]->width_ + 1;
+      px += masks_[l].width_ + 1;
     } else {
-      py += masks_[l]->height_ + 1;
+      py += masks_[l].height_ + 1;
     }
     break;
   }
