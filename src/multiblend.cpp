@@ -473,7 +473,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
   // create top level masks
   for (int i = 0; i < n_images; ++i) {
-    images[i].masks_.push_back(utils::Flex(width, height));
+    images[i].masks_.emplace_back(width, height);
   }
 
   io::png::Pnger* xor_map =
@@ -947,24 +947,22 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
     if ((opts.wrap & 1) != 0) {
       wrap_levels_h = (int)std::floor(std::log2((width >> 1) + 4.0f) - 1);
-      wrap_pyramids.push_back(
-          PyramidWithMasks(width >> 1, height, wrap_levels_h, 0, 0));
-      wrap_pyramids.push_back(PyramidWithMasks((width + 1) >> 1, height,
-                                               wrap_levels_h, width >> 1, 0));
+      wrap_pyramids.emplace_back(width >> 1, height, wrap_levels_h, 0, 0);
+      wrap_pyramids.emplace_back((width + 1) >> 1, height, wrap_levels_h,
+                                 width >> 1, 0);
     }
 
     if ((opts.wrap & 2) != 0) {
       wrap_levels_v = (int)std::floor(std::log2((height >> 1) + 4.0f) - 1);
-      wrap_pyramids.push_back(
-          PyramidWithMasks(width, height >> 1, wrap_levels_v, 0, 0));
-      wrap_pyramids.push_back(PyramidWithMasks(width, (height + 1) >> 1,
-                                               wrap_levels_v, 0, height >> 1));
+      wrap_pyramids.emplace_back(width, height >> 1, wrap_levels_v, 0, 0);
+      wrap_pyramids.emplace_back(width, (height + 1) >> 1, wrap_levels_v, 0,
+                                 height >> 1);
     }
 
     // masks
     for (auto& pyr : wrap_pyramids) {
       threadpool->Queue([=, &pyr] {
-        pyr.masks.push_back(utils::Flex(width, height));
+        pyr.masks.emplace_back(width, height);
         for (int y = 0; y < height; ++y) {
           if (y < pyr.GetY() || y >= pyr.GetY() + pyr.GetHeight()) {
             pyr.masks[0].Write32(0x80000000 | width);

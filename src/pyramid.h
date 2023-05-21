@@ -119,9 +119,11 @@ class Pyramid {
   static void LaplaceExpandShifted(__m128* hi, __m128* lo, int m128_pitch_hi,
                                    int m128_pitch_lo);
   [[nodiscard]] std::size_t GetTotalBytes() const { return total_bytes_; }
-  std::vector<Level>& GetLevels() { return levels_; };
-  Level& GetLevel(int level) { return levels_[level]; };
-  const Level& GetLevel(int level) const { return levels_[level]; };
+  [[nodiscard]] std::vector<Level>& GetLevels() { return levels_; };
+  [[nodiscard]] Level& GetLevel(int level) { return levels_[level]; };
+  [[nodiscard]] const Level& GetLevel(int level) const {
+    return levels_[level];
+  };
   void Png(const char* filename);
 };
 

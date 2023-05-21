@@ -10,8 +10,8 @@ namespace multiblend::memory {
 class AlignedM128Ptr {
   // RAII class for an array of __m128
  public:
-  AlignedM128Ptr() : ptr_(nullptr) {}
-  AlignedM128Ptr(__m128* ptr) : ptr_(ptr) {}
+  AlignedM128Ptr() = default;
+  explicit AlignedM128Ptr(__m128* ptr) : ptr_(ptr) {}
   ~AlignedM128Ptr();
 
   AlignedM128Ptr(const AlignedM128Ptr& other) = delete;
@@ -19,7 +19,7 @@ class AlignedM128Ptr {
   AlignedM128Ptr(AlignedM128Ptr&& other) noexcept;
   AlignedM128Ptr& operator=(AlignedM128Ptr&& other) noexcept;
 
-  __m128* get() const { return ptr_; }
+  [[nodiscard]] __m128* get() const { return ptr_; }
 
   __m128& operator[](int i) { return ptr_[i]; }
   const __m128& operator[](int i) const { return ptr_[i]; }

@@ -7,7 +7,7 @@
 namespace multiblend::memory {
 
 AlignedM128Ptr::~AlignedM128Ptr() {
-  if (ptr_) {
+  if (ptr_ != nullptr) {
     _aligned_free(ptr_);
   }
 }
@@ -18,7 +18,7 @@ AlignedM128Ptr::AlignedM128Ptr(AlignedM128Ptr&& other) noexcept {
 
 AlignedM128Ptr& AlignedM128Ptr::operator=(AlignedM128Ptr&& other) noexcept {
   if (this != &other) {
-    if (!ptr_) {
+    if (ptr_ != nullptr) {
       _aligned_free(ptr_);
     }
     ptr_ = other.ptr_;

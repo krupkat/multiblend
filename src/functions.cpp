@@ -210,7 +210,7 @@ void ShrinkMasks(std::vector<Flex>& masks, int n_levels) {
     int in_width = masks[l - 1].width_;
     int out_width = (in_width + 6) >> 1;
     int out_height = (masks[l - 1].height_ + 6) >> 1;
-    masks.push_back(Flex(out_width, out_height));
+    masks.emplace_back(out_width, out_height);
 
     int input_p = 0;
 
