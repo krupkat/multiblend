@@ -7,6 +7,7 @@ include(CTest)
 set(CMAKE_CXX_STANDARD 20)
 
 add_executable(Multiblend
+  "src/aligned_ptr.cpp"
   "src/functions.cpp"
   "src/geotiff.cpp"
   "src/image.cpp"

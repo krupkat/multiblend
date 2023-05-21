@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdio>
+#include <optional>
 
 #include <jpeglib.h>
 #include <png.h>
@@ -45,7 +46,7 @@ class Image {
   int xpos_add_ = 0;
   int ypos_add_ = 0;
   std::vector<Channel> channels_;
-  Pyramid* pyramid_ = nullptr;
+  std::optional<Pyramid> pyramid_;
   tiff::GeoTIFFInfo geotiff_;
   int tiff_width_;
   int tiff_height_;

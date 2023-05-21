@@ -940,49 +940,49 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
      * Create shared input pyramids
      ***********************************************************************/
     // wrapping
-    std::vector<PyramidWithMasks*> wrap_pyramids;
+    std::vector<PyramidWithMasks> wrap_pyramids;
     int wrap_levels_h = 0;
     int wrap_levels_v = 0;
 
     if ((opts.wrap & 1) != 0) {
       wrap_levels_h = (int)std::floor(std::log2((width >> 1) + 4.0f) - 1);
       wrap_pyramids.push_back(
-          new PyramidWithMasks(width >> 1, height, wrap_levels_h, 0, 0));
-      wrap_pyramids.push_back(new PyramidWithMasks(
-          (width + 1) >> 1, height, wrap_levels_h, width >> 1, 0));
+          PyramidWithMasks(width >> 1, height, wrap_levels_h, 0, 0));
+      wrap_pyramids.push_back(PyramidWithMasks((width + 1) >> 1, height,
+                                               wrap_levels_h, width >> 1, 0));
     }
 
     if ((opts.wrap & 2) != 0) {
       wrap_levels_v = (int)std::floor(std::log2((height >> 1) + 4.0f) - 1);
       wrap_pyramids.push_back(
-          new PyramidWithMasks(width, height >> 1, wrap_levels_v, 0, 0));
-      wrap_pyramids.push_back(new PyramidWithMasks(
-          width, (height + 1) >> 1, wrap_levels_v, 0, height >> 1));
+          PyramidWithMasks(width, height >> 1, wrap_levels_v, 0, 0));
+      wrap_pyramids.push_back(PyramidWithMasks(width, (height + 1) >> 1,
+                                               wrap_levels_v, 0, height >> 1));
     }
 
     // masks
-    for (auto& py : wrap_pyramids) {
-      threadpool->Queue([=] {
-        py->masks.push_back(new utils::Flex(width, height));
+    for (auto& pyr : wrap_pyramids) {
+      threadpool->Queue([=, &pyr] {
+        pyr.masks.push_back(new utils::Flex(width, height));
         for (int y = 0; y < height; ++y) {
-          if (y < py->GetY() || y >= py->GetY() + py->GetHeight()) {
-            py->masks[0]->Write32(0x80000000 | width);
+          if (y < pyr.GetY() || y >= pyr.GetY() + pyr.GetHeight()) {
+            pyr.masks[0]->Write32(0x80000000 | width);
           } else {
-            if (py->GetX() != 0) {
-              py->masks[0]->Write32(0x80000000 | py->GetX());
-              py->masks[0]->Write32(0xc0000000 | py->GetWidth());
+            if (pyr.GetX() != 0) {
+              pyr.masks[0]->Write32(0x80000000 | pyr.GetX());
+              pyr.masks[0]->Write32(0xc0000000 | pyr.GetWidth());
             } else {
-              py->masks[0]->Write32(0xc0000000 | py->GetWidth());
-              if (py->GetWidth() != width) {
-                py->masks[0]->Write32(0x80000000 | (width - py->GetWidth()));
+              pyr.masks[0]->Write32(0xc0000000 | pyr.GetWidth());
+              if (pyr.GetWidth() != width) {
+                pyr.masks[0]->Write32(0x80000000 | (width - pyr.GetWidth()));
               }
             }
           }
-          py->masks[0]->NextLine();
+          pyr.masks[0]->NextLine();
         }
 
-        ShrinkMasks(py->masks,
-                    py->GetWidth() == width ? wrap_levels_v : wrap_levels_h);
+        ShrinkMasks(pyr.masks,
+                    pyr.GetWidth() == width ? wrap_levels_v : wrap_levels_h);
       });
     }
 
@@ -994,8 +994,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
     for (int i = 0; i < n_images; ++i) {
       images[i].pyramid_ =
-          new Pyramid(images[i].width_, images[i].height_, blend_levels,
-                      images[i].xpos_, images[i].ypos_);
+          Pyramid(images[i].width_, images[i].height_, blend_levels,
+                  images[i].xpos_, images[i].ypos_);
     }
 
     for (int level = total_levels - 1; level >= 0; --level) {
@@ -1008,9 +1008,9 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         }
       }
 
-      for (auto& py : wrap_pyramids) {
-        if (level < py->GetNLevels()) {
-          max_bytes = std::max(max_bytes, py->GetLevel(level).bytes);
+      for (auto& pyr : wrap_pyramids) {
+        if (level < pyr.GetNLevels()) {
+          max_bytes = std::max(max_bytes, pyr.GetLevel(level).bytes);
         }
       }
 
@@ -1031,9 +1031,9 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         }
       }
 
-      for (auto& py : wrap_pyramids) {
-        if (level < py->GetNLevels()) {
-          py->GetLevel(level).data = temp;
+      for (auto& pyr : wrap_pyramids) {
+        if (level < pyr.GetNLevels()) {
+          pyr.GetLevel(level).data = temp;
         }
       }
     }
@@ -1041,24 +1041,21 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     /***********************************************************************
      * Create output pyramid
      ***********************************************************************/
-    Pyramid* output_pyramid = nullptr;
-
-    output_pyramid = new Pyramid(width, height, total_levels, 0, 0);
+    auto output_pyramid = Pyramid{width, height, total_levels, 0, 0};
 
     for (int level = total_levels - 1; level >= 0; --level) {
       std::shared_ptr<float> temp = nullptr;
 
       try {
-        temp =
-            std::shared_ptr<float>{(float*)memory::MapAlloc::Alloc(
-                                       output_pyramid->GetLevel(level).bytes),
-                                   memory::MapAllocDeleter{}};
+        temp = std::shared_ptr<float>{(float*)memory::MapAlloc::Alloc(
+                                          output_pyramid.GetLevel(level).bytes),
+                                      memory::MapAllocDeleter{}};
       } catch (char* e) {
         printf("%s\n", e);
         exit(EXIT_FAILURE);
       }
 
-      output_pyramid->GetLevel(level).data = temp;
+      output_pyramid.GetLevel(level).data = temp;
     }
 
     /***********************************************************************
@@ -1110,7 +1107,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
           for (int level = 0; level < blend_levels; ++level) {
             const auto& in_level = images[i].pyramid_->GetLevel(level);
-            auto& out_level = output_pyramid->GetLevel(level);
+            auto& out_level = output_pyramid.GetLevel(level);
 
             int x_offset = (in_level.x - out_level.x) >> level;
             int y_offset = (in_level.y - out_level.y) >> level;
@@ -1148,15 +1145,15 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         }
 
         timer.Start();
-        output_pyramid->Collapse(blend_levels);
+        output_pyramid.Collapse(blend_levels);
         timing.collapse_time += timer.Read();
       } else {
         timer.Start();
 
-        output_pyramid->Copy((uint8_t*)images[0].channels_[c].data_.get(), 1,
-                             images[0].width_, opts.gamma, images[0].bpp_);
+        output_pyramid.Copy((uint8_t*)images[0].channels_[c].data_.get(), 1,
+                            images[0].width_, opts.gamma, images[0].bpp_);
         if (opts.output_bpp != images[0].bpp_) {
-          output_pyramid->Multiply(
+          output_pyramid.Multiply(
               0, opts.gamma ? (opts.output_bpp == 8 ? 1.0f / 66049 : 66049)
                             : (opts.output_bpp == 8 ? 1.0f / 257 : 257));
         }
@@ -1177,25 +1174,25 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         for (int w = 1; w <= 2; ++w) {
           if ((opts.wrap & w) != 0) {
             if (w == 1) {
-              utils::SwapH(output_pyramid);
+              utils::SwapH(&output_pyramid);
             } else {
-              utils::SwapV(output_pyramid);
+              utils::SwapV(&output_pyramid);
             }
 
             int wrap_levels = (w == 1) ? wrap_levels_h : wrap_levels_v;
             for (int wp = 0; wp < 2; ++wp) {
-              wrap_pyramids[p]->Copy(
-                  (uint8_t*)(output_pyramid->GetData() +
-                             wrap_pyramids[p]->GetX() +
-                             wrap_pyramids[p]->GetY() *
-                                 (int64_t)output_pyramid->GetPitch()),
-                  1, output_pyramid->GetPitch(), false, 32);
-              wrap_pyramids[p]->Shrink();
-              wrap_pyramids[p]->Laplace();
+              wrap_pyramids[p].Copy(
+                  (uint8_t*)(output_pyramid.GetData() +
+                             wrap_pyramids[p].GetX() +
+                             wrap_pyramids[p].GetY() *
+                                 (int64_t)output_pyramid.GetPitch()),
+                  1, output_pyramid.GetPitch(), false, 32);
+              wrap_pyramids[p].Shrink();
+              wrap_pyramids[p].Laplace();
 
               for (int level = 0; level < wrap_levels; ++level) {
-                const auto& in_level = wrap_pyramids[p]->GetLevel(level);
-                auto& out_level = output_pyramid->GetLevel(level);
+                const auto& in_level = wrap_pyramids[p].GetLevel(level);
+                auto& out_level = output_pyramid.GetLevel(level);
 
                 int x_offset = (in_level.x - out_level.x) >> level;
                 int y_offset = (in_level.y - out_level.y) >> level;
@@ -1204,7 +1201,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                   int sy = out_level.bands[b];
                   int ey = out_level.bands[b + 1];
 
-                  threadpool->Queue([=, &in_level, &out_level] {
+                  threadpool->Queue([=, &in_level, &out_level, &wrap_pyramids] {
                     for (int y = sy; y < ey; ++y) {
                       int in_line = y - y_offset;
                       if (in_line < 0) {
@@ -1220,9 +1217,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                       utils::CompositeLine(
                           input_p, output_p, wp + static_cast<int>(level == 0),
                           x_offset, in_level.width, out_level.width,
-                          out_level.pitch,
-                          wrap_pyramids[p]->masks[level]->data_,
-                          wrap_pyramids[p]->masks[level]->rows_[y]);
+                          out_level.pitch, wrap_pyramids[p].masks[level]->data_,
+                          wrap_pyramids[p].masks[level]->rows_[y]);
                     }
                   });
                 }
@@ -1232,12 +1228,12 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
               ++p;
             }
 
-            output_pyramid->Collapse(wrap_levels);
+            output_pyramid.Collapse(wrap_levels);
 
             if (w == 1) {
-              utils::UnswapH(output_pyramid);
+              utils::UnswapH(&output_pyramid);
             } else {
-              utils::UnswapV(output_pyramid);
+              utils::UnswapV(&output_pyramid);
             }
           }  // if (wrap & w)
         }    // w loop
@@ -1251,7 +1247,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
        ***********************************************************************/
       if (total_pixels != 0u) {
         double channel_total = 0;  // must be a double
-        float* data = output_pyramid->GetData();
+        float* data = output_pyramid.GetData();
         xor_mask.Start();
 
         for (int y = 0; y < height; ++y) {
@@ -1268,7 +1264,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
             }
           }
 
-          data += output_pyramid->GetPitch();
+          data += output_pyramid.GetPitch();
         }
 
         float avg = (float)channel_totals[c] / total_pixels;
@@ -1283,7 +1279,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
           }
         }
         float output_avg = (float)channel_total / total_pixels;
-        output_pyramid->Add(avg - output_avg, 1);
+        output_pyramid.Add(avg - output_avg, 1);
       }
 
       /***********************************************************************
@@ -1301,12 +1297,12 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
       switch (opts.output_bpp) {
         case 8:
-          output_pyramid->Out((uint8_t*)output_channels[c].get(), width,
-                              opts.gamma, opts.dither, true);
+          output_pyramid.Out((uint8_t*)output_channels[c].get(), width,
+                             opts.gamma, opts.dither, true);
           break;
         case 16:
-          output_pyramid->Out((uint16_t*)output_channels[c].get(), width,
-                              opts.gamma, opts.dither, true);
+          output_pyramid.Out((uint16_t*)output_channels[c].get(), width,
+                             opts.gamma, opts.dither, true);
           break;
       }
 

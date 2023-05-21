@@ -7,6 +7,7 @@
 
 #include <cmath>
 
+#include "src/aligned_ptr.h"
 #include "src/linux_overrides.h"
 #include "src/pnger.h"
 #include "src/threadpool.h"
@@ -88,32 +89,20 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y) {
     level->bands.push_back(level->height);
   }
 
-  lines_ = new __m128*[threadpool_->GetNThreads()];
+  lines_.resize(threadpool_->GetNThreads());
 
   for (int i = 0; i < threadpool_->GetNThreads(); ++i) {
-    lines_[i] = (__m128*)_aligned_malloc(levels_[0].pitch * sizeof(float),
-                                         16);  // was 32
+    lines_[i] = memory::AlignedM128Ptr{
+        (__m128*)_aligned_malloc(levels_[0].pitch * sizeof(float), 16)};
   }
-}
-
-Pyramid::~Pyramid() {
-  for (int i = 0; i < threadpool_->GetNThreads(); ++i) {
-    _aligned_free(lines_[i]);
-  }
-  delete[] lines_;
-
-  levels_.clear();
-
-  free(lut_);
 }
 
 /***********************************************************************
  * copiers
  ***********************************************************************/
 void Pyramid::set_lut(int bits, bool gamma) {
-  if (lut_bits_ < bits || lut_gamma_ != gamma || (lut_ == nullptr)) {
-    free(lut_);
-    lut_ = (float*)malloc((1 << bits) << 2);
+  if (lut_bits_ < bits || lut_gamma_ != gamma || (lut_.empty())) {
+    lut_.resize(1 << bits);
     lut_bits_ = bits;
     lut_gamma_ = gamma;
   }
@@ -460,8 +449,8 @@ void Pyramid::Subsample(int sub_w, int sub_h, Pyramid* source) {
   int p = 0;
   auto* in = (__m128*)source->levels_[0].data.get();
   auto* out = (__m128*)levels_[0].data.get();
-  __m128** temp_lines = source->lines_;
-  __m128* line = temp_lines[0];
+  auto& temp_lines = source->lines_;
+  __m128* line = temp_lines[0].get();
   int m128_pitch_in = source->levels_[0].m128_pitch;
   int m128_pitch_out = levels_[0].m128_pitch;
   int mid_pitch = sub_w == 2 ? ((m128_pitch_in >> 1) + 1) & ~1 : m128_pitch_in;
@@ -596,7 +585,7 @@ void Pyramid::Shrink() {
 
     for (int t = 0; t < (int)levels_[l + 1].bands.size() - 1; ++t) {
       threadpool_->Queue([=, this] {
-        ShrinkThread(lines_[t], hi, lo, levels_[l].m128_pitch,
+        ShrinkThread(lines_[t].get(), hi, lo, levels_[l].m128_pitch,
                      levels_[l + 1].m128_pitch, first_bad_line, height_odd,
                      levels_[l + 1].bands[t], levels_[l + 1].bands[t + 1],
                      levels_[l].x_shift, levels_[l].y_shift);

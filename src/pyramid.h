@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 
+#include "src/aligned_ptr.h"
 #include "src/mapalloc.h"
 #include "src/threadpool.h"
 
@@ -31,8 +32,8 @@ class Pyramid {
 
  private:
   std::vector<Level> levels_;
-  __m128** lines_;
-  float* lut_ = nullptr;
+  std::vector<memory::AlignedM128Ptr> lines_;
+  std::vector<float> lut_;
   int lut_bits_ = 0;
   bool lut_gamma_ = false;
   int out_max_;
@@ -72,7 +73,12 @@ class Pyramid {
 
  public:
   Pyramid(int width, int height, int _levels, int x, int y);
-  ~Pyramid();
+
+  Pyramid(const Pyramid& other) = delete;
+  Pyramid& operator=(const Pyramid& other) = delete;
+  Pyramid(Pyramid&& other) = default;
+  Pyramid& operator=(Pyramid&& other) = default;
+
   static int DefaultNumLevels(int width, int height) {
     return 8; /* (int)ceil(log2(max(width, height))); */
   };
@@ -115,6 +121,7 @@ class Pyramid {
   [[nodiscard]] std::size_t GetTotalBytes() const { return total_bytes_; }
   std::vector<Level>& GetLevels() { return levels_; };
   Level& GetLevel(int level) { return levels_[level]; };
+  const Level& GetLevel(int level) const { return levels_[level]; };
   void Png(const char* filename);
 };
 

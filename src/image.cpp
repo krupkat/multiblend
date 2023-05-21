@@ -23,10 +23,7 @@ Image::~Image() {
   for (auto it = masks_.begin(); it < masks_.end(); ++it) {
     delete (*it);
   }
-  channels_.clear();
   masks_.clear();
-
-  delete pyramid_;
 }
 
 /***********************************************************************
