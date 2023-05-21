@@ -53,6 +53,7 @@ class MapAllocDeleter {
   void operator()(void* p) const { MapAlloc::Free(p); }
 };
 
-using MapAllocPtr = std::unique_ptr<void, MapAllocDeleter>;
+template <typename TType>
+using MapAllocPtr = std::unique_ptr<TType, MapAllocDeleter>;
 
 }  // namespace multiblend::memory

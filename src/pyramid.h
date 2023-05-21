@@ -30,7 +30,6 @@ class Pyramid {
  private:
   std::vector<Level> levels_;
   __m128** lines_;
-  bool shared_;
   bool no_alloc_;
   float* lut_ = nullptr;
   int lut_bits_ = 0;
@@ -71,9 +70,7 @@ class Pyramid {
   std::size_t total_bytes_ = 0;
 
  public:
-  Pyramid(int width, int height, int _levels = 0, Pyramid* share = nullptr);
-  Pyramid(int width, int height, int _levels, int x, int y, bool no_alloc,
-          Pyramid* share = nullptr);
+  Pyramid(int width, int height, int _levels, int x, int y, bool no_alloc);
   ~Pyramid();
   static int DefaultNumLevels(int width, int height) {
     return 8; /* (int)ceil(log2(max(width, height))); */

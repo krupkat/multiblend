@@ -18,11 +18,10 @@ enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG };
 class Channel {
  public:
   explicit Channel(std::size_t bytes) : bytes_(bytes) {
-    data_ = memory::MapAllocPtr{memory::MapAlloc::Alloc(bytes_),
-                                memory::MapAllocDeleter{}};
+    data_ = memory::MapAllocPtr<void>{memory::MapAlloc::Alloc(bytes_)};
   };
 
-  memory::MapAllocPtr data_ = nullptr;
+  memory::MapAllocPtr<void> data_ = nullptr;
   std::size_t bytes_;
   FILE* file_ = nullptr;
 };

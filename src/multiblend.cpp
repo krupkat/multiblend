@@ -107,8 +107,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   /***********************************************************************
    * Allocate working space for reading/trimming/extraction
    ***********************************************************************/
-  auto untrimmed_data = memory::MapAllocPtr{
-      memory::MapAlloc::Alloc(untrimmed_bytes), memory::MapAllocDeleter{}};
+  auto untrimmed_data =
+      memory::MapAllocPtr<void>{memory::MapAlloc::Alloc(untrimmed_bytes)};
 
   /***********************************************************************
    * Read/trim/extract
@@ -917,8 +917,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   /***********************************************************************
    * No output?
    ***********************************************************************/
-  std::array<memory::MapAllocPtr, 3> output_channels = {nullptr, nullptr,
-                                                        nullptr};
+  std::array<memory::MapAllocPtr<void>, 3> output_channels = {nullptr, nullptr,
+                                                              nullptr};
 
   if (opts.output_type != io::ImageType::MB_NONE) {
     /***********************************************************************
@@ -1287,10 +1287,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       timer.Start();
 
       try {
-        output_channels[c] = memory::MapAllocPtr{
-            memory::MapAlloc::Alloc(((std::size_t)width * height)
-                                    << (opts.output_bpp >> 4)),
-            memory::MapAllocDeleter{}};
+        output_channels[c] = memory::MapAllocPtr<void>{memory::MapAlloc::Alloc(
+            ((std::size_t)width * height) << (opts.output_bpp >> 4))};
       } catch (char* e) {
         printf("%s\n", e);
         exit(EXIT_FAILURE);
