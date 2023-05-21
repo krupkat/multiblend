@@ -947,17 +947,17 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     if ((opts.wrap & 1) != 0) {
       wrap_levels_h = (int)std::floor(std::log2((width >> 1) + 4.0f) - 1);
       wrap_pyramids.push_back(
-          new PyramidWithMasks(width >> 1, height, wrap_levels_h, 0, 0, true));
+          new PyramidWithMasks(width >> 1, height, wrap_levels_h, 0, 0));
       wrap_pyramids.push_back(new PyramidWithMasks(
-          (width + 1) >> 1, height, wrap_levels_h, width >> 1, 0, true));
+          (width + 1) >> 1, height, wrap_levels_h, width >> 1, 0));
     }
 
     if ((opts.wrap & 2) != 0) {
       wrap_levels_v = (int)std::floor(std::log2((height >> 1) + 4.0f) - 1);
       wrap_pyramids.push_back(
-          new PyramidWithMasks(width, height >> 1, wrap_levels_v, 0, 0, true));
+          new PyramidWithMasks(width, height >> 1, wrap_levels_v, 0, 0));
       wrap_pyramids.push_back(new PyramidWithMasks(
-          width, (height + 1) >> 1, wrap_levels_v, 0, height >> 1, true));
+          width, (height + 1) >> 1, wrap_levels_v, 0, height >> 1));
     }
 
     // masks
@@ -995,7 +995,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     for (int i = 0; i < n_images; ++i) {
       images[i].pyramid_ =
           new Pyramid(images[i].width_, images[i].height_, blend_levels,
-                      images[i].xpos_, images[i].ypos_, true);
+                      images[i].xpos_, images[i].ypos_);
     }
 
     for (int l = total_levels - 1; l >= 0; --l) {
@@ -1040,7 +1040,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
      ***********************************************************************/
     Pyramid* output_pyramid = nullptr;
 
-    output_pyramid = new Pyramid(width, height, total_levels, 0, 0, true);
+    output_pyramid = new Pyramid(width, height, total_levels, 0, 0);
 
     for (int level = total_levels - 1; level >= 0; --level) {
       float* temp;

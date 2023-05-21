@@ -16,9 +16,7 @@ namespace multiblend {
 /***********************************************************************
  * Constructor/destructor
  ***********************************************************************/
-Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
-                 bool _no_alloc)
-    : no_alloc_(_no_alloc) {
+Pyramid::Pyramid(int width, int height, int _levels, int x, int y) {
   float* data;
 
   int n_levels = DefaultNumLevels(width, height);
@@ -45,18 +43,7 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
                         sizeof(float);
     total_bytes_ += bytes;
 
-    if (!no_alloc_) {
-      data = (float*)_aligned_malloc(bytes, 16);  // was 32
-      if (data == nullptr) {
-        for (int j = 0; j < n; ++j) {
-          _aligned_free(levels_[j].data);
-        }
-        throw(bytes);
-      }
-    } else {
-      data = nullptr;
-    }
-
+    data = nullptr;
     levels_.push_back({n, width, height, pitch, pitch >> 2, bytes, data, x, y,
                        x_shift, y_shift,
                        n != 0 ? levels_[n - 1].x_shift : false,
@@ -109,11 +96,6 @@ Pyramid::~Pyramid() {
   }
   delete[] lines_;
 
-  if (!no_alloc_) {
-    for (auto it = levels_.begin(); it < levels_.end(); ++it) {
-      _aligned_free(it->data);
-    }
-  }
   levels_.clear();
 
   free(lut_);
