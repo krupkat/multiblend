@@ -882,7 +882,7 @@ void Image::MaskPng(int i) {
   uint32_t cur;
 
   for (int l = 0; l < (int)masks_.size(); ++l) {
-    auto* data = (uint32_t*)masks_[l]->data_;
+    auto* data = (uint32_t*)masks_[l]->data_.get();
     uint8_t* line = temp + static_cast<ptrdiff_t>(py) * masks_[0]->width_ + px;
     for (int y = 0; y < masks_[l]->height_; ++y) {
       int x = 0;

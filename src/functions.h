@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <memory>
 #include <vector>
 
 #include "src/pyramid.h"
@@ -11,6 +12,11 @@ namespace multiblend::utils {
 
 extern int verbosity;
 
+class FreeDeleter {
+ public:
+  void operator()(void* ptr) const { free(ptr); }
+};
+
 /***********************************************************************
  * Flexible data class
  ***********************************************************************/
@@ -18,40 +24,14 @@ class Flex {
  public:
   Flex() : width_(0), height_(0) {}
   Flex(int width, int height) : width_(width), height_(height) {
-    rows_ = new int[height_];
+    rows_.resize(height_);
     NextLine();
   };
 
   Flex(const Flex& other) = delete;
   Flex& operator=(const Flex& other) = delete;
-
-  Flex(Flex&& other) noexcept { *this = std::move(other); }
-  Flex& operator=(Flex&& other) noexcept {
-    if (this != &other) {
-      if (data_ != nullptr) {
-        free(data_);
-      }
-
-      delete[] rows_;
-
-      data_ = other.data_;
-      width_ = other.width_;
-      height_ = other.height_;
-      rows_ = other.rows_;
-      y_ = other.y_;
-
-      size_ = other.size_;
-      p_ = other.p_;
-      end_p_ = other.end_p_;
-      mask_count_ = other.mask_count_;
-      mask_white_ = other.mask_white_;
-      first_ = other.first_;
-
-      other.data_ = nullptr;
-      other.rows_ = nullptr;
-    }
-    return *this;
-  }
+  Flex(Flex&& other) noexcept = default;
+  Flex& operator=(Flex&& other) noexcept = default;
 
   void NextLine() {
     end_p_ = p_;
@@ -62,13 +42,13 @@ class Flex {
     if (p_ + (width_ << 2) > size_) {
       if (y_ == 0) {
         size_ = (std::max)(height_, 16) << 4;  // was << 2
-        data_ = (uint8_t*)malloc(size_);
+        data_ = {(uint8_t*)malloc(size_), FreeDeleter{}};
       } else if (y_ < height_) {
         int prev_size = size_;
         int new_size1 = (p_ / y_) * height_ + (width_ << 4);
         int new_size2 = size_ << 1;
         size_ = (std::max)(new_size1, new_size2);
-        data_ = (uint8_t*)realloc(data_, size_);
+        data_ = {(uint8_t*)realloc(data_.release(), size_), FreeDeleter{}};
       }
     }
 
@@ -77,16 +57,16 @@ class Flex {
   }
 
   void Shrink() {
-    data_ = (uint8_t*)realloc(data_, p_);
+    data_ = {(uint8_t*)realloc(data_.release(), p_), FreeDeleter{}};
     end_p_ = p_;
   }
 
   void Write32(uint32_t w) {
-    *((uint32_t*)&data_[p_]) = w;
+    *((uint32_t*)&data_.get()[p_]) = w;
     p_ += 4;
   }
   void Write64(uint64_t w) {
-    *((uint64_t*)&data_[p_]) = w;
+    *((uint64_t*)&data_.get()[p_]) = w;
     p_ += 8;
   }
 
@@ -112,21 +92,23 @@ class Flex {
     }
   }
 
-  void IncrementLast32(int inc) const { *((uint32_t*)&data_[p_ - 4]) += inc; }
+  void IncrementLast32(int inc) const {
+    *((uint32_t*)&data_.get()[p_ - 4]) += inc;
+  }
 
-  uint8_t ReadBackwards8() { return data_[--p_]; }
-  uint16_t ReadBackwards16() { return *((uint16_t*)&data_[p_ -= 2]); }
-  uint32_t ReadBackwards32() { return *((uint32_t*)&data_[p_ -= 4]); }
-  uint64_t ReadBackwards64() { return *((uint64_t*)&data_[p_ -= 8]); }
+  uint8_t ReadBackwards8() { return data_.get()[--p_]; }
+  uint16_t ReadBackwards16() { return *((uint16_t*)&data_.get()[p_ -= 2]); }
+  uint32_t ReadBackwards32() { return *((uint32_t*)&data_.get()[p_ -= 4]); }
+  uint64_t ReadBackwards64() { return *((uint64_t*)&data_.get()[p_ -= 8]); }
 
   uint32_t ReadForwards32() {
-    uint32_t out = *((uint32_t*)&data_[p_]);
+    uint32_t out = *((uint32_t*)&data_.get()[p_]);
     p_ += 4;
     return out;
   }
 
   void Copy(uint8_t* src, int len) {
-    memcpy(&data_[p_], src, len);
+    memcpy(&data_.get()[p_], src, len);
     p_ += len;
   }
 
@@ -134,18 +116,10 @@ class Flex {
 
   void End() { p_ = end_p_; }
 
-  ~Flex() {
-    if (data_ != nullptr) {
-      free(data_);
-    }
-
-    delete[] rows_;
-  }
-
-  uint8_t* data_ = nullptr;
+  std::unique_ptr<uint8_t, FreeDeleter> data_ = nullptr;
   int width_;
   int height_;
-  int* rows_ = nullptr;
+  std::vector<int> rows_;
   int y_ = -1;
 
  private:

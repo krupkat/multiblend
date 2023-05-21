@@ -1132,7 +1132,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                   utils::CompositeLine(input_p, output_p, i, x_offset,
                                        in_level.width, out_level.width,
                                        out_level.pitch,
-                                       images[i].masks_[level]->data_,
+                                       images[i].masks_[level]->data_.get(),
                                        images[i].masks_[level]->rows_[y]);
                 }
               });
@@ -1217,7 +1217,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                       utils::CompositeLine(
                           input_p, output_p, wp + static_cast<int>(level == 0),
                           x_offset, in_level.width, out_level.width,
-                          out_level.pitch, wrap_pyramids[p].masks[level]->data_,
+                          out_level.pitch,
+                          wrap_pyramids[p].masks[level]->data_.get(),
                           wrap_pyramids[p].masks[level]->rows_[y]);
                     }
                   });
