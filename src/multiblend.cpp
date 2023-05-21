@@ -998,39 +998,42 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                       images[i].xpos_, images[i].ypos_);
     }
 
-    for (int l = total_levels - 1; l >= 0; --l) {
+    for (int level = total_levels - 1; level >= 0; --level) {
       std::size_t max_bytes = 0;
 
-      if (l < blend_levels) {
+      if (level < blend_levels) {
         for (const auto& image : images) {
-          max_bytes = std::max(max_bytes, image.pyramid_->GetLevel(l).bytes);
+          max_bytes =
+              std::max(max_bytes, image.pyramid_->GetLevel(level).bytes);
         }
       }
 
       for (auto& py : wrap_pyramids) {
-        if (l < py->GetNLevels()) {
-          max_bytes = std::max(max_bytes, py->GetLevel(l).bytes);
+        if (level < py->GetNLevels()) {
+          max_bytes = std::max(max_bytes, py->GetLevel(level).bytes);
         }
       }
 
-      float* temp;
+      std::shared_ptr<float> temp = nullptr;
 
       try {
-        temp = (float*)memory::MapAlloc::Alloc(max_bytes);
+        temp =
+            std::shared_ptr<float>{(float*)memory::MapAlloc::Alloc(max_bytes),
+                                   memory::MapAllocDeleter{}};
       } catch (char* e) {
         printf("%s\n", e);
         exit(EXIT_FAILURE);
       }
 
-      if (l < blend_levels) {
+      if (level < blend_levels) {
         for (auto& image : images) {
-          image.pyramid_->GetLevel(l).data = temp;
+          image.pyramid_->GetLevel(level).data = temp;
         }
       }
 
       for (auto& py : wrap_pyramids) {
-        if (l < py->GetNLevels()) {
-          py->GetLevel(l).data = temp;
+        if (level < py->GetNLevels()) {
+          py->GetLevel(level).data = temp;
         }
       }
     }
@@ -1043,11 +1046,13 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     output_pyramid = new Pyramid(width, height, total_levels, 0, 0);
 
     for (int level = total_levels - 1; level >= 0; --level) {
-      float* temp;
+      std::shared_ptr<float> temp = nullptr;
 
       try {
-        temp = (float*)memory::MapAlloc::Alloc(
-            output_pyramid->GetLevel(level).bytes);
+        temp =
+            std::shared_ptr<float>{(float*)memory::MapAlloc::Alloc(
+                                       output_pyramid->GetLevel(level).bytes),
+                                   memory::MapAllocDeleter{}};
       } catch (char* e) {
         printf("%s\n", e);
         exit(EXIT_FAILURE);
@@ -1104,8 +1109,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
           timer.Start();
 
           for (int level = 0; level < blend_levels; ++level) {
-            auto in_level = images[i].pyramid_->GetLevel(level);
-            auto out_level = output_pyramid->GetLevel(level);
+            const auto& in_level = images[i].pyramid_->GetLevel(level);
+            auto& out_level = output_pyramid->GetLevel(level);
 
             int x_offset = (in_level.x - out_level.x) >> level;
             int y_offset = (in_level.y - out_level.y) >> level;
@@ -1114,7 +1119,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
               int sy = out_level.bands[b];
               int ey = out_level.bands[b + 1];
 
-              threadpool->Queue([=, &images] {
+              threadpool->Queue([=, &images, &in_level, &out_level] {
                 for (int y = sy; y < ey; ++y) {
                   int in_line = y - y_offset;
                   if (in_line < 0) {
@@ -1122,10 +1127,10 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                   } else if (in_line > in_level.height - 1) {
                     in_line = in_level.height - 1;
                   }
-                  float* input_p =
-                      in_level.data + (std::size_t)in_line * in_level.pitch;
+                  float* input_p = in_level.data.get() +
+                                   (std::size_t)in_line * in_level.pitch;
                   float* output_p =
-                      out_level.data + (std::size_t)y * out_level.pitch;
+                      out_level.data.get() + (std::size_t)y * out_level.pitch;
 
                   utils::CompositeLine(input_p, output_p, i, x_offset,
                                        in_level.width, out_level.width,
@@ -1189,8 +1194,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
               wrap_pyramids[p]->Laplace();
 
               for (int level = 0; level < wrap_levels; ++level) {
-                auto in_level = wrap_pyramids[p]->GetLevel(level);
-                auto out_level = output_pyramid->GetLevel(level);
+                const auto& in_level = wrap_pyramids[p]->GetLevel(level);
+                auto& out_level = output_pyramid->GetLevel(level);
 
                 int x_offset = (in_level.x - out_level.x) >> level;
                 int y_offset = (in_level.y - out_level.y) >> level;
@@ -1199,7 +1204,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                   int sy = out_level.bands[b];
                   int ey = out_level.bands[b + 1];
 
-                  threadpool->Queue([=] {
+                  threadpool->Queue([=, &in_level, &out_level] {
                     for (int y = sy; y < ey; ++y) {
                       int in_line = y - y_offset;
                       if (in_line < 0) {
@@ -1207,10 +1212,10 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                       } else if (in_line > in_level.height - 1) {
                         in_line = in_level.height - 1;
                       }
-                      float* input_p =
-                          in_level.data + (std::size_t)in_line * in_level.pitch;
-                      float* output_p =
-                          out_level.data + (std::size_t)y * out_level.pitch;
+                      float* input_p = in_level.data.get() +
+                                       (std::size_t)in_line * in_level.pitch;
+                      float* output_p = out_level.data.get() +
+                                        (std::size_t)y * out_level.pitch;
 
                       utils::CompositeLine(
                           input_p, output_p, wp + static_cast<int>(level == 0),

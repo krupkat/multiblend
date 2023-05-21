@@ -2,8 +2,10 @@
 
 #include <cstring>
 #include <immintrin.h>
+#include <memory>
 #include <vector>
 
+#include "src/mapalloc.h"
 #include "src/threadpool.h"
 
 namespace multiblend {
@@ -17,7 +19,7 @@ class Pyramid {
     int pitch;
     int m128_pitch;
     std::size_t bytes;
-    float* data;
+    std::shared_ptr<float> data;
     int x;
     int y;
     bool x_shift;
@@ -97,7 +99,7 @@ class Pyramid {
            int level = 0, int step = 0, int offset = 0, bool chroma = false);
   int GetNLevels() { return (int)levels_.size(); };
   int GetPitch(int level = 0) { return levels_[level].pitch; };
-  float* GetData(int level = 0) { return levels_[level].data; };
+  float* GetData(int level = 0) { return levels_[level].data.get(); };
   int GetWidth(int level = 0) { return levels_[level].width; };
   int GetHeight(int level = 0) { return levels_[level].height; };
   int GetX(int level = 0) { return levels_[level].x; };
