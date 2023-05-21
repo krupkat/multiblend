@@ -18,12 +18,11 @@ enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG };
 class Channel {
  public:
   explicit Channel(std::size_t bytes) : bytes_(bytes) {
-    data_ = memory::MapAlloc::Alloc(bytes_);
+    data_ = memory::MapAllocPtr{memory::MapAlloc::Alloc(bytes_),
+                                memory::MapAllocDeleter{}};
   };
 
-  ~Channel() { memory::MapAlloc::Free(data_); };
-
-  void* data_;
+  memory::MapAllocPtr data_ = nullptr;
   std::size_t bytes_;
   FILE* file_ = nullptr;
 };
@@ -46,7 +45,7 @@ class Image {
   int ypos_;
   int xpos_add_ = 0;
   int ypos_add_ = 0;
-  std::vector<Channel*> channels_;
+  std::vector<Channel> channels_;
   Pyramid* pyramid_ = nullptr;
   tiff::GeoTIFFInfo geotiff_;
   int tiff_width_;

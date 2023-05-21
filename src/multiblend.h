@@ -4,6 +4,7 @@
 
 #include "src/functions.h"
 #include "src/image.h"
+#include "src/mapalloc.h"
 
 namespace multiblend {
 
@@ -44,7 +45,7 @@ struct Result {
   int height = 0;
   bool no_mask = false;
 
-  std::array<void*, 3> output_channels = {NULL, NULL, NULL};
+  std::array<memory::MapAllocPtr, 3> output_channels;
   int min_xpos = 0x7fffffff;
   int min_ypos = 0x7fffffff;
 

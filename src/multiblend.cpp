@@ -107,7 +107,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   /***********************************************************************
    * Allocate working space for reading/trimming/extraction
    ***********************************************************************/
-  auto untrimmed_data = std::unique_ptr<void, memory::MapAllocDeleter>{
+  auto untrimmed_data = memory::MapAllocPtr{
       memory::MapAlloc::Alloc(untrimmed_bytes), memory::MapAllocDeleter{}};
 
   /***********************************************************************
@@ -568,11 +568,11 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
             case 8: {
               uint16_t v;
               while ((total_count--) != 0) {
-                v = ((uint8_t*)images[xor_image].channels_[0]->data_)[p];
+                v = ((uint8_t*)images[xor_image].channels_[0].data_.get())[p];
                 channel_totals[0] += static_cast<uint64_t>(v) * v;
-                v = ((uint8_t*)images[xor_image].channels_[1]->data_)[p];
+                v = ((uint8_t*)images[xor_image].channels_[1].data_.get())[p];
                 channel_totals[1] += static_cast<uint64_t>(v) * v;
-                v = ((uint8_t*)images[xor_image].channels_[2]->data_)[p];
+                v = ((uint8_t*)images[xor_image].channels_[2].data_.get())[p];
                 channel_totals[2] += static_cast<uint64_t>(v) * v;
                 ++p;
               }
@@ -580,11 +580,11 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
             case 16: {
               uint32_t v;
               while ((total_count--) != 0) {
-                v = ((uint16_t*)images[xor_image].channels_[0]->data_)[p];
+                v = ((uint16_t*)images[xor_image].channels_[0].data_.get())[p];
                 channel_totals[0] += static_cast<uint64_t>(v) * v;
-                v = ((uint16_t*)images[xor_image].channels_[1]->data_)[p];
+                v = ((uint16_t*)images[xor_image].channels_[1].data_.get())[p];
                 channel_totals[1] += static_cast<uint64_t>(v) * v;
-                v = ((uint16_t*)images[xor_image].channels_[2]->data_)[p];
+                v = ((uint16_t*)images[xor_image].channels_[2].data_.get())[p];
                 channel_totals[2] += static_cast<uint64_t>(v) * v;
                 ++p;
               }
@@ -595,22 +595,22 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
             case 8: {
               while ((total_count--) != 0) {
                 channel_totals[0] +=
-                    ((uint8_t*)images[xor_image].channels_[0]->data_)[p];
+                    ((uint8_t*)images[xor_image].channels_[0].data_.get())[p];
                 channel_totals[1] +=
-                    ((uint8_t*)images[xor_image].channels_[1]->data_)[p];
+                    ((uint8_t*)images[xor_image].channels_[1].data_.get())[p];
                 channel_totals[2] +=
-                    ((uint8_t*)images[xor_image].channels_[2]->data_)[p];
+                    ((uint8_t*)images[xor_image].channels_[2].data_.get())[p];
                 ++p;
               }
             } break;
             case 16: {
               while ((total_count--) != 0) {
                 channel_totals[0] +=
-                    ((uint16_t*)images[xor_image].channels_[0]->data_)[p];
+                    ((uint16_t*)images[xor_image].channels_[0].data_.get())[p];
                 channel_totals[1] +=
-                    ((uint16_t*)images[xor_image].channels_[1]->data_)[p];
+                    ((uint16_t*)images[xor_image].channels_[1].data_.get())[p];
                 channel_totals[2] +=
-                    ((uint16_t*)images[xor_image].channels_[2]->data_)[p];
+                    ((uint16_t*)images[xor_image].channels_[2].data_.get())[p];
                 ++p;
               }
             } break;
@@ -917,7 +917,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   /***********************************************************************
    * No output?
    ***********************************************************************/
-  std::array<void*, 3> output_channels = {NULL, NULL, NULL};
+  std::array<memory::MapAllocPtr, 3> output_channels = {nullptr, nullptr,
+                                                        nullptr};
 
   if (opts.output_type != io::ImageType::MB_NONE) {
     /***********************************************************************
@@ -1077,8 +1078,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         for (int i = 0; i < n_images; ++i) {
           timer.Start();
 
-          images[i].pyramid_->Copy((uint8_t*)images[i].channels_[c]->data_, 1,
-                                   images[i].width_, opts.gamma,
+          images[i].pyramid_->Copy((uint8_t*)images[i].channels_[c].data_.get(),
+                                   1, images[i].width_, opts.gamma,
                                    images[i].bpp_);
           if (opts.output_bpp != images[i].bpp_) {
             images[i].pyramid_->Multiply(
@@ -1086,8 +1087,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                               : (opts.output_bpp == 8 ? 1.0f / 257 : 257));
           }
 
-          delete images[i].channels_[c];
-          images[i].channels_[c] = nullptr;
+          images[i].channels_[c].data_.reset();
 
           timing.copy_time += timer.Read();
 
@@ -1148,7 +1148,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       } else {
         timer.Start();
 
-        output_pyramid->Copy((uint8_t*)images[0].channels_[c]->data_, 1,
+        output_pyramid->Copy((uint8_t*)images[0].channels_[c].data_.get(), 1,
                              images[0].width_, opts.gamma, images[0].bpp_);
         if (opts.output_bpp != images[0].bpp_) {
           output_pyramid->Multiply(
@@ -1156,8 +1156,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                             : (opts.output_bpp == 8 ? 1.0f / 257 : 257));
         }
 
-        delete images[0].channels_[c];
-        images[0].channels_[c] = nullptr;
+        images[0].channels_[c].data_.reset();
 
         timing.copy_time += timer.Read();
       }
@@ -1288,8 +1287,10 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       timer.Start();
 
       try {
-        output_channels[c] = memory::MapAlloc::Alloc(
-            ((std::size_t)width * height) << (opts.output_bpp >> 4));
+        output_channels[c] = memory::MapAllocPtr{
+            memory::MapAlloc::Alloc(((std::size_t)width * height)
+                                    << (opts.output_bpp >> 4)),
+            memory::MapAllocDeleter{}};
       } catch (char* e) {
         printf("%s\n", e);
         exit(EXIT_FAILURE);
@@ -1297,12 +1298,12 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
       switch (opts.output_bpp) {
         case 8:
-          output_pyramid->Out((uint8_t*)output_channels[c], width, opts.gamma,
-                              opts.dither, true);
+          output_pyramid->Out((uint8_t*)output_channels[c].get(), width,
+                              opts.gamma, opts.dither, true);
           break;
         case 16:
-          output_pyramid->Out((uint16_t*)output_channels[c], width, opts.gamma,
-                              opts.dither, true);
+          output_pyramid->Out((uint16_t*)output_channels[c].get(), width,
+                              opts.gamma, opts.dither, true);
           break;
       }
 
@@ -1316,7 +1317,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       .height = height,
       .no_mask = opts.no_mask,
 
-      .output_channels = output_channels,
+      .output_channels = std::move(output_channels),
       .min_xpos = min_xpos,
       .min_ypos = min_ypos,
       .full_mask = std::move(full_mask),

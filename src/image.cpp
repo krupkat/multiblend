@@ -20,9 +20,6 @@ int hist_blu[256];
 Image::Image(char* filename) : filename_(filename) {}
 
 Image::~Image() {
-  for (auto it = channels_.begin(); it < channels_.end(); ++it) {
-    delete (*it);
-  }
   for (auto it = masks_.begin(); it < masks_.end(); ++it) {
     delete (*it);
   }
@@ -774,7 +771,7 @@ void Image::Read(void* data, bool gamma) {
   std::size_t channel_bytes = ((std::size_t)width_ * height_) << (bpp_ >> 4);
 
   for (int c = 0; c < 3; ++c) {
-    channels_.push_back(new Channel(channel_bytes));
+    channels_.emplace_back(channel_bytes);
   }
 
   if (spp_ == 4) {
@@ -786,9 +783,9 @@ void Image::Read(void* data, bool gamma) {
         for (y = 0; y < height_; ++y) {
           for (x = 0; x < width_; ++x) {
             uint32_t pixel = line[x];
-            ((uint8_t*)channels_[0]->data_)[p + x] = pixel & 0xff;
-            ((uint8_t*)channels_[1]->data_)[p + x] = (pixel >> 8) & 0xff;
-            ((uint8_t*)channels_[2]->data_)[p + x] = (pixel >> 16) & 0xff;
+            ((uint8_t*)channels_[0].data_.get())[p + x] = pixel & 0xff;
+            ((uint8_t*)channels_[1].data_.get())[p + x] = (pixel >> 8) & 0xff;
+            ((uint8_t*)channels_[2].data_.get())[p + x] = (pixel >> 16) & 0xff;
           }
           p += width_;
           line += tiff_width_;
@@ -801,9 +798,11 @@ void Image::Read(void* data, bool gamma) {
         for (y = 0; y < height_; ++y) {
           for (x = 0; x < width_; ++x) {
             uint64_t pixel = line[x];
-            ((uint16_t*)channels_[0]->data_)[p + x] = pixel & 0xffff;
-            ((uint16_t*)channels_[1]->data_)[p + x] = (pixel >> 16) & 0xffff;
-            ((uint16_t*)channels_[2]->data_)[p + x] = (pixel >> 32) & 0xffff;
+            ((uint16_t*)channels_[0].data_.get())[p + x] = pixel & 0xffff;
+            ((uint16_t*)channels_[1].data_.get())[p + x] =
+                (pixel >> 16) & 0xffff;
+            ((uint16_t*)channels_[2].data_.get())[p + x] =
+                (pixel >> 32) & 0xffff;
           }
           p += width_;
           line += tiff_width_;
@@ -819,15 +818,15 @@ void Image::Read(void* data, bool gamma) {
         for (y = 0; y < height_; ++y) {
           for (x = 0; x < width_; ++x) {
             byte = *bytes++;
-            ((uint8_t*)channels_[0]->data_)[p] = byte;
+            ((uint8_t*)channels_[0].data_.get())[p] = byte;
             // channel_totals[0] += gamma ? byte*byte : byte;
 
             byte = *bytes++;
-            ((uint8_t*)channels_[1]->data_)[p] = byte;
+            ((uint8_t*)channels_[1].data_.get())[p] = byte;
             // channel_totals[1] += gamma ? byte * byte : byte;
 
             byte = *bytes++;
-            ((uint8_t*)channels_[2]->data_)[p] = byte;
+            ((uint8_t*)channels_[2].data_.get())[p] = byte;
             // channel_totals[2] += gamma ? byte * byte : byte;
 
             ++p;
@@ -841,15 +840,15 @@ void Image::Read(void* data, bool gamma) {
         for (y = 0; y < height_; ++y) {
           for (x = 0; x < width_; ++x) {
             word = *words++;
-            ((uint16_t*)channels_[0]->data_)[p] = word;
+            ((uint16_t*)channels_[0].data_.get())[p] = word;
             // channel_totals[0] += gamma ? word * word : word;
 
             word = *words++;
-            ((uint16_t*)channels_[1]->data_)[p] = word;
+            ((uint16_t*)channels_[1].data_.get())[p] = word;
             // channel_totals[1] += gamma ? word * word : word;
 
             word = *words++;
-            ((uint16_t*)channels_[2]->data_)[p] = word;
+            ((uint16_t*)channels_[2].data_.get())[p] = word;
             // channel_totals[2] += gamma ? word * word : word;
 
             ++p;

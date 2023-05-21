@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 
 #ifdef _WIN32
@@ -51,5 +52,7 @@ class MapAllocDeleter {
  public:
   void operator()(void* p) const { MapAlloc::Free(p); }
 };
+
+using MapAllocPtr = std::unique_ptr<void, MapAllocDeleter>;
 
 }  // namespace multiblend::memory
