@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdio>
+#include <memory>
 #include <optional>
 
 #include <jpeglib.h>
@@ -15,6 +16,15 @@
 namespace multiblend::io {
 
 enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG };
+
+class JpegDecompressDeleter {
+ public:
+  void operator()(jpeg_decompress_struct* cinfo) const {
+    jpeg_finish_decompress(cinfo);
+    jpeg_destroy_decompress(cinfo);
+    delete cinfo;
+  }
+};
 
 class Channel {
  public:
@@ -76,8 +86,8 @@ class Image {
  private:
   TIFF* tiff_;
   FILE* file_;
-  struct jpeg_decompress_struct cinfo_;
-  struct jpeg_error_mgr jerr_;
+  std::unique_ptr<jpeg_decompress_struct, JpegDecompressDeleter> cinfo_;
+  jpeg_error_mgr jerr_;
   png_structp png_ptr_;
 };
 

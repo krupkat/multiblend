@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <memory>
 
 #include "src/functions.h"
 #include "src/geotiff.h"
@@ -186,22 +187,24 @@ void Image::Open() {
         utils::die("Could not open %s", filename_);
       }
 
-      cinfo_.err = jpeg_std_error(&jerr_);
-      jpeg_create_decompress(&cinfo_);
-      jpeg_stdio_src(&cinfo_, file_);
-      jpeg_read_header(&cinfo_, TRUE);
-      jpeg_start_decompress(&cinfo_);
+      cinfo_ = {new jpeg_decompress_struct{}, JpegDecompressDeleter{}};
 
-      if ((cinfo_.output_width == 0u) || (cinfo_.output_height == 0u)) {
+      cinfo_->err = jpeg_std_error(&jerr_);
+      jpeg_create_decompress(cinfo_.get());
+      jpeg_stdio_src(cinfo_.get(), file_);
+      jpeg_read_header(cinfo_.get(), TRUE);
+      jpeg_start_decompress(cinfo_.get());
+
+      if ((cinfo_->output_width == 0u) || (cinfo_->output_height == 0u)) {
         utils::die("Unknown JPEG format (%s)", filename_);
       }
 
-      if (cinfo_.out_color_components != 3) {
+      if (cinfo_->out_color_components != 3) {
         utils::die("Unknown JPEG format (%s)", filename_);
       }
 
-      tiff_width_ = cinfo_.output_width;
-      tiff_height_ = tiff_u_height_ = cinfo_.output_height;
+      tiff_width_ = cinfo_->output_width;
+      tiff_height_ = tiff_u_height_ = cinfo_->output_height;
 
       bpp_ = 8;
       spp_ = 3;
@@ -295,8 +298,8 @@ void Image::Read(void* data, bool gamma) {
     case ImageType::MB_JPEG: {
       auto* pointer = (uint8_t*)data;
 
-      while (cinfo_.output_scanline < cinfo_.output_height) {
-        jpeg_read_scanlines(&cinfo_, &pointer, 1);
+      while (cinfo_->output_scanline < cinfo_->output_height) {
+        jpeg_read_scanlines(cinfo_.get(), &pointer, 1);
         pointer += (tiff_width_ * spp_) << (bpp_ >> 4);
       }
     } break;
