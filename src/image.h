@@ -11,6 +11,7 @@
 #include "src/functions.h"
 #include "src/geotiff.h"
 #include "src/mapalloc.h"
+#include "src/pnger.h"
 #include "src/pyramid.h"
 
 namespace multiblend::io {
@@ -88,7 +89,7 @@ class Image {
   FILE* file_;
   std::unique_ptr<jpeg_error_mgr> jerr_;
   std::unique_ptr<jpeg_decompress_struct, JpegDecompressDeleter> cinfo_;
-  png_structp png_ptr_;
+  std::unique_ptr<png_struct, io::png::PngReadStructDeleter> png_ptr_;
 };
 
 }  // namespace multiblend::io

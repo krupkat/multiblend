@@ -17,6 +17,13 @@ class PngWriteStructDeleter {
   }
 };
 
+class PngReadStructDeleter {
+ public:
+  void operator()(png_struct* png_ptr) const noexcept {
+    png_destroy_read_struct(&png_ptr, nullptr, nullptr);
+  }
+};
+
 class PngInfoStructDeleter {
  public:
   PngInfoStructDeleter() = default;
