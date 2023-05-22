@@ -6,11 +6,13 @@
 
 #include "src/functions.h"
 #include "src/geotiff.h"
+#include "src/jpeg.h"
 #include "src/linux_overrides.h"
 #include "src/mapalloc.h"
 #include "src/pnger.h"
 #include "src/pyramid.h"
 #include "src/threadpool.h"
+#include "src/tiff.h"
 
 namespace multiblend::io {
 
@@ -48,7 +50,7 @@ void Image::Open() {
 
   switch (type_) {
     case ImageType::MB_TIFF: {
-      tiff_ = {TIFFOpen(filename_, "r"), tiff::TiffDeleter{}};
+      tiff_ = {TIFFOpen(filename_, "r"), tiff::CloseDeleter{}};
       if (tiff_ == nullptr) {
         utils::die("Could not open %s", filename_);
       }
@@ -143,26 +145,26 @@ void Image::Open() {
           end_strip_ != TIFFNumberOfStrips(
                             tiff_.get())) {  // double check that min strips are
                                              // (probably) transparent
-        tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tiff_.get()));
+        auto buf = std::unique_ptr<void, tiff::FreeDeleter>{
+            _TIFFmalloc(TIFFScanlineSize(tiff_.get())), tiff::FreeDeleter{}};
         if (first_strip_ != 0) {
-          TIFFReadScanline(tiff_.get(), buf, 0);
+          TIFFReadScanline(tiff_.get(), buf.get(), 0);
         } else {
-          TIFFReadScanline(tiff_.get(), buf, tiff_u_height_ - 1);
+          TIFFReadScanline(tiff_.get(), buf.get(), tiff_u_height_ - 1);
         }
         bool trans;
         switch (bpp_) {
           case 8:
-            trans = (((uint32_t*)buf)[0] & 0xff000000) == 0u;
+            trans = (((uint32_t*)buf.get())[0] & 0xff000000) == 0u;
             break;
           case 16:
-            trans = (((uint64_t*)buf)[0] & 0xffff000000000000) == 0u;
+            trans = (((uint64_t*)buf.get())[0] & 0xffff000000000000) == 0u;
             break;
         }
         if (!trans) {
           first_strip_ = 0;
           end_strip_ = TIFFNumberOfStrips(tiff_.get());
         }
-        _TIFFfree(buf);
       }
 
       ypos_ += first_strip_ * rows_per_strip_;
@@ -182,7 +184,7 @@ void Image::Open() {
       }
       file_ = {tmp_file, FileDeleter{}};
 
-      cinfo_ = {new jpeg_decompress_struct{}, JpegDecompressDeleter{}};
+      cinfo_ = {new jpeg_decompress_struct{}, jpeg::DecompressDeleter{}};
       jerr_ = std::make_unique<jpeg_error_mgr>();
 
       cinfo_->err = jpeg_std_error(jerr_.get());
@@ -462,15 +464,15 @@ void Image::Read(void* data, bool gamma) {
 
     int n_threads = (std::max)(2, threadpool->GetNThreads());
 
-    auto** thread_lines = new uint32_t*[n_threads];
-    auto** thread_comp_lines = new uint32_t*[n_threads];
+    auto thread_lines = std::vector<std::vector<uint32_t>>(n_threads);
+    auto thread_comp_lines = std::vector<std::vector<uint32_t>>(n_threads);
 
-    auto* flex_mutex_p = new std::mutex;
-    auto* flex_cond_p = new std::condition_variable;
+    auto flex_mutex_p = std::mutex{};
+    auto flex_cond_p = std::condition_variable{};
 
     for (int i = 0; i < n_threads; ++i) {
-      thread_lines[i] = new uint32_t[width_];
-      thread_comp_lines[i] = new uint32_t[width_];
+      thread_lines[i].resize(width_);
+      thread_comp_lines[i].resize(width_);
     }
 
     uint32_t* bitmap32 = nullptr;
@@ -485,16 +487,16 @@ void Image::Read(void* data, bool gamma) {
 
     for (y = 0; y < height_; ++y) {
       int t = y % n_threads;
-      this_line = thread_lines[t];
-      uint32_t* comp = thread_comp_lines[t];
+      this_line = thread_lines[t].data();
+      uint32_t* comp = thread_comp_lines[t].data();
       bool first;
 
       x = 0;
 
       {  // make sure the last compression thread to use this chunk of memory is
          // finished
-        std::unique_lock<std::mutex> mlock(*flex_mutex_p);
-        flex_cond_p->wait(mlock, [=, &dt] { return dt.y_ > y - n_threads; });
+        std::unique_lock<std::mutex> mlock(flex_mutex_p);
+        flex_cond_p.wait(mlock, [=, &dt] { return dt.y_ > y - n_threads; });
       }
 
       while (x < width_) {
@@ -616,15 +618,15 @@ void Image::Read(void* data, bool gamma) {
       }
 
       if (y < height_ - 1) {
-        threadpool->Queue([=, this, &dt] {
+        threadpool->Queue([=, this, &dt, &flex_mutex_p, &flex_cond_p] {
           int p = utils::CompressDTLine(this_line, (uint8_t*)comp, width_);
           {
-            std::unique_lock<std::mutex> mlock(*flex_mutex_p);
-            flex_cond_p->wait(mlock, [=, &dt] { return dt.y_ == y; });
+            std::unique_lock<std::mutex> mlock(flex_mutex_p);
+            flex_cond_p.wait(mlock, [=, &dt] { return dt.y_ == y; });
             dt.Copy((uint8_t*)comp, p);
             dt.NextLine();
           }
-          flex_cond_p->notify_all();
+          flex_cond_p.notify_all();
         });
       }
 
@@ -641,7 +643,7 @@ void Image::Read(void* data, bool gamma) {
 
     uint32_t mask;
 
-    prev_line = thread_lines[(y - 2) % n_threads];
+    prev_line = thread_lines[(y - 2) % n_threads].data();
 
     // first line
     x = width_ - 1;
@@ -745,17 +747,6 @@ void Image::Read(void* data, bool gamma) {
 
       std::swap(this_line, prev_line);
     }
-
-    delete flex_mutex_p;
-    delete flex_cond_p;
-
-    for (int i = 0; i < n_threads; ++i) {
-      delete[] thread_lines[i];
-      delete[] thread_comp_lines[i];
-    }
-
-    delete[] thread_lines;
-    delete[] thread_comp_lines;
   } else {
     width_ = tiff_width_;
     height_ = tiff_height_;
@@ -877,8 +868,8 @@ void Image::MaskPng(int i) {
   int height = masks_[0].height_;  // +1 + masks[1]->height;
 
   std::size_t size = (std::size_t)width * height;
-  auto* temp = (uint8_t*)malloc(size);
-  memset(temp, 32, size);
+  auto temp = std::make_unique<uint8_t[]>(size);
+  memset(temp.get(), 32, size);
 
   int px = 0;
   int py = 0;
@@ -886,7 +877,8 @@ void Image::MaskPng(int i) {
 
   for (int l = 0; l < (int)masks_.size(); ++l) {
     auto* data = (uint32_t*)masks_[l].data_.get();
-    uint8_t* line = temp + static_cast<ptrdiff_t>(py) * masks_[0].width_ + px;
+    uint8_t* line =
+        temp.get() + static_cast<ptrdiff_t>(py) * masks_[0].width_ + px;
     for (int y = 0; y < masks_[l].height_; ++y) {
       int x = 0;
       while (x < masks_[l].width_) {
@@ -923,7 +915,7 @@ void Image::MaskPng(int i) {
     break;
   }
 
-  io::png::Pnger::Quick(filename, temp, width, height, width,
+  io::png::Pnger::Quick(filename, temp.get(), width, height, width,
                         PNG_COLOR_TYPE_GRAY);
 }
 

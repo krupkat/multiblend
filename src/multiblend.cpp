@@ -3,6 +3,7 @@
 #include <cmath>
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include "src/linux_overrides.h"
 #include "src/pnger.h"
@@ -255,14 +256,14 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   std::vector<std::vector<uint64_t>> thread_lines(n_threads);
 
   if (opts.seamload_filename == nullptr) {
-    auto* flex_mutex_p = new std::mutex;
-    auto* flex_cond_p = new std::condition_variable;
+    auto flex_mutex_p = std::mutex{};
+    auto flex_cond_p = std::condition_variable{};
 
-    auto** thread_comp_lines = new uint8_t*[n_threads];
+    std::vector<std::vector<uint8_t>> thread_comp_lines(n_threads);
 
     for (int i = 0; i < n_threads; ++i) {
       thread_lines[i].resize(width);
-      thread_comp_lines[i] = new uint8_t[width];
+      thread_comp_lines[i].resize(width);
     }
 
     // set all image masks to bottom right
@@ -273,7 +274,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     for (int y = height - 1; y >= 0; --y) {
       int t = y % n_threads;
       this_line = thread_lines[t].data();
-      uint8_t* comp = thread_comp_lines[t];
+      uint8_t* comp = thread_comp_lines[t].data();
 
       // set initial image mask states
       for (int i = 0; i < n_images; ++i) {
@@ -291,8 +292,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
       {  // make sure the last compression thread to use this chunk of memory
          // is finished
-        std::unique_lock<std::mutex> mlock(*flex_mutex_p);
-        flex_cond_p->wait(mlock, [=, &seam_flex] {
+        std::unique_lock<std::mutex> mlock(flex_mutex_p);
+        flex_cond_p.wait(mlock, [=, &seam_flex] {
           return seam_flex.y_ > (height - 1) - y - n_threads;
         });
       }
@@ -426,7 +427,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       }
 
       if (y != 0) {
-        threadpool->Queue([=, &seam_flex] {
+        threadpool->Queue([=, &seam_flex, &flex_cond_p, &flex_mutex_p] {
           int p = utils::CompressSeamLine(this_line, comp, width);
           if (p > width) {
             printf("bad p: %d at line %d", p, y);
@@ -434,14 +435,14 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
           }
 
           {
-            std::unique_lock<std::mutex> mlock(*flex_mutex_p);
-            flex_cond_p->wait(mlock, [=, &seam_flex] {
+            std::unique_lock<std::mutex> mlock(flex_mutex_p);
+            flex_cond_p.wait(mlock, [=, &seam_flex] {
               return seam_flex.y_ == (height - 1) - y;
             });
             seam_flex.Copy(comp, p);
             seam_flex.NextLine();
           }
-          flex_cond_p->notify_all();
+          flex_cond_p.notify_all();
         });
       }
 
@@ -461,12 +462,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       if (i >= 2) {
         thread_lines.resize(0);
       }
-      delete[] thread_comp_lines[i];
     }
-
-    delete[] thread_comp_lines;
-    delete flex_mutex_p;
-    delete flex_cond_p;
   } else {  // if seamload_filename:
     for (int i = 0; i < n_images; ++i) {
       images[i].tiff_mask_->Start();
@@ -891,10 +887,10 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       utils::die("Error: Incorrect seam PNG format");
     }
 
-    auto* png_line = (png_bytep)malloc(width);
+    auto png_line = std::make_unique<png_byte[]>(width);
 
     for (int y = 0; y < height; ++y) {
-      png_read_row(png_ptr.get(), png_line, nullptr);
+      png_read_row(png_ptr.get(), png_line.get(), nullptr);
 
       int x = 0;
       RecordState state;
@@ -912,8 +908,6 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         images[i].masks_[0].NextLine();
       }
     }
-
-    free(png_line);
   }
 
   timing.seam_time = timer.Read();

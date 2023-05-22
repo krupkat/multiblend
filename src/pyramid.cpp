@@ -955,15 +955,12 @@ void Pyramid::LaplaceThreadWrapper(Level* upper_level, Level* lower_level,
                                    int sy, int ey) {
   int temp = upper_level->m128_pitch << 4;
 
-  auto* temp1 = (__m128*)_aligned_malloc(temp, 16);
-  auto* temp2 = (__m128*)_aligned_malloc(temp, 16);
-  auto* temp3 = (__m128*)_aligned_malloc(temp, 16);
+  auto temp1 = memory::AlignedM128Ptr{(__m128*)_aligned_malloc(temp, 16)};
+  auto temp2 = memory::AlignedM128Ptr{(__m128*)_aligned_malloc(temp, 16)};
+  auto temp3 = memory::AlignedM128Ptr{(__m128*)_aligned_malloc(temp, 16)};
 
-  LaplaceThread(upper_level, lower_level, sy, ey, temp1, temp2, temp3);
-
-  _aligned_free(temp1);
-  _aligned_free(temp2);
-  _aligned_free(temp3);
+  LaplaceThread(upper_level, lower_level, sy, ey, temp1.get(), temp2.get(),
+                temp3.get());
 }
 
 void Pyramid::LaplaceThread(Level* upper_level, Level* lower_level, int sy,
