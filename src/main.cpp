@@ -23,11 +23,13 @@
 #include <cstdint>
 #include <cstdio>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <jpeglib.h>
 #include <tiffio.h>
 
+#include "src/file.h"
 #include "src/functions.h"
 #include "src/image.h"
 #include "src/linux_overrides.h"
@@ -67,8 +69,8 @@ int main(int argc, char* argv[]) {
   int wrap = 0;
 
   TIFF* tiff_file = nullptr;
-  FILE* jpeg_file = nullptr;
-  io::png::Pnger* png_file = nullptr;
+  io::FilePtr jpeg_file = nullptr;
+  std::optional<io::png::Pnger> png_file;
   io::ImageType output_type = io::ImageType::MB_NONE;
   int jpeg_quality = -1;
   int compression = -1;
@@ -506,16 +508,15 @@ int main(int argc, char* argv[]) {
       if (output_bpp == 16) {
         utils::die("Error: 16bpp output is incompatible with JPEG output");
       }
-      fopen_s(&jpeg_file, output_filename, "wb");
-      if (jpeg_file == nullptr) {
-        utils::die("Error: Could not open output file");
-      }
-    } break;
+    }
+      [[fallthrough]];
     case io::ImageType::MB_PNG: {
-      fopen_s(&jpeg_file, output_filename, "wb");
-      if (jpeg_file == nullptr) {
+      FILE* tmp_jpeg_file = nullptr;
+      fopen_s(&tmp_jpeg_file, output_filename, "wb");
+      if (tmp_jpeg_file == nullptr) {
         utils::die("Error: Could not open output file");
       }
+      jpeg_file = {tmp_jpeg_file, io::FileDeleter{}};
     } break;
   }
 
@@ -616,7 +617,7 @@ int main(int argc, char* argv[]) {
       case io::ImageType::MB_JPEG: {
         cinfo.err = jpeg_std_error(&jerr);
         jpeg_create_compress(&cinfo);
-        jpeg_stdio_dest(&cinfo, jpeg_file);
+        jpeg_stdio_dest(&cinfo, jpeg_file.get());
 
         cinfo.image_width = result.width;
         cinfo.image_height = result.height;
@@ -628,10 +629,10 @@ int main(int argc, char* argv[]) {
         jpeg_start_compress(&cinfo, 1);
       } break;
       case io::ImageType::MB_PNG: {
-        png_file = new io::png::Pnger(
+        png_file = io::png::Pnger(
             output_filename, nullptr, result.width, result.height,
             result.no_mask ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA,
-            result.output_bpp, jpeg_file, jpeg_quality);
+            result.output_bpp, std::move(jpeg_file), jpeg_quality);
       } break;
     }
 
@@ -735,7 +736,6 @@ int main(int argc, char* argv[]) {
       case io::ImageType::MB_JPEG: {
         jpeg_finish_compress(&cinfo);
         jpeg_destroy_compress(&cinfo);
-        fclose(jpeg_file);
       } break;
     }
 

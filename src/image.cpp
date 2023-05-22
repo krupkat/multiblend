@@ -220,26 +220,31 @@ void Image::Open() {
         utils::die("Bad PNG signature (%s)", filename_);
       }
 
-      png_ptr_ = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr,
-                                        nullptr);
+      png_ptr_ = {png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr,
+                                         nullptr, nullptr),
+                  png::PngReadStructDeleter{}};
       if (png_ptr_ == nullptr) {
         utils::die("Error: libpng problem");
       }
-      png_infop info_ptr = png_create_info_struct(png_ptr_);
+
+      auto info_ptr = std::unique_ptr<png_info, png::PngInfoStructDeleter>{
+          png_create_info_struct(png_ptr_.get()),
+          png::PngInfoStructDeleter{png_ptr_.get()}};
+
       if (info_ptr == nullptr) {
         utils::die("Error: libpng problem");
       }
 
-      png_init_io(png_ptr_, file_);
-      png_set_sig_bytes(png_ptr_, 8);
-      png_read_info(png_ptr_, info_ptr);
+      png_init_io(png_ptr_.get(), file_);
+      png_set_sig_bytes(png_ptr_.get(), 8);
+      png_read_info(png_ptr_.get(), info_ptr.get());
 
       int png_colour;
       uint32_t png_width;
       uint32_t png_height;
       int _bpp;
-      png_get_IHDR(png_ptr_, info_ptr, &png_width, &png_height, &_bpp,
-                   &png_colour, nullptr, nullptr, nullptr);
+      png_get_IHDR(png_ptr_.get(), info_ptr.get(), &png_width, &png_height,
+                   &_bpp, &png_colour, nullptr, nullptr, nullptr);
       bpp_ = _bpp;
       tiff_width_ = png_width;
       tiff_u_height_ = tiff_height_ = png_height;
@@ -301,7 +306,7 @@ void Image::Read(void* data, bool gamma) {
       auto* pointer = (uint8_t*)data;
 
       for (int y = 0; y < tiff_height_; ++y) {
-        png_read_row(png_ptr_, pointer, nullptr);
+        png_read_row(png_ptr_.get(), pointer, nullptr);
         pointer += (tiff_width_ * spp_) << (bpp_ >> 4);
       }
     } break;

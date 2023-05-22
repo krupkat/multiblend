@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <memory>
+#include <optional>
 
 #include "src/linux_overrides.h"
 #include "src/pnger.h"
@@ -17,7 +18,8 @@ struct RecordState {
 };
 
 void Record(int tmp, int count, int x, RecordState& state,
-            std::vector<io::Image>& images, io::png::Pnger* seam_map) {
+            std::vector<io::Image>& images,
+            std::optional<io::png::Pnger>& seam_map) {
   if (tmp == state.current_i) {
     state.mc += count;
     return;
@@ -26,7 +28,7 @@ void Record(int tmp, int count, int x, RecordState& state,
   int n_images = (int)images.size();
 
   if (state.mc > 0) {
-    if (seam_map != nullptr) {
+    if (seam_map) {
       memset(&seam_map->line_[x - state.mc], state.current_i, state.mc);
     }
     for (int i = 0; i < n_images; ++i) {
@@ -250,7 +252,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       mt::Threadpool::GetInstance(opts.all_threads ? 2 : 0);
 
   int n_threads = std::max(2, threadpool->GetNThreads());
-  auto** thread_lines = new uint64_t*[n_threads];
+  std::vector<std::vector<uint64_t>> thread_lines(n_threads);
 
   if (opts.seamload_filename == nullptr) {
     auto* flex_mutex_p = new std::mutex;
@@ -259,7 +261,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     auto** thread_comp_lines = new uint8_t*[n_threads];
 
     for (int i = 0; i < n_threads; ++i) {
-      thread_lines[i] = new uint64_t[width];
+      thread_lines[i].resize(width);
       thread_comp_lines[i] = new uint8_t[width];
     }
 
@@ -270,7 +272,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
     for (int y = height - 1; y >= 0; --y) {
       int t = y % n_threads;
-      this_line = thread_lines[t];
+      this_line = thread_lines[t].data();
       uint8_t* comp = thread_comp_lines[t];
 
       // set initial image mask states
@@ -457,7 +459,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
     for (int i = 0; i < n_threads; ++i) {
       if (i >= 2) {
-        delete[] thread_lines[i];
+        thread_lines.resize(0);
       }
       delete[] thread_comp_lines[i];
     }
@@ -476,16 +478,17 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     images[i].masks_.emplace_back(width, height);
   }
 
-  io::png::Pnger* xor_map =
-      opts.xor_filename != nullptr
-          ? new io::png::Pnger(opts.xor_filename, "XOR map", width, height,
-                               PNG_COLOR_TYPE_PALETTE)
-          : nullptr;
-  io::png::Pnger* seam_map =
-      opts.seamsave_filename != nullptr
-          ? new io::png::Pnger(opts.seamsave_filename, "Seam map", width,
-                               height, PNG_COLOR_TYPE_PALETTE)
-          : nullptr;
+  std::optional<io::png::Pnger> xor_map;
+  if (opts.xor_filename != nullptr) {
+    xor_map = io::png::Pnger(opts.xor_filename, "XOR map", width, height,
+                             PNG_COLOR_TYPE_PALETTE);
+  }
+
+  std::optional<io::png::Pnger> seam_map;
+  if (opts.seamsave_filename != nullptr) {
+    seam_map = io::png::Pnger(opts.seamsave_filename, "Seam map", width, height,
+                              PNG_COLOR_TYPE_PALETTE);
+  }
 
   /***********************************************************************
    * Forward distance transform
@@ -494,7 +497,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   int64_t current_step;
   uint64_t dt_val;
 
-  prev_line = thread_lines[1];
+  prev_line = thread_lines[1].data();
 
   uint64_t total_pixels = 0;
   uint64_t channel_totals[3] = {0};
@@ -554,7 +557,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       xor_mask.MaskWrite(min_count, xor_count == 1);
 
       if (xor_count == 1) {
-        if (xor_map != nullptr) {
+        if (xor_map) {
           memset(&xor_map->line_[x], xor_image, min_count);
         }
 
@@ -629,7 +632,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
         best = xor_image;
       } else {
-        if (xor_map != nullptr) {
+        if (xor_map) {
           memset(&xor_map->line_[x], 0xff, min_count);
         }
 
@@ -818,24 +821,19 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     full_mask.NextLine();
     xor_mask.NextLine();
 
-    if (xor_map != nullptr) {
+    if (xor_map) {
       xor_map->Write();
     }
-    if (seam_map != nullptr) {
+    if (seam_map) {
       seam_map->Write();
     }
 
     std::swap(this_line, prev_line);
   }
 
-  if (opts.seamload_filename == nullptr) {
-    delete[] thread_lines[0];
-    delete[] thread_lines[1];
-    delete[] thread_lines;
-  }
-
-  delete xor_map;
-  delete seam_map;
+  thread_lines.resize(0);
+  xor_map.reset();
+  seam_map.reset();
 
   if (!alpha || opts.output_type == io::ImageType::MB_JPEG) {
     opts.no_mask = true;
@@ -850,8 +848,6 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     png_uint_32 png_width;
     png_uint_32 png_height;
     uint8_t sig[8];
-    png_structp png_ptr;
-    png_infop info_ptr;
     FILE* f;
 
     fopen_s(&f, opts.seamload_filename, "rb");
@@ -865,21 +861,28 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       utils::die("Error: Bad PNG signature");
     }
 
-    png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr,
-                                     nullptr);
+    auto png_ptr = std::unique_ptr<png_struct, io::png::PngReadStructDeleter>{
+        png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr,
+                               nullptr),
+        io::png::PngReadStructDeleter{}};
+
     if (png_ptr == nullptr) {
       utils::die("Error: Seam PNG problem");
     }
-    info_ptr = png_create_info_struct(png_ptr);
+
+    auto info_ptr = std::unique_ptr<png_info, io::png::PngInfoStructDeleter>{
+        png_create_info_struct(png_ptr.get()),
+        io::png::PngInfoStructDeleter{png_ptr.get()}};
+
     if (info_ptr == nullptr) {
       utils::die("Error: Seam PNG problem");
     }
 
-    png_init_io(png_ptr, f);
-    png_set_sig_bytes(png_ptr, 8);
-    png_read_info(png_ptr, info_ptr);
-    png_get_IHDR(png_ptr, info_ptr, &png_width, &png_height, &png_depth,
-                 &png_colour, nullptr, nullptr, nullptr);
+    png_init_io(png_ptr.get(), f);
+    png_set_sig_bytes(png_ptr.get(), 8);
+    png_read_info(png_ptr.get(), info_ptr.get());
+    png_get_IHDR(png_ptr.get(), info_ptr.get(), &png_width, &png_height,
+                 &png_depth, &png_colour, nullptr, nullptr, nullptr);
 
     if (png_width != width || png_height != height) {
       utils::die("Error: Seam PNG dimensions don't match workspace");
@@ -891,7 +894,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     auto* png_line = (png_bytep)malloc(width);
 
     for (int y = 0; y < height; ++y) {
-      png_read_row(png_ptr, png_line, nullptr);
+      png_read_row(png_ptr.get(), png_line, nullptr);
 
       int x = 0;
       RecordState state;

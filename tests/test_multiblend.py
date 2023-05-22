@@ -61,6 +61,56 @@ class TestMultiblend(unittest.TestCase):
 
         self.assert_equal(result_path, "data/expected.png")
 
+    def test_multiblend_png_saveseams(self):
+        result_path = "result.png"
+        seams_path = "seams.png"
+
+        if os.path.exists(result_path):
+            os.remove(result_path)
+
+        subprocess.run(
+            [
+                MULTIBLEND_PATH,
+                "--saveseams",
+                seams_path,
+                "-o",
+                result_path,
+                "data/img_0.png",
+                "-91,204",
+                "data/img_1.png",
+                "-167,202",
+                "data/img_2.png",
+                "-41,193",
+            ]
+        ).check_returncode()
+
+        self.assert_equal(result_path, "data/expected.png")
+        self.assert_equal(seams_path, "data/expected_seams.png")
+
+    def test_multiblend_png_loadseams(self):
+        result_path = "result.png"
+
+        if os.path.exists(result_path):
+            os.remove(result_path)
+
+        subprocess.run(
+            [
+                MULTIBLEND_PATH,
+                "--loadseams",
+                "data/expected_seams.png",
+                "-o",
+                result_path,
+                "data/img_0.png",
+                "-91,204",
+                "data/img_1.png",
+                "-167,202",
+                "data/img_2.png",
+                "-41,193",
+            ]
+        ).check_returncode()
+
+        self.assert_equal(result_path, "data/expected.png")
+
     def test_multiblend_tif_8bit(self):
         result_path = "result.tif"
 
