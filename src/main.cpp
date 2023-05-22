@@ -23,6 +23,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <jpeglib.h>
@@ -69,7 +70,7 @@ int main(int argc, char* argv[]) {
 
   TIFF* tiff_file = nullptr;
   io::FilePtr jpeg_file = nullptr;
-  io::png::Pnger* png_file = nullptr;
+  std::optional<io::png::Pnger> png_file;
   io::ImageType output_type = io::ImageType::MB_NONE;
   int jpeg_quality = -1;
   int compression = -1;
@@ -628,7 +629,7 @@ int main(int argc, char* argv[]) {
         jpeg_start_compress(&cinfo, 1);
       } break;
       case io::ImageType::MB_PNG: {
-        png_file = new io::png::Pnger(
+        png_file = io::png::Pnger(
             output_filename, nullptr, result.width, result.height,
             result.no_mask ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA,
             result.output_bpp, std::move(jpeg_file), jpeg_quality);

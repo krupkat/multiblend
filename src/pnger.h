@@ -12,7 +12,7 @@ namespace multiblend::io::png {
 
 class PngWriteStructDeleter {
  public:
-  void operator()(png_struct* png_ptr) const {
+  void operator()(png_struct* png_ptr) const noexcept {
     png_destroy_write_struct(&png_ptr, nullptr);
   }
 };
@@ -21,11 +21,9 @@ class PngInfoStructDeleter {
  public:
   PngInfoStructDeleter() = default;
   explicit PngInfoStructDeleter(png_struct* png_ptr) : png_ptr_(png_ptr) {}
-  void operator()(png_info* info_ptr) const {
+  void operator()(png_info* info_ptr) const noexcept {
     if (png_ptr_ != nullptr) {
       png_destroy_info_struct(png_ptr_, &info_ptr);
-    } else {
-      throw std::runtime_error("png_ptr_ is null while destroying info_ptr");
     }
   }
 

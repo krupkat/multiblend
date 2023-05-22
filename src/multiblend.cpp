@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <memory>
+#include <optional>
 
 #include "src/linux_overrides.h"
 #include "src/pnger.h"
@@ -17,7 +18,8 @@ struct RecordState {
 };
 
 void Record(int tmp, int count, int x, RecordState& state,
-            std::vector<io::Image>& images, io::png::Pnger* seam_map) {
+            std::vector<io::Image>& images,
+            std::optional<io::png::Pnger>& seam_map) {
   if (tmp == state.current_i) {
     state.mc += count;
     return;
@@ -26,7 +28,7 @@ void Record(int tmp, int count, int x, RecordState& state,
   int n_images = (int)images.size();
 
   if (state.mc > 0) {
-    if (seam_map != nullptr) {
+    if (seam_map) {
       memset(&seam_map->line_[x - state.mc], state.current_i, state.mc);
     }
     for (int i = 0; i < n_images; ++i) {
@@ -476,16 +478,17 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     images[i].masks_.emplace_back(width, height);
   }
 
-  io::png::Pnger* xor_map =
-      opts.xor_filename != nullptr
-          ? new io::png::Pnger(opts.xor_filename, "XOR map", width, height,
-                               PNG_COLOR_TYPE_PALETTE)
-          : nullptr;
-  io::png::Pnger* seam_map =
-      opts.seamsave_filename != nullptr
-          ? new io::png::Pnger(opts.seamsave_filename, "Seam map", width,
-                               height, PNG_COLOR_TYPE_PALETTE)
-          : nullptr;
+  std::optional<io::png::Pnger> xor_map;
+  if (opts.xor_filename != nullptr) {
+    xor_map = io::png::Pnger(opts.xor_filename, "XOR map", width, height,
+                             PNG_COLOR_TYPE_PALETTE);
+  }
+
+  std::optional<io::png::Pnger> seam_map;
+  if (opts.seamsave_filename != nullptr) {
+    seam_map = io::png::Pnger(opts.seamsave_filename, "Seam map", width, height,
+                              PNG_COLOR_TYPE_PALETTE);
+  }
 
   /***********************************************************************
    * Forward distance transform
@@ -554,7 +557,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       xor_mask.MaskWrite(min_count, xor_count == 1);
 
       if (xor_count == 1) {
-        if (xor_map != nullptr) {
+        if (xor_map) {
           memset(&xor_map->line_[x], xor_image, min_count);
         }
 
@@ -629,7 +632,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
         best = xor_image;
       } else {
-        if (xor_map != nullptr) {
+        if (xor_map) {
           memset(&xor_map->line_[x], 0xff, min_count);
         }
 
@@ -818,10 +821,10 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     full_mask.NextLine();
     xor_mask.NextLine();
 
-    if (xor_map != nullptr) {
+    if (xor_map) {
       xor_map->Write();
     }
-    if (seam_map != nullptr) {
+    if (seam_map) {
       seam_map->Write();
     }
 
@@ -834,8 +837,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     delete[] thread_lines;
   }
 
-  delete xor_map;
-  delete seam_map;
+  xor_map.reset();
+  seam_map.reset();
 
   if (!alpha || opts.output_type == io::ImageType::MB_JPEG) {
     opts.no_mask = true;
