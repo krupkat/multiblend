@@ -6,19 +6,28 @@ from PIL import Image
 from PIL import ImageChops
 
 MULTIBLEND_PATH = os.path.join("..", "Multiblend")
-RESULT_PATH = "result.jpg"
 
 
-class TestStringMethods(unittest.TestCase):
-    def test_multiblend(self):
-        if os.path.exists(RESULT_PATH):
-            os.remove(RESULT_PATH)
+class TestMultiblend(unittest.TestCase):
+    def assert_equal(self, result_path, expected_path):
+        with Image.open(result_path) as result, Image.open(expected_path) as expected:
+            self.assertEqual(result.width, expected.width)
+            self.assertEqual(result.height, expected.height)
+
+            diff = ImageChops.difference(result, expected)
+            self.assertEqual(diff.getbbox(), None)
+
+    def test_multiblend_jpg(self):
+        result_path = "result.jpg"
+
+        if os.path.exists(result_path):
+            os.remove(result_path)
 
         subprocess.run(
             [
                 MULTIBLEND_PATH,
                 "-o",
-                RESULT_PATH,
+                result_path,
                 "data/img_0.jpg",
                 "-366,816",
                 "data/img_1.jpg",
@@ -28,15 +37,73 @@ class TestStringMethods(unittest.TestCase):
             ]
         ).check_returncode()
 
-        result = Image.open(RESULT_PATH)
-        expected = Image.open("data/expected.jpg")
+        self.assert_equal(result_path, "data/expected.jpg")
 
-        self.assertEqual(result.width, expected.width)
-        self.assertEqual(result.height, expected.height)
+    def test_multiblend_png(self):
+        result_path = "result.png"
 
-        diff = ImageChops.difference(result, expected)
+        if os.path.exists(result_path):
+            os.remove(result_path)
 
-        self.assertEqual(diff.getbbox(), None)
+        subprocess.run(
+            [
+                MULTIBLEND_PATH,
+                "-o",
+                result_path,
+                "data/img_0.png",
+                "-91,204",
+                "data/img_1.png",
+                "-167,202",
+                "data/img_2.png",
+                "-41,193",
+            ]
+        ).check_returncode()
+
+        self.assert_equal(result_path, "data/expected.png")
+
+    def test_multiblend_tif_8bit(self):
+        result_path = "result.tif"
+
+        if os.path.exists(result_path):
+            os.remove(result_path)
+
+        subprocess.run(
+            [
+                MULTIBLEND_PATH,
+                "-o",
+                result_path,
+                "data/img_0.tif",
+                "76,11",
+                "data/img_1.tif",
+                "0,9",
+                "data/img_2.tif",
+                "126,0",
+            ]
+        ).check_returncode()
+
+        self.assert_equal(result_path, "data/expected.tif")
+
+    def test_multiblend_tif_16bit(self):
+        result_path = "result_16bit.tif"
+
+        if os.path.exists(result_path):
+            os.remove(result_path)
+
+        subprocess.run(
+            [
+                MULTIBLEND_PATH,
+                "-o",
+                result_path,
+                "data/img_0_16bit.tif",
+                "76,11",
+                "data/img_1_16bit.tif",
+                "0,9",
+                "data/img_2_16bit.tif",
+                "126,0",
+            ]
+        ).check_returncode()
+
+        self.assert_equal(result_path, "data/expected_16bit.tif")
 
 
 if __name__ == "__main__":
