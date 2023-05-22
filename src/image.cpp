@@ -6,6 +6,7 @@
 
 #include "src/functions.h"
 #include "src/geotiff.h"
+#include "src/jpeg.h"
 #include "src/linux_overrides.h"
 #include "src/mapalloc.h"
 #include "src/pnger.h"
@@ -182,7 +183,7 @@ void Image::Open() {
       }
       file_ = {tmp_file, FileDeleter{}};
 
-      cinfo_ = {new jpeg_decompress_struct{}, JpegDecompressDeleter{}};
+      cinfo_ = {new jpeg_decompress_struct{}, jpeg::DecompressDeleter{}};
       jerr_ = std::make_unique<jpeg_error_mgr>();
 
       cinfo_->err = jpeg_std_error(jerr_.get());

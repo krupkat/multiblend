@@ -32,6 +32,7 @@
 #include "src/file.h"
 #include "src/functions.h"
 #include "src/image.h"
+#include "src/jpeg.h"
 #include "src/linux_overrides.h"
 #include "src/mapalloc.h"
 #include "src/multiblend.h"
@@ -554,8 +555,8 @@ int main(int argc, char* argv[]) {
 
     timer.Start();
 
-    struct jpeg_compress_struct cinfo;
-    struct jpeg_error_mgr jerr;
+    std::unique_ptr<jpeg_error_mgr> jerr;
+    std::unique_ptr<jpeg_compress_struct, io::jpeg::CompressDeleter> cinfo;
 
     // JSAMPARRAY scanlines = nullptr;
     std::unique_ptr<JSAMPROW[]> scanlines = nullptr;
@@ -619,18 +620,21 @@ int main(int argc, char* argv[]) {
         }
       } break;
       case io::ImageType::MB_JPEG: {
-        cinfo.err = jpeg_std_error(&jerr);
-        jpeg_create_compress(&cinfo);
-        jpeg_stdio_dest(&cinfo, jpeg_file.get());
+        cinfo = {new jpeg_compress_struct{}, io::jpeg::CompressDeleter{}};
+        jerr = std::make_unique<jpeg_error_mgr>();
 
-        cinfo.image_width = result.width;
-        cinfo.image_height = result.height;
-        cinfo.input_components = 3;
-        cinfo.in_color_space = JCS_RGB;
+        cinfo->err = jpeg_std_error(jerr.get());
+        jpeg_create_compress(cinfo.get());
+        jpeg_stdio_dest(cinfo.get(), jpeg_file.get());
 
-        jpeg_set_defaults(&cinfo);
-        jpeg_set_quality(&cinfo, jpeg_quality, 1);
-        jpeg_start_compress(&cinfo, 1);
+        cinfo->image_width = result.width;
+        cinfo->image_height = result.height;
+        cinfo->input_components = 3;
+        cinfo->in_color_space = JCS_RGB;
+
+        jpeg_set_defaults(cinfo.get());
+        jpeg_set_quality(cinfo.get(), jpeg_quality, 1);
+        jpeg_start_compress(cinfo.get(), 1);
       } break;
       case io::ImageType::MB_PNG: {
         png_file = io::png::Pnger(
@@ -723,7 +727,7 @@ int main(int argc, char* argv[]) {
                                 rows * (int64_t)bytes_per_row);
         } break;
         case io::ImageType::MB_JPEG: {
-          jpeg_write_scanlines(&cinfo, scanlines.get(), rows);
+          jpeg_write_scanlines(cinfo.get(), scanlines.get(), rows);
         } break;
         case io::ImageType::MB_PNG: {
           png_file->WriteRows(scanlines.get(), rows);
@@ -731,11 +735,6 @@ int main(int argc, char* argv[]) {
       }
 
       remaining -= rows_per_strip;
-    }
-
-    if (output_type == io::ImageType::MB_JPEG) {
-      jpeg_finish_compress(&cinfo);
-      jpeg_destroy_compress(&cinfo);
     }
 
     write_time = timer.Read();

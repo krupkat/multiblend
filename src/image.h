@@ -11,6 +11,7 @@
 #include "src/file.h"
 #include "src/functions.h"
 #include "src/geotiff.h"
+#include "src/jpeg.h"
 #include "src/mapalloc.h"
 #include "src/pnger.h"
 #include "src/pyramid.h"
@@ -19,15 +20,6 @@
 namespace multiblend::io {
 
 enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG };
-
-class JpegDecompressDeleter {
- public:
-  void operator()(jpeg_decompress_struct* cinfo) const {
-    jpeg_finish_decompress(cinfo);
-    jpeg_destroy_decompress(cinfo);
-    delete cinfo;
-  }
-};
 
 class Channel {
  public:
@@ -90,7 +82,7 @@ class Image {
   FilePtr file_;
 
   std::unique_ptr<jpeg_error_mgr> jerr_;
-  std::unique_ptr<jpeg_decompress_struct, JpegDecompressDeleter> cinfo_;
+  std::unique_ptr<jpeg_decompress_struct, jpeg::DecompressDeleter> cinfo_;
   std::unique_ptr<png_struct, png::PngReadStructDeleter> png_ptr_;
 };
 
