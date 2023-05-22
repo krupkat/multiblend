@@ -181,8 +181,9 @@ void Image::Open() {
       }
 
       cinfo_ = {new jpeg_decompress_struct{}, JpegDecompressDeleter{}};
+      jerr_ = std::make_unique<jpeg_error_mgr>();
 
-      cinfo_->err = jpeg_std_error(&jerr_);
+      cinfo_->err = jpeg_std_error(jerr_.get());
       jpeg_create_decompress(cinfo_.get());
       jpeg_stdio_src(cinfo_.get(), file_);
       jpeg_read_header(cinfo_.get(), TRUE);

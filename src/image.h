@@ -87,7 +87,7 @@ class Image {
   TIFF* tiff_;
   FILE* file_;
   std::unique_ptr<jpeg_decompress_struct, JpegDecompressDeleter> cinfo_;
-  jpeg_error_mgr jerr_;
+  std::unique_ptr<jpeg_error_mgr> jerr_;
   png_structp png_ptr_;
 };
 
