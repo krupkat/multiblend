@@ -37,7 +37,6 @@ class Channel {
 
   memory::MapAllocPtr<void> data_ = nullptr;
   std::size_t bytes_;
-  FILE* file_ = nullptr;
 };
 
 class Image {
