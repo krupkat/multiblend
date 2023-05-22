@@ -57,7 +57,7 @@ class TestMultiblend(unittest.TestCase):
                 "data/img_2.png",
                 "-41,193",
             ]
-        )#.check_returncode()
+        ).check_returncode()
 
         self.assert_equal(result_path, "data/expected.png")
 
@@ -82,7 +82,7 @@ class TestMultiblend(unittest.TestCase):
                 "data/img_2.png",
                 "-41,193",
             ]
-        )#.check_returncode()
+        ).check_returncode()
 
         self.assert_equal(result_path, "data/expected.png")
         self.assert_equal(seams_path, "data/expected_seams.png")
@@ -107,7 +107,7 @@ class TestMultiblend(unittest.TestCase):
                 "data/img_2.png",
                 "-41,193",
             ]
-        )#.check_returncode()
+        ).check_returncode()
 
         self.assert_equal(result_path, "data/expected.png")
 
@@ -129,7 +129,7 @@ class TestMultiblend(unittest.TestCase):
                 "data/img_2.tif",
                 "126,0",
             ]
-        )#.check_returncode()
+        ).check_returncode()
 
         self.assert_equal(result_path, "data/expected.tif")
 
@@ -151,7 +151,7 @@ class TestMultiblend(unittest.TestCase):
                 "data/img_2_16bit.tif",
                 "126,0",
             ]
-        )#.check_returncode()
+        ).check_returncode()
 
         self.assert_equal(result_path, "data/expected_16bit.tif")
 
