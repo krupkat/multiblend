@@ -4,6 +4,7 @@
 #include <cstdarg>
 #include <cstdint>
 #include <cstring>
+#include <memory>
 #include <vector>
 
 #include "src/pyramid.h"
@@ -651,23 +652,21 @@ void SwapUnswapH(Pyramid* py, bool unswap) {
   int minor_bytes = (width >> 1) << 2;
   int major_bytes = ((width + 1) >> 1) << 2;
   float* data = py->GetData();
-  auto* temp = (uint8_t*)malloc(major_bytes);
+  auto temp = std::make_unique<uint8_t[]>(major_bytes);
 
   for (int y = 0; y < height; ++y) {
     if (unswap) {
-      memcpy(temp, &((uint8_t*)data)[minor_bytes], major_bytes);
+      memcpy(temp.get(), &((uint8_t*)data)[minor_bytes], major_bytes);
       memcpy(&((uint8_t*)data)[major_bytes], data, minor_bytes);
-      memcpy(data, temp, major_bytes);
+      memcpy(data, temp.get(), major_bytes);
     } else {
-      memcpy(temp, data, major_bytes);
+      memcpy(temp.get(), data, major_bytes);
       memcpy(data, &((uint8_t*)data)[major_bytes], minor_bytes);
-      memcpy(&((uint8_t*)data)[minor_bytes], temp, major_bytes);
+      memcpy(&((uint8_t*)data)[minor_bytes], temp.get(), major_bytes);
     }
 
     data += py->GetPitch();
   }
-
-  free(temp);
 }
 
 void SwapH(Pyramid* py) { SwapUnswapH(py, false); }
@@ -677,63 +676,60 @@ void UnswapH(Pyramid* py) { SwapUnswapH(py, true); }
 void SwapUnswapV(Pyramid* py, bool unswap) {
   int height = py->GetHeight();
   int byte_pitch = py->GetPitch() << 2;
-  auto* temp = (uint8_t*)malloc(byte_pitch);
+  auto temp = std::make_unique<uint8_t[]>(byte_pitch);
+
   int half_height = height >> 1;
 
   if ((height & 1) != 0) {
-    auto* temp2 = (uint8_t*)malloc(byte_pitch);
+    auto temp2 = std::make_unique<uint8_t[]>(byte_pitch);
     if (unswap) {
       auto* upper =
           (uint8_t*)(py->GetData() + ((int64_t)height >> 1) * py->GetPitch());
       auto* lower =
           (uint8_t*)(py->GetData() + ((int64_t)height - 1) * py->GetPitch());
 
-      memcpy(temp, upper, byte_pitch);
+      memcpy(temp.get(), upper, byte_pitch);
 
       for (int y = 0; y < half_height; ++y) {
-        memcpy(temp2, lower, byte_pitch);
-        memcpy(lower, temp, byte_pitch);
+        memcpy(temp2.get(), lower, byte_pitch);
+        memcpy(lower, temp.get(), byte_pitch);
         upper -= byte_pitch;
-        memcpy(temp, upper, byte_pitch);
-        memcpy(upper, temp2, byte_pitch);
+        memcpy(temp.get(), upper, byte_pitch);
+        memcpy(upper, temp2.get(), byte_pitch);
         lower -= byte_pitch;
       }
 
-      memcpy(lower, temp, byte_pitch);
+      memcpy(lower, temp.get(), byte_pitch);
     } else {
       auto* upper = (uint8_t*)py->GetData();
       auto* lower =
           (uint8_t*)(py->GetData() + ((int64_t)height >> 1) * py->GetPitch());
 
-      memcpy(temp, lower, byte_pitch);
+      memcpy(temp.get(), lower, byte_pitch);
 
       for (int y = 0; y < half_height; ++y) {
-        memcpy(temp2, upper, byte_pitch);
-        memcpy(upper, temp, byte_pitch);
+        memcpy(temp2.get(), upper, byte_pitch);
+        memcpy(upper, temp.get(), byte_pitch);
         lower += byte_pitch;
-        memcpy(temp, lower, byte_pitch);
-        memcpy(lower, temp2, byte_pitch);
+        memcpy(temp.get(), lower, byte_pitch);
+        memcpy(lower, temp2.get(), byte_pitch);
         upper += byte_pitch;
       }
 
-      memcpy(upper, temp, byte_pitch);
+      memcpy(upper, temp.get(), byte_pitch);
     }
-
-    free(temp2);
   } else {
     auto* upper = (uint8_t*)py->GetData();
     auto* lower =
         (uint8_t*)(py->GetData() + (int64_t)half_height * py->GetPitch());
     for (int y = 0; y < half_height; ++y) {
-      memcpy(temp, upper, byte_pitch);
+      memcpy(temp.get(), upper, byte_pitch);
       memcpy(upper, lower, byte_pitch);
-      memcpy(lower, temp, byte_pitch);
+      memcpy(lower, temp.get(), byte_pitch);
       upper += byte_pitch;
       lower += byte_pitch;
     }
   }
-
-  free(temp);
 }
 
 void SwapV(Pyramid* py) { SwapUnswapV(py, false); }

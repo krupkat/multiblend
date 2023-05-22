@@ -498,9 +498,9 @@ int main(int argc, char* argv[]) {
   switch (output_type) {
     case io::ImageType::MB_TIFF: {
       if (!big_tiff) {
-        tiff_file = {TIFFOpen(output_filename, "w"), io::tiff::TiffDeleter{}};
+        tiff_file = {TIFFOpen(output_filename, "w"), io::tiff::CloseDeleter{}};
       } else {
-        tiff_file = {TIFFOpen(output_filename, "w8"), io::tiff::TiffDeleter{}};
+        tiff_file = {TIFFOpen(output_filename, "w8"), io::tiff::CloseDeleter{}};
       }
       if (tiff_file == nullptr) {
         utils::die("Error: Could not open output file");

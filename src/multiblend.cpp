@@ -891,10 +891,10 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       utils::die("Error: Incorrect seam PNG format");
     }
 
-    auto* png_line = (png_bytep)malloc(width);
+    auto png_line = std::make_unique<png_byte[]>(width);
 
     for (int y = 0; y < height; ++y) {
-      png_read_row(png_ptr.get(), png_line, nullptr);
+      png_read_row(png_ptr.get(), png_line.get(), nullptr);
 
       int x = 0;
       RecordState state;
@@ -912,8 +912,6 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         images[i].masks_[0].NextLine();
       }
     }
-
-    free(png_line);
   }
 
   timing.seam_time = timer.Read();

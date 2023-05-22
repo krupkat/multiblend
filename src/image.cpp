@@ -12,6 +12,7 @@
 #include "src/pnger.h"
 #include "src/pyramid.h"
 #include "src/threadpool.h"
+#include "src/tiff.h"
 
 namespace multiblend::io {
 
@@ -49,7 +50,7 @@ void Image::Open() {
 
   switch (type_) {
     case ImageType::MB_TIFF: {
-      tiff_ = {TIFFOpen(filename_, "r"), tiff::TiffDeleter{}};
+      tiff_ = {TIFFOpen(filename_, "r"), tiff::CloseDeleter{}};
       if (tiff_ == nullptr) {
         utils::die("Could not open %s", filename_);
       }
@@ -144,26 +145,26 @@ void Image::Open() {
           end_strip_ != TIFFNumberOfStrips(
                             tiff_.get())) {  // double check that min strips are
                                              // (probably) transparent
-        tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tiff_.get()));
+        auto buf = std::unique_ptr<void, tiff::FreeDeleter>{
+            _TIFFmalloc(TIFFScanlineSize(tiff_.get())), tiff::FreeDeleter{}};
         if (first_strip_ != 0) {
-          TIFFReadScanline(tiff_.get(), buf, 0);
+          TIFFReadScanline(tiff_.get(), buf.get(), 0);
         } else {
-          TIFFReadScanline(tiff_.get(), buf, tiff_u_height_ - 1);
+          TIFFReadScanline(tiff_.get(), buf.get(), tiff_u_height_ - 1);
         }
         bool trans;
         switch (bpp_) {
           case 8:
-            trans = (((uint32_t*)buf)[0] & 0xff000000) == 0u;
+            trans = (((uint32_t*)buf.get())[0] & 0xff000000) == 0u;
             break;
           case 16:
-            trans = (((uint64_t*)buf)[0] & 0xffff000000000000) == 0u;
+            trans = (((uint64_t*)buf.get())[0] & 0xffff000000000000) == 0u;
             break;
         }
         if (!trans) {
           first_strip_ = 0;
           end_strip_ = TIFFNumberOfStrips(tiff_.get());
         }
-        _TIFFfree(buf);
       }
 
       ypos_ += first_strip_ * rows_per_strip_;
@@ -878,8 +879,8 @@ void Image::MaskPng(int i) {
   int height = masks_[0].height_;  // +1 + masks[1]->height;
 
   std::size_t size = (std::size_t)width * height;
-  auto* temp = (uint8_t*)malloc(size);
-  memset(temp, 32, size);
+  auto temp = std::make_unique<uint8_t[]>(size);
+  memset(temp.get(), 32, size);
 
   int px = 0;
   int py = 0;
@@ -887,7 +888,8 @@ void Image::MaskPng(int i) {
 
   for (int l = 0; l < (int)masks_.size(); ++l) {
     auto* data = (uint32_t*)masks_[l].data_.get();
-    uint8_t* line = temp + static_cast<ptrdiff_t>(py) * masks_[0].width_ + px;
+    uint8_t* line =
+        temp.get() + static_cast<ptrdiff_t>(py) * masks_[0].width_ + px;
     for (int y = 0; y < masks_[l].height_; ++y) {
       int x = 0;
       while (x < masks_[l].width_) {
@@ -924,7 +926,7 @@ void Image::MaskPng(int i) {
     break;
   }
 
-  io::png::Pnger::Quick(filename, temp, width, height, width,
+  io::png::Pnger::Quick(filename, temp.get(), width, height, width,
                         PNG_COLOR_TYPE_GRAY);
 }
 
