@@ -89,7 +89,7 @@ class Image {
   FILE* file_;
   std::unique_ptr<jpeg_error_mgr> jerr_;
   std::unique_ptr<jpeg_decompress_struct, JpegDecompressDeleter> cinfo_;
-  std::unique_ptr<png_struct, io::png::PngReadStructDeleter> png_ptr_;
+  std::unique_ptr<png_struct, png::PngReadStructDeleter> png_ptr_;
 };
 
 }  // namespace multiblend::io
