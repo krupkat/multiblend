@@ -48,34 +48,34 @@ void Image::Open() {
 
   switch (type_) {
     case ImageType::MB_TIFF: {
-      tiff_ = TIFFOpen(filename_, "r");
+      tiff_ = {TIFFOpen(filename_, "r"), tiff::TiffDeleter{}};
       if (tiff_ == nullptr) {
         utils::die("Could not open %s", filename_);
       }
 
-      if (TIFFGetField(tiff_, TIFFTAG_XPOSITION, &tiff_xpos) == 0) {
+      if (TIFFGetField(tiff_.get(), TIFFTAG_XPOSITION, &tiff_xpos) == 0) {
         tiff_xpos = -1;
       }
-      if (TIFFGetField(tiff_, TIFFTAG_YPOSITION, &tiff_ypos) == 0) {
+      if (TIFFGetField(tiff_.get(), TIFFTAG_YPOSITION, &tiff_ypos) == 0) {
         tiff_ypos = -1;
       }
-      if (TIFFGetField(tiff_, TIFFTAG_XRESOLUTION, &tiff_xres_) == 0) {
+      if (TIFFGetField(tiff_.get(), TIFFTAG_XRESOLUTION, &tiff_xres_) == 0) {
         tiff_xres_ = -1;
       }
-      if (TIFFGetField(tiff_, TIFFTAG_YRESOLUTION, &tiff_yres_) == 0) {
+      if (TIFFGetField(tiff_.get(), TIFFTAG_YRESOLUTION, &tiff_yres_) == 0) {
         tiff_yres_ = -1;
       }
-      TIFFGetField(tiff_, TIFFTAG_IMAGEWIDTH, &tiff_width_);
-      TIFFGetField(tiff_, TIFFTAG_IMAGELENGTH, &tiff_height_);
-      TIFFGetField(tiff_, TIFFTAG_BITSPERSAMPLE, &bpp_);
-      TIFFGetField(tiff_, TIFFTAG_SAMPLESPERPIXEL, &spp_);
-      TIFFGetField(tiff_, TIFFTAG_ROWSPERSTRIP, &rows_per_strip_);
-      TIFFGetField(tiff_, TIFFTAG_COMPRESSION, &compression);
+      TIFFGetField(tiff_.get(), TIFFTAG_IMAGEWIDTH, &tiff_width_);
+      TIFFGetField(tiff_.get(), TIFFTAG_IMAGELENGTH, &tiff_height_);
+      TIFFGetField(tiff_.get(), TIFFTAG_BITSPERSAMPLE, &bpp_);
+      TIFFGetField(tiff_.get(), TIFFTAG_SAMPLESPERPIXEL, &spp_);
+      TIFFGetField(tiff_.get(), TIFFTAG_ROWSPERSTRIP, &rows_per_strip_);
+      TIFFGetField(tiff_.get(), TIFFTAG_COMPRESSION, &compression);
 
       if (bpp_ != 8 && bpp_ != 16) {
         printf("Invalid bpp %d (%s)", bpp_, filename_);
         printf("%d, %d\n", tiff_width_, tiff_height_);
-        TIFFGetField(tiff_, TIFFTAG_BITSPERSAMPLE, &bpp_);
+        TIFFGetField(tiff_.get(), TIFFTAG_BITSPERSAMPLE, &bpp_);
         if (bpp_ != 8 && bpp_ != 16) {
           utils::die("Invalid bpp %d (%s)", bpp_, filename_);
         }
@@ -87,7 +87,7 @@ void Image::Open() {
 
       if (tiff_xpos == -1 && tiff_ypos == -1) {
         // try to read geotiff tags
-        if (tiff::geotiff_read(tiff_, &geotiff_) != 0) {
+        if (tiff::geotiff_read(tiff_.get(), &geotiff_) != 0) {
           xpos_ = (int)(geotiff_.XGeoRef / geotiff_.XCellRes);
           ypos_ = (int)(geotiff_.YGeoRef / geotiff_.YCellRes);
         } else {
@@ -104,7 +104,7 @@ void Image::Open() {
       }
 
       first_strip_ = 0;
-      end_strip_ = TIFFNumberOfStrips(tiff_);
+      end_strip_ = TIFFNumberOfStrips(tiff_.get());
 
       int s;
       tmsize_t temp;
@@ -112,8 +112,8 @@ void Image::Open() {
       if (tiff_xpos <= 0 && tiff_ypos <= 0 && compression != 1 && spp_ == 4) {
         tmsize_t min_stripsize = 0xffffffff;
         int min_stripcount = 0;
-        for (s = 0; s < (int)TIFFNumberOfStrips(tiff_) - 1; ++s) {
-          temp = TIFFRawStripSize(tiff_, s);
+        for (s = 0; s < (int)TIFFNumberOfStrips(tiff_.get()) - 1; ++s) {
+          temp = TIFFRawStripSize(tiff_.get(), s);
           if (temp < min_stripsize) {
             min_stripsize = temp;
             min_stripcount = 1;
@@ -124,8 +124,8 @@ void Image::Open() {
 
         if (min_stripcount > 2) {
           first_strip_ = -1;
-          for (s = 0; s < (int)TIFFNumberOfStrips(tiff_); ++s) {
-            temp = TIFFRawStripSize(tiff_, s);
+          for (s = 0; s < (int)TIFFNumberOfStrips(tiff_.get()); ++s) {
+            temp = TIFFRawStripSize(tiff_.get(), s);
             if (temp != min_stripsize) {
               if (first_strip_ == -1) {
                 first_strip_ = s;
@@ -140,14 +140,14 @@ void Image::Open() {
       }
 
       if ((first_strip_ != 0) ||
-          end_strip_ !=
-              TIFFNumberOfStrips(tiff_)) {  // double check that min strips are
-                                            // (probably) transparent
-        tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tiff_));
+          end_strip_ != TIFFNumberOfStrips(
+                            tiff_.get())) {  // double check that min strips are
+                                             // (probably) transparent
+        tdata_t buf = _TIFFmalloc(TIFFScanlineSize(tiff_.get()));
         if (first_strip_ != 0) {
-          TIFFReadScanline(tiff_, buf, 0);
+          TIFFReadScanline(tiff_.get(), buf, 0);
         } else {
-          TIFFReadScanline(tiff_, buf, tiff_u_height_ - 1);
+          TIFFReadScanline(tiff_.get(), buf, tiff_u_height_ - 1);
         }
         bool trans;
         switch (bpp_) {
@@ -160,32 +160,34 @@ void Image::Open() {
         }
         if (!trans) {
           first_strip_ = 0;
-          end_strip_ = TIFFNumberOfStrips(tiff_);
+          end_strip_ = TIFFNumberOfStrips(tiff_.get());
         }
         _TIFFfree(buf);
       }
 
       ypos_ += first_strip_ * rows_per_strip_;
       int rows_missing =
-          TIFFNumberOfStrips(tiff_) * rows_per_strip_ - tiff_height_;
+          TIFFNumberOfStrips(tiff_.get()) * rows_per_strip_ - tiff_height_;
 
       tiff_u_height_ = (end_strip_ - first_strip_) * rows_per_strip_;
-      if (end_strip_ == TIFFNumberOfStrips(tiff_)) {
+      if (end_strip_ == TIFFNumberOfStrips(tiff_.get())) {
         tiff_u_height_ -= rows_missing;
       }
     } break;
     case ImageType::MB_JPEG: {
-      fopen_s(&file_, filename_, "rb");
-      if (file_ == nullptr) {
+      FILE* tmp_file = nullptr;
+      fopen_s(&tmp_file, filename_, "rb");
+      if (tmp_file == nullptr) {
         utils::die("Could not open %s", filename_);
       }
+      file_ = {tmp_file, FileDeleter{}};
 
       cinfo_ = {new jpeg_decompress_struct{}, JpegDecompressDeleter{}};
       jerr_ = std::make_unique<jpeg_error_mgr>();
 
       cinfo_->err = jpeg_std_error(jerr_.get());
       jpeg_create_decompress(cinfo_.get());
-      jpeg_stdio_src(cinfo_.get(), file_);
+      jpeg_stdio_src(cinfo_.get(), file_.get());
       jpeg_read_header(cinfo_.get(), TRUE);
       jpeg_start_decompress(cinfo_.get());
 
@@ -208,14 +210,16 @@ void Image::Open() {
       tiff_xres_ = tiff_yres_ = 90;
     } break;
     case ImageType::MB_PNG: {
-      fopen_s(&file_, filename_, "rb");
-      if (file_ == nullptr) {
+      FILE* tmp_file = nullptr;
+      fopen_s(&tmp_file, filename_, "rb");
+      if (tmp_file == nullptr) {
         utils::die("Could not open %s", filename_);
       }
+      file_ = {tmp_file, FileDeleter{}};
 
       uint8_t sig[8];
-      std::size_t r =
-          fread(sig, 1, 8, file_);  // assignment suppresses g++ -Ofast warning
+      std::size_t r = fread(
+          sig, 1, 8, file_.get());  // assignment suppresses g++ -Ofast warning
       if (!png_check_sig(sig, 8)) {
         utils::die("Bad PNG signature (%s)", filename_);
       }
@@ -235,7 +239,7 @@ void Image::Open() {
         utils::die("Error: libpng problem");
       }
 
-      png_init_io(png_ptr_.get(), file_);
+      png_init_io(png_ptr_.get(), file_.get());
       png_set_sig_bytes(png_ptr_.get(), 8);
       png_read_info(png_ptr_.get(), info_ptr.get());
 
@@ -290,7 +294,7 @@ void Image::Read(void* data, bool gamma) {
       char* pointer = (char*)data;
 
       for (int s = first_strip_; s < end_strip_; s++) {
-        auto strip_size = TIFFReadEncodedStrip(tiff_, s, pointer, -1);
+        auto strip_size = TIFFReadEncodedStrip(tiff_.get(), s, pointer, -1);
         pointer += strip_size;
       }
     } break;

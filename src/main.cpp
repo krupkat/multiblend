@@ -36,6 +36,7 @@
 #include "src/mapalloc.h"
 #include "src/multiblend.h"
 #include "src/pnger.h"
+#include "src/tiff.h"
 
 namespace mb = multiblend;
 namespace utils = mb::utils;
@@ -68,7 +69,7 @@ int main(int argc, char* argv[]) {
   bool all_threads = true;
   int wrap = 0;
 
-  TIFF* tiff_file = nullptr;
+  io::tiff::TiffPtr tiff_file = nullptr;
   io::FilePtr jpeg_file = nullptr;
   std::optional<io::png::Pnger> png_file;
   io::ImageType output_type = io::ImageType::MB_NONE;
@@ -496,9 +497,9 @@ int main(int argc, char* argv[]) {
   switch (output_type) {
     case io::ImageType::MB_TIFF: {
       if (!big_tiff) {
-        tiff_file = TIFFOpen(output_filename, "w");
+        tiff_file = {TIFFOpen(output_filename, "w"), io::tiff::TiffDeleter{}};
       } else {
-        tiff_file = TIFFOpen(output_filename, "w8");
+        tiff_file = {TIFFOpen(output_filename, "w8"), io::tiff::TiffDeleter{}};
       }
       if (tiff_file == nullptr) {
         utils::die("Error: Could not open output file");
@@ -577,29 +578,32 @@ int main(int argc, char* argv[]) {
 
     switch (output_type) {
       case io::ImageType::MB_TIFF: {
-        TIFFSetField(tiff_file, TIFFTAG_IMAGEWIDTH, result.width);
-        TIFFSetField(tiff_file, TIFFTAG_IMAGELENGTH, result.height);
-        TIFFSetField(tiff_file, TIFFTAG_COMPRESSION, compression);
-        TIFFSetField(tiff_file, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
-        TIFFSetField(tiff_file, TIFFTAG_ROWSPERSTRIP, rows_per_strip);
-        TIFFSetField(tiff_file, TIFFTAG_BITSPERSAMPLE, result.output_bpp);
+        TIFFSetField(tiff_file.get(), TIFFTAG_IMAGEWIDTH, result.width);
+        TIFFSetField(tiff_file.get(), TIFFTAG_IMAGELENGTH, result.height);
+        TIFFSetField(tiff_file.get(), TIFFTAG_COMPRESSION, compression);
+        TIFFSetField(tiff_file.get(), TIFFTAG_PLANARCONFIG,
+                     PLANARCONFIG_CONTIG);
+        TIFFSetField(tiff_file.get(), TIFFTAG_ROWSPERSTRIP, rows_per_strip);
+        TIFFSetField(tiff_file.get(), TIFFTAG_BITSPERSAMPLE, result.output_bpp);
         if (result.no_mask) {
-          TIFFSetField(tiff_file, TIFFTAG_SAMPLESPERPIXEL, 3);
+          TIFFSetField(tiff_file.get(), TIFFTAG_SAMPLESPERPIXEL, 3);
         } else {
-          TIFFSetField(tiff_file, TIFFTAG_SAMPLESPERPIXEL, 4);
+          TIFFSetField(tiff_file.get(), TIFFTAG_SAMPLESPERPIXEL, 4);
           uint16_t out[1] = {EXTRASAMPLE_UNASSALPHA};
-          TIFFSetField(tiff_file, TIFFTAG_EXTRASAMPLES, 1, &out);
+          TIFFSetField(tiff_file.get(), TIFFTAG_EXTRASAMPLES, 1, &out);
         }
 
-        TIFFSetField(tiff_file, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
+        TIFFSetField(tiff_file.get(), TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
         if (images[0].tiff_xres_ != -1) {
-          TIFFSetField(tiff_file, TIFFTAG_XRESOLUTION, images[0].tiff_xres_);
-          TIFFSetField(tiff_file, TIFFTAG_XPOSITION,
+          TIFFSetField(tiff_file.get(), TIFFTAG_XRESOLUTION,
+                       images[0].tiff_xres_);
+          TIFFSetField(tiff_file.get(), TIFFTAG_XPOSITION,
                        (float)(result.min_xpos / images[0].tiff_xres_));
         }
         if (images[0].tiff_yres_ != -1) {
-          TIFFSetField(tiff_file, TIFFTAG_YRESOLUTION, images[0].tiff_yres_);
-          TIFFSetField(tiff_file, TIFFTAG_YPOSITION,
+          TIFFSetField(tiff_file.get(), TIFFTAG_YRESOLUTION,
+                       images[0].tiff_yres_);
+          TIFFSetField(tiff_file.get(), TIFFTAG_YPOSITION,
                        (float)(result.min_ypos / images[0].tiff_yres_));
         }
 
@@ -611,7 +615,7 @@ int main(int argc, char* argv[]) {
           utils::Output(1, "Output georef: UL: %f %f, pixel size: %f %f\n",
                         info.XGeoRef, info.YGeoRef, info.XCellRes,
                         info.YCellRes);
-          io::tiff::geotiff_write(tiff_file, &info);
+          io::tiff::geotiff_write(tiff_file.get(), &info);
         }
       } break;
       case io::ImageType::MB_JPEG: {
@@ -715,7 +719,7 @@ int main(int argc, char* argv[]) {
 
       switch (output_type) {
         case io::ImageType::MB_TIFF: {
-          TIFFWriteEncodedStrip(tiff_file, s, strip.get(),
+          TIFFWriteEncodedStrip(tiff_file.get(), s, strip.get(),
                                 rows * (int64_t)bytes_per_row);
         } break;
         case io::ImageType::MB_JPEG: {
@@ -729,14 +733,9 @@ int main(int argc, char* argv[]) {
       remaining -= rows_per_strip;
     }
 
-    switch (output_type) {
-      case io::ImageType::MB_TIFF: {
-        TIFFClose(tiff_file);
-      } break;
-      case io::ImageType::MB_JPEG: {
-        jpeg_finish_compress(&cinfo);
-        jpeg_destroy_compress(&cinfo);
-      } break;
+    if (output_type == io::ImageType::MB_JPEG) {
+      jpeg_finish_compress(&cinfo);
+      jpeg_destroy_compress(&cinfo);
     }
 
     write_time = timer.Read();
