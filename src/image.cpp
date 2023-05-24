@@ -4,12 +4,10 @@
 #include <cstdio>
 #include <memory>
 
-#ifdef MULTIBLEND_WITH_TIFF
-#include <tiffio.h>
-#endif
-
 #include "src/functions.h"
+#ifdef MULTIBLEND_WITH_JPEG
 #include "src/jpeg.h"
+#endif
 #include "src/linux_overrides.h"
 #include "src/mapalloc.h"
 #include "src/pnger.h"
@@ -186,6 +184,7 @@ void Image::Open() {
 #endif
     } break;
     case ImageType::MB_JPEG: {
+#ifdef MULTIBLEND_WITH_JPEG
       FILE* tmp_file = nullptr;
       fopen_s(&tmp_file, filename_, "rb");
       if (tmp_file == nullptr) {
@@ -219,6 +218,9 @@ void Image::Open() {
       xpos_ = ypos_ = 0;
       tiff_xpos = tiff_ypos = 0;
       tiff_xres_ = tiff_yres_ = 90;
+#else
+      throw(std::runtime_error("JPEG support not compiled in"));
+#endif
     } break;
     case ImageType::MB_PNG: {
 #ifdef MULTIBLEND_WITH_PNG
@@ -318,12 +320,16 @@ void Image::Read(void* data, bool gamma) {
 #endif
     } break;
     case ImageType::MB_JPEG: {
+#ifdef MULTIBLEND_WITH_JPEG
       auto* pointer = (uint8_t*)data;
 
       while (cinfo_->output_scanline < cinfo_->output_height) {
         jpeg_read_scanlines(cinfo_.get(), &pointer, 1);
         pointer += (tiff_width_ * spp_) << (bpp_ >> 4);
       }
+#else
+      throw(std::runtime_error("JPEG support not compiled in"));
+#endif
     } break;
     case ImageType::MB_PNG: {
 #ifdef MULTIBLEND_WITH_PNG

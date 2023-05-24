@@ -4,14 +4,11 @@
 #include <memory>
 #include <optional>
 
-#include <jpeglib.h>
-#ifdef MULTIBLEND_WITH_PNG
-#include <png.h>
-#endif
-
 #include "src/file.h"
 #include "src/functions.h"
+#ifdef MULTIBLEND_WITH_JPEG
 #include "src/jpeg.h"
+#endif
 #include "src/mapalloc.h"
 #include "src/pnger.h"
 #include "src/pyramid.h"
@@ -87,8 +84,10 @@ class Image {
 #ifdef MULTIBLEND_WITH_TIFF
   tiff::TiffPtr tiff_;
 #endif
+#ifdef MULTIBLEND_WITH_JPEG
   std::unique_ptr<jpeg_error_mgr> jerr_;
   std::unique_ptr<jpeg_decompress_struct, jpeg::DecompressDeleter> cinfo_;
+#endif
 #ifdef MULTIBLEND_WITH_PNG
   std::unique_ptr<png_struct, png::PngReadStructDeleter> png_ptr_;
 #endif
