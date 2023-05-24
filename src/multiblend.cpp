@@ -5,6 +5,7 @@
 #include <optional>
 #include <vector>
 
+#include "src/image.h"
 #include "src/linux_overrides.h"
 #include "src/pnger.h"
 

@@ -1,4 +1,4 @@
-#include "src/geotiff.h"
+#include "src/tiff.h"
 
 #include <cstdint>
 #include <cstdlib>

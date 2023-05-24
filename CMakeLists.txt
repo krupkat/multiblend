@@ -20,7 +20,6 @@ set(CMAKE_CXX_STANDARD 20)
 add_library(MultiblendLib
   "src/aligned_ptr.cpp"
   "src/functions.cpp"
-  "src/geotiff.cpp"
   "src/image.cpp"
   "src/mapalloc.cpp"
   "src/multiblend.cpp"
@@ -49,6 +48,7 @@ if(MULTIBLEND_LIB_WITH_TIFF)
   find_package(TIFF REQUIRED)
   target_link_libraries(MultiblendLib TIFF::TIFF)
   target_compile_definitions(MultiblendLib PUBLIC MULTIBLEND_WITH_TIFF)
+  target_sources(MultiblendLib PRIVATE "src/tiff.cpp")
 endif()
 
 if(MULTIBLEND_BUILD_EXE)

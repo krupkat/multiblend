@@ -8,16 +8,16 @@
 #ifdef MULTIBLEND_WITH_PNG
 #include <png.h>
 #endif
-#include <tiffio.h>
 
 #include "src/file.h"
 #include "src/functions.h"
-#include "src/geotiff.h"
 #include "src/jpeg.h"
 #include "src/mapalloc.h"
 #include "src/pnger.h"
 #include "src/pyramid.h"
+#ifdef MULTIBLEND_WITH_TIFF
 #include "src/tiff.h"
+#endif
 
 namespace multiblend::io {
 
@@ -52,7 +52,9 @@ class Image {
   int ypos_add_ = 0;
   std::vector<Channel> channels_;
   std::optional<Pyramid> pyramid_;
+#ifdef MULTIBLEND_WITH_TIFF
   tiff::GeoTIFFInfo geotiff_;
+#endif
   int tiff_width_;
   int tiff_height_;
   int tiff_u_height_;
@@ -80,9 +82,11 @@ class Image {
   void MaskPng(int i);
 
  private:
-  tiff::TiffPtr tiff_;
   FilePtr file_;
 
+#ifdef MULTIBLEND_WITH_TIFF
+  tiff::TiffPtr tiff_;
+#endif
   std::unique_ptr<jpeg_error_mgr> jerr_;
   std::unique_ptr<jpeg_decompress_struct, jpeg::DecompressDeleter> cinfo_;
 #ifdef MULTIBLEND_WITH_PNG

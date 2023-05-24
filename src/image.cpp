@@ -4,15 +4,20 @@
 #include <cstdio>
 #include <memory>
 
+#ifdef MULTIBLEND_WITH_TIFF
+#include <tiffio.h>
+#endif
+
 #include "src/functions.h"
-#include "src/geotiff.h"
 #include "src/jpeg.h"
 #include "src/linux_overrides.h"
 #include "src/mapalloc.h"
 #include "src/pnger.h"
 #include "src/pyramid.h"
 #include "src/threadpool.h"
+#ifdef MULTIBLEND_WITH_TIFF
 #include "src/tiff.h"
+#endif
 
 namespace multiblend::io {
 
@@ -50,6 +55,7 @@ void Image::Open() {
 
   switch (type_) {
     case ImageType::MB_TIFF: {
+#ifdef MULTIBLEND_WITH_TIFF
       tiff_ = {TIFFOpen(filename_, "r"), tiff::CloseDeleter{}};
       if (tiff_ == nullptr) {
         utils::die("Could not open %s", filename_);
@@ -175,6 +181,9 @@ void Image::Open() {
       if (end_strip_ == TIFFNumberOfStrips(tiff_.get())) {
         tiff_u_height_ -= rows_missing;
       }
+#else
+      throw(std::runtime_error("TIFF support not compiled in"));
+#endif
     } break;
     case ImageType::MB_JPEG: {
       FILE* tmp_file = nullptr;
@@ -297,12 +306,16 @@ void Image::Read(void* data, bool gamma) {
 
   switch (type_) {
     case ImageType::MB_TIFF: {
+#ifdef MULTIBLEND_WITH_TIFF
       char* pointer = (char*)data;
 
       for (int s = first_strip_; s < end_strip_; s++) {
         auto strip_size = TIFFReadEncodedStrip(tiff_.get(), s, pointer, -1);
         pointer += strip_size;
       }
+#else
+      throw(std::runtime_error("TIFF support not compiled in"));
+#endif
     } break;
     case ImageType::MB_JPEG: {
       auto* pointer = (uint8_t*)data;
