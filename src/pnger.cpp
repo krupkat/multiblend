@@ -4,21 +4,43 @@
 #include <cmath>
 #include <cstdint>
 
+#ifdef MULTIBLEND_WITH_PNG
 #include <png.h>
+#endif
 
 #include "src/functions.h"
 #include "src/linux_overrides.h"
 
 namespace multiblend::io::png {
 
+#ifdef MULTIBLEND_WITH_PNG
 std::vector<png_color> Pnger::palette_ = {};
 
+namespace {
+int ToPngValue(ColorType type) {
+  switch (type) {
+    case ColorType::RGB:
+      return PNG_COLOR_TYPE_RGB;
+    case ColorType::RGB_ALPHA:
+      return PNG_COLOR_TYPE_RGB_ALPHA;
+    case ColorType::PALETTE:
+      return PNG_COLOR_TYPE_PALETTE;
+    case ColorType::GRAY:
+      return PNG_COLOR_TYPE_GRAY;
+    default:
+      return PNG_COLOR_TYPE_RGB;
+  }
+}
+}  // namespace
+#endif
+
 Pnger::Pnger(const char* filename, const char* name, int width, int height,
-             int type, int bpp, FilePtr file, int compression) {
+             ColorType type, int bpp, FilePtr file, int compression) {
+#ifdef MULTIBLEND_WITH_PNG
   y_ = 0;
   height_ = height;
 
-  if (type == PNG_COLOR_TYPE_PALETTE && palette_.empty()) {
+  if (type == ColorType::PALETTE && palette_.empty()) {
     palette_.resize(256);
 
     double base = 2;
@@ -94,10 +116,10 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
 
   png_init_io(png_ptr_.get(), file_.get());
 
-  png_set_IHDR(png_ptr_.get(), info_ptr_.get(), width, height, bpp, type,
-               PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT,
-               PNG_FILTER_TYPE_DEFAULT);
-  if (type == PNG_COLOR_TYPE_PALETTE) {
+  png_set_IHDR(png_ptr_.get(), info_ptr_.get(), width, height, bpp,
+               ToPngValue(type), PNG_INTERLACE_NONE,
+               PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+  if (type == ColorType::PALETTE) {
     png_set_PLTE(png_ptr_.get(), info_ptr_.get(), palette_.data(), 256);
   }
 
@@ -108,15 +130,17 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
   }
 
   if (name != nullptr) {
-    auto size = (type == PNG_COLOR_TYPE_RGB_ALPHA ? (width << 2)
-                 : type == PNG_COLOR_TYPE_RGB     ? width * 3
-                                                  : width)
+    auto size = (type == ColorType::RGB_ALPHA ? (width << 2)
+                 : type == ColorType::RGB     ? width * 3
+                                              : width)
                 << (bpp >> 4);
     line_.resize(size);
   }
+#endif
 };
 
 void Pnger::Write() {
+#ifdef MULTIBLEND_WITH_PNG
   if (file_ == nullptr) {
     return;
   }
@@ -130,9 +154,13 @@ void Pnger::Write() {
     png_ptr_.reset();
     file_.reset();
   }
+#else
+  throw(std::runtime_error("PNG support not compiled in"));
+#endif
 }
 
 void Pnger::WriteRows(uint8_t** rows, int num_rows) {
+#ifdef MULTIBLEND_WITH_PNG
   if (file_ == nullptr) {
     return;
   }
@@ -145,16 +173,23 @@ void Pnger::WriteRows(uint8_t** rows, int num_rows) {
     png_ptr_.reset();
     file_.reset();
   }
+#else
+  throw(std::runtime_error("PNG support not compiled in"));
+#endif
 }
 
 void Pnger::Quick(char* filename, uint8_t* data, int width, int height,
-                  int pitch, int type) {
+                  int pitch, ColorType type) {
+#ifdef MULTIBLEND_WITH_PNG
   Pnger temp(filename, nullptr, width, height, type);
 
   for (int y = 0; y < height; ++y) {
     temp.WriteRows(&data, 1);
-    data += (type == PNG_COLOR_TYPE_RGB_ALPHA) ? (pitch << 2) : pitch;
+    data += (type == ColorType::RGB_ALPHA) ? (pitch << 2) : pitch;
   }
+#else
+  throw(std::runtime_error("PNG support not compiled in"));
+#endif
 }
 
 }  // namespace multiblend::io::png

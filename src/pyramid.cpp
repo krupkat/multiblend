@@ -1482,7 +1482,7 @@ void Pyramid::Png(const char* filename) {
   }
 
   io::png::Pnger::Quick((char*)filename, temp, width, height, width,
-                        PNG_COLOR_TYPE_GRAY);
+                        io::png::ColorType::GRAY);
 
   free(temp);
 }

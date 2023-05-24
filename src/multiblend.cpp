@@ -477,13 +477,13 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   std::optional<io::png::Pnger> xor_map;
   if (opts.xor_filename != nullptr) {
     xor_map = io::png::Pnger(opts.xor_filename, "XOR map", width, height,
-                             PNG_COLOR_TYPE_PALETTE);
+                             io::png::ColorType::PALETTE);
   }
 
   std::optional<io::png::Pnger> seam_map;
   if (opts.seamsave_filename != nullptr) {
     seam_map = io::png::Pnger(opts.seamsave_filename, "Seam map", width, height,
-                              PNG_COLOR_TYPE_PALETTE);
+                              io::png::ColorType::PALETTE);
   }
 
   /***********************************************************************
@@ -835,9 +835,10 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     opts.no_mask = true;
   }
 
-  /***********************************************************************
-   * Seam load
-   ***********************************************************************/
+/***********************************************************************
+ * Seam load
+ ***********************************************************************/
+#ifdef MULTIBLEND_WITH_PNG
   if (opts.seamload_filename != nullptr) {
     int png_depth;
     int png_colour;
@@ -890,6 +891,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     }
 
     auto png_line = std::make_unique<png_byte[]>(width);
+    std::optional<io::png::Pnger> empty;
 
     for (int y = 0; y < height; ++y) {
       png_read_row(png_ptr.get(), png_line.get(), nullptr);
@@ -901,16 +903,17 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         if (png_line[x] > n_images) {
           utils::die("Error: Bad pixel found in seam file: %d,%d", x, y);
         }
-        Record(png_line[x], 1, x, state, images, seam_map);
+        Record(png_line[x], 1, x, state, images, empty);
       }
 
-      Record(-1, 0, x, state, images, seam_map);
+      Record(-1, 0, x, state, images, empty);
 
       for (int i = 0; i < n_images; ++i) {
         images[i].masks_[0].NextLine();
       }
     }
   }
+#endif
 
   timing.seam_time = timer.Read();
 

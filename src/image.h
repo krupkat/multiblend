@@ -5,7 +5,9 @@
 #include <optional>
 
 #include <jpeglib.h>
+#ifdef MULTIBLEND_WITH_PNG
 #include <png.h>
+#endif
 #include <tiffio.h>
 
 #include "src/file.h"
@@ -83,7 +85,9 @@ class Image {
 
   std::unique_ptr<jpeg_error_mgr> jerr_;
   std::unique_ptr<jpeg_decompress_struct, jpeg::DecompressDeleter> cinfo_;
+#ifdef MULTIBLEND_WITH_PNG
   std::unique_ptr<png_struct, png::PngReadStructDeleter> png_ptr_;
+#endif
 };
 
 }  // namespace multiblend::io

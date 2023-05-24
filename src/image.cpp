@@ -212,6 +212,7 @@ void Image::Open() {
       tiff_xres_ = tiff_yres_ = 90;
     } break;
     case ImageType::MB_PNG: {
+#ifdef MULTIBLEND_WITH_PNG
       FILE* tmp_file = nullptr;
       fopen_s(&tmp_file, filename_, "rb");
       if (tmp_file == nullptr) {
@@ -273,6 +274,9 @@ void Image::Open() {
       xpos_ = ypos_ = 0;
       tiff_xpos = tiff_ypos = 0;
       tiff_xres_ = tiff_yres_ = 90;
+#else
+      throw(std::runtime_error("PNG support not compiled in"));
+#endif
     } break;
   }
 
@@ -309,12 +313,16 @@ void Image::Read(void* data, bool gamma) {
       }
     } break;
     case ImageType::MB_PNG: {
+#ifdef MULTIBLEND_WITH_PNG
       auto* pointer = (uint8_t*)data;
 
       for (int y = 0; y < tiff_height_; ++y) {
         png_read_row(png_ptr_.get(), pointer, nullptr);
         pointer += (tiff_width_ * spp_) << (bpp_ >> 4);
       }
+#else
+      throw(std::runtime_error("PNG support not compiled in"));
+#endif
     } break;
   }
 
@@ -916,7 +924,7 @@ void Image::MaskPng(int i) {
   }
 
   io::png::Pnger::Quick(filename, temp.get(), width, height, width,
-                        PNG_COLOR_TYPE_GRAY);
+                        io::png::ColorType::GRAY);
 }
 
 }  // namespace multiblend::io
