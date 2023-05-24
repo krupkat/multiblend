@@ -844,15 +844,17 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     png_uint_32 png_width;
     png_uint_32 png_height;
     uint8_t sig[8];
-    FILE* f;
 
-    fopen_s(&f, opts.seamload_filename, "rb");
-    if (f == nullptr) {
+    FILE* tmp_file;
+    fopen_s(&tmp_file, opts.seamload_filename, "rb");
+    if (tmp_file == nullptr) {
       utils::die("Error: Couldn't open seam file");
     }
+    auto output_file = std::unique_ptr<FILE, io::FileDeleter>{tmp_file};
 
     std::size_t r =
-        fread(sig, 1, 8, f);  // assignment suppresses g++ -Ofast warning
+        fread(sig, 1, 8,
+              output_file.get());  // assignment suppresses g++ -Ofast warning
     if (!png_check_sig(sig, 8)) {
       utils::die("Error: Bad PNG signature");
     }
@@ -874,7 +876,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       utils::die("Error: Seam PNG problem");
     }
 
-    png_init_io(png_ptr.get(), f);
+    png_init_io(png_ptr.get(), output_file.get());
     png_set_sig_bytes(png_ptr.get(), 8);
     png_read_info(png_ptr.get(), info_ptr.get());
     png_get_IHDR(png_ptr.get(), info_ptr.get(), &png_width, &png_height,
