@@ -3,6 +3,8 @@
 #include <cstdio>
 #include <memory>
 #include <optional>
+#include <string>
+#include <vector>
 
 #include "src/file.h"
 #include "src/functions.h"
@@ -18,7 +20,16 @@
 
 namespace multiblend::io {
 
-enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG };
+struct InMemoryImage {
+  int tiff_width;
+  int tiff_height;
+  uint16_t bpp;
+  uint16_t spp;
+
+  std::vector<uint8_t> data;
+};
+
+enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG, MB_IN_MEMORY };
 
 class Channel {
  public:
@@ -33,14 +44,15 @@ class Channel {
 class Image {
  public:
   explicit Image(char* filename);
+  explicit Image(InMemoryImage image);
 
   Image(const Image&) = delete;
   Image& operator=(const Image&) = delete;
   Image(Image&&) = default;
   Image& operator=(Image&&) = default;
 
-  char* filename_;
-  ImageType type_;
+  std::string filename_;
+  ImageType type_ = ImageType::MB_NONE;
   int width_;
   int height_;
   int xpos_;
@@ -80,6 +92,7 @@ class Image {
 
  private:
   FilePtr file_;
+  std::optional<InMemoryImage> image_;
 
 #ifdef MULTIBLEND_WITH_TIFF
   tiff::TiffPtr tiff_;

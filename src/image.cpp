@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstdio>
 #include <memory>
+#include <optional>
 
 #include "src/functions.h"
 #ifdef MULTIBLEND_WITH_JPEG
@@ -25,6 +26,9 @@ int hist_blu[256];
 
 Image::Image(char* filename) : filename_(filename) {}
 
+Image::Image(InMemoryImage image)
+    : image_(std::move(image)), filename_("in memory image") {}
+
 /***********************************************************************
 ************************************************************************
 ** Open
@@ -35,28 +39,32 @@ void Image::Open() {
   float tiff_ypos;
   uint16_t compression;
 
-  char* ext = strrchr(filename_, '.');
-  if (ext == nullptr) {
-    utils::die("Could not identify file extension: %s", filename_);
-  }
-  ++ext;
-
-  if ((_stricmp(ext, "tif") == 0) || (_stricmp(ext, "tiff") == 0)) {
-    type_ = ImageType::MB_TIFF;
-  } else if ((_stricmp(ext, "jpg") == 0) || (_stricmp(ext, "jpeg") == 0)) {
-    type_ = ImageType::MB_JPEG;
-  } else if (_stricmp(ext, "png") == 0) {
-    type_ = ImageType::MB_PNG;
+  if (image_) {
+    type_ = ImageType::MB_IN_MEMORY;
   } else {
-    utils::die("Unknown file extension: %s", filename_);
+    const char* ext = strrchr(filename_.c_str(), '.');
+    if (ext == nullptr) {
+      utils::die("Could not identify file extension: %s", filename_.c_str());
+    }
+    ++ext;
+
+    if ((_stricmp(ext, "tif") == 0) || (_stricmp(ext, "tiff") == 0)) {
+      type_ = ImageType::MB_TIFF;
+    } else if ((_stricmp(ext, "jpg") == 0) || (_stricmp(ext, "jpeg") == 0)) {
+      type_ = ImageType::MB_JPEG;
+    } else if (_stricmp(ext, "png") == 0) {
+      type_ = ImageType::MB_PNG;
+    } else {
+      utils::die("Unknown file extension: %s", filename_.c_str());
+    }
   }
 
   switch (type_) {
     case ImageType::MB_TIFF: {
 #ifdef MULTIBLEND_WITH_TIFF
-      tiff_ = {TIFFOpen(filename_, "r"), tiff::CloseDeleter{}};
+      tiff_ = {TIFFOpen(filename_.c_str(), "r"), tiff::CloseDeleter{}};
       if (tiff_ == nullptr) {
-        utils::die("Could not open %s", filename_);
+        utils::die("Could not open %s", filename_.c_str());
       }
 
       if (TIFFGetField(tiff_.get(), TIFFTAG_XPOSITION, &tiff_xpos) == 0) {
@@ -79,11 +87,11 @@ void Image::Open() {
       TIFFGetField(tiff_.get(), TIFFTAG_COMPRESSION, &compression);
 
       if (bpp_ != 8 && bpp_ != 16) {
-        printf("Invalid bpp %d (%s)", bpp_, filename_);
+        printf("Invalid bpp %d (%s)", bpp_, filename_.c_str());
         printf("%d, %d\n", tiff_width_, tiff_height_);
         TIFFGetField(tiff_.get(), TIFFTAG_BITSPERSAMPLE, &bpp_);
         if (bpp_ != 8 && bpp_ != 16) {
-          utils::die("Invalid bpp %d (%s)", bpp_, filename_);
+          utils::die("Invalid bpp %d (%s)", bpp_, filename_.c_str());
         }
       }
       //   if (spp != 4) die("Images must be RGBA (%s)",
@@ -186,9 +194,9 @@ void Image::Open() {
     case ImageType::MB_JPEG: {
 #ifdef MULTIBLEND_WITH_JPEG
       FILE* tmp_file = nullptr;
-      fopen_s(&tmp_file, filename_, "rb");
+      fopen_s(&tmp_file, filename_.c_str(), "rb");
       if (tmp_file == nullptr) {
-        utils::die("Could not open %s", filename_);
+        utils::die("Could not open %s", filename_.c_str());
       }
       file_ = {tmp_file, FileDeleter{}};
 
@@ -202,11 +210,11 @@ void Image::Open() {
       jpeg_start_decompress(cinfo_.get());
 
       if ((cinfo_->output_width == 0u) || (cinfo_->output_height == 0u)) {
-        utils::die("Unknown JPEG format (%s)", filename_);
+        utils::die("Unknown JPEG format (%s)", filename_.c_str());
       }
 
       if (cinfo_->out_color_components != 3) {
-        utils::die("Unknown JPEG format (%s)", filename_);
+        utils::die("Unknown JPEG format (%s)", filename_.c_str());
       }
 
       tiff_width_ = cinfo_->output_width;
@@ -225,9 +233,9 @@ void Image::Open() {
     case ImageType::MB_PNG: {
 #ifdef MULTIBLEND_WITH_PNG
       FILE* tmp_file = nullptr;
-      fopen_s(&tmp_file, filename_, "rb");
+      fopen_s(&tmp_file, filename_.c_str(), "rb");
       if (tmp_file == nullptr) {
-        utils::die("Could not open %s", filename_);
+        utils::die("Could not open %s", filename_.c_str());
       }
       file_ = {tmp_file, FileDeleter{}};
 
@@ -235,7 +243,7 @@ void Image::Open() {
       std::size_t r = fread(
           sig, 1, 8, file_.get());  // assignment suppresses g++ -Ofast warning
       if (!png_check_sig(sig, 8)) {
-        utils::die("Bad PNG signature (%s)", filename_);
+        utils::die("Bad PNG signature (%s)", filename_.c_str());
       }
 
       png_ptr_ = {png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr,
@@ -275,11 +283,11 @@ void Image::Open() {
           spp_ = 4;
           break;
         default:
-          utils::die("Bad PNG colour type (%s)", filename_);
+          utils::die("Bad PNG colour type (%s)", filename_.c_str());
       }
 
       if (bpp_ != 8 && bpp_ != 16) {
-        utils::die("Bad bit depth (%s)", filename_);
+        utils::die("Bad bit depth (%s)", filename_.c_str());
       }
 
       xpos_ = ypos_ = 0;
@@ -288,6 +296,14 @@ void Image::Open() {
 #else
       throw(std::runtime_error("PNG support not compiled in"));
 #endif
+    } break;
+    case ImageType::MB_IN_MEMORY: {
+      tiff_width_ = image_->tiff_width;
+      tiff_height_ = tiff_u_height_ = image_->tiff_height;
+      bpp_ = image_->bpp;
+      spp_ = image_->spp;
+      xpos_ = ypos_ = 0;
+      tiff_xres_ = tiff_yres_ = 90;
     } break;
   }
 
@@ -304,7 +320,7 @@ void Image::Open() {
 ************************************************************************
 ***********************************************************************/
 void Image::Read(void* data, bool gamma) {
-  utils::Output(1, "Processing %s...", filename_);
+  utils::Output(1, "Processing %s...", filename_.c_str());
 
   switch (type_) {
     case ImageType::MB_TIFF: {
@@ -342,6 +358,10 @@ void Image::Read(void* data, bool gamma) {
 #else
       throw(std::runtime_error("PNG support not compiled in"));
 #endif
+    } break;
+    case ImageType::MB_IN_MEMORY: {
+      auto size_bytes = image_->data.size() << (bpp_ >> 4);
+      memcpy(data, image_->data.data(), size_bytes);
     } break;
   }
 

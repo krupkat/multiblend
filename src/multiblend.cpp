@@ -455,7 +455,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     for (int i = 0; i < n_images; ++i) {
       if (!images[i].seam_present_) {
         utils::Output(1, "Warning: %s is fully obscured by other images\n",
-                      images[i].filename_);
+                      images[i].filename_.c_str());
       }
     }
 
