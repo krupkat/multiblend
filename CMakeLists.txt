@@ -35,7 +35,7 @@ add_library(MultiblendLib
 )
 
 target_include_directories(MultiblendLib PUBLIC 
-  "."
+  "include"
 )
 
 if(MULTIBLEND_LIB_WITH_JPEG)

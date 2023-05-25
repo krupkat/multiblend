@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-#include "src/pyramid.h"
+#include "mb/pyramid.h"
 
 namespace multiblend::utils {
 

@@ -1,8 +1,8 @@
-#include "src/aligned_ptr.h"
+#include "mb/aligned_ptr.h"
 
 #include <utility>
 
-#include "src/linux_overrides.h"
+#include "mb/linux_overrides.h"
 
 namespace multiblend::memory {
 

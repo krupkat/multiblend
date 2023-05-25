@@ -6,16 +6,16 @@
 #include <string>
 #include <vector>
 
-#include "src/file.h"
-#include "src/functions.h"
+#include "mb/file.h"
+#include "mb/functions.h"
 #ifdef MULTIBLEND_WITH_JPEG
-#include "src/jpeg.h"
+#include "mb/jpeg.h"
 #endif
-#include "src/mapalloc.h"
-#include "src/pnger.h"
-#include "src/pyramid.h"
+#include "mb/mapalloc.h"
+#include "mb/pnger.h"
+#include "mb/pyramid.h"
 #ifdef MULTIBLEND_WITH_TIFF
-#include "src/tiff.h"
+#include "mb/tiff.h"
 #endif
 
 namespace multiblend::io {

@@ -29,15 +29,15 @@
 #include <jpeglib.h>
 #include <tiffio.h>
 
-#include "src/file.h"
-#include "src/functions.h"
-#include "src/image.h"
-#include "src/jpeg.h"
-#include "src/linux_overrides.h"
-#include "src/mapalloc.h"
-#include "src/multiblend.h"
-#include "src/pnger.h"
-#include "src/tiff.h"
+#include "mb/file.h"
+#include "mb/functions.h"
+#include "mb/image.h"
+#include "mb/jpeg.h"
+#include "mb/linux_overrides.h"
+#include "mb/mapalloc.h"
+#include "mb/multiblend.h"
+#include "mb/pnger.h"
+#include "mb/tiff.h"
 
 namespace mb = multiblend;
 namespace utils = mb::utils;

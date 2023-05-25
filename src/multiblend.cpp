@@ -1,13 +1,13 @@
-#include "src/multiblend.h"
+#include "mb/multiblend.h"
 
 #include <cmath>
 #include <memory>
 #include <optional>
 #include <vector>
 
-#include "src/image.h"
-#include "src/linux_overrides.h"
-#include "src/pnger.h"
+#include "mb/image.h"
+#include "mb/linux_overrides.h"
+#include "mb/pnger.h"
 
 namespace multiblend {
 

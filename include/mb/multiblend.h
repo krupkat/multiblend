@@ -2,9 +2,9 @@
 
 #include <array>
 
-#include "src/functions.h"
-#include "src/image.h"
-#include "src/mapalloc.h"
+#include "mb/functions.h"
+#include "mb/image.h"
+#include "mb/mapalloc.h"
 
 namespace multiblend {
 

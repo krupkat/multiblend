@@ -1,4 +1,4 @@
-#include "src/multiblend.h"
+#include "mb/multiblend.h"
 
 #include <fstream>
 #include <vector>
@@ -7,7 +7,7 @@
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/vector.hpp>
 
-#include "src/image.h"
+#include "mb/image.h"
 
 multiblend::io::Image Load(const char* path) {
   std::ifstream ifs(path, std::ios::binary);

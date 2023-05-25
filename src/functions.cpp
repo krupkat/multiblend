@@ -1,4 +1,4 @@
-#include "src/functions.h"
+#include "mb/functions.h"
 
 #include <chrono>
 #include <cstdarg>
@@ -7,7 +7,7 @@
 #include <memory>
 #include <vector>
 
-#include "src/pyramid.h"
+#include "mb/pyramid.h"
 
 namespace multiblend::utils {
 

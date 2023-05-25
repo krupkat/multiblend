@@ -8,7 +8,7 @@
 #include <png.h>
 #endif
 
-#include "src/file.h"
+#include "mb/file.h"
 
 namespace multiblend::io::png {
 

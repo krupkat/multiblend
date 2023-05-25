@@ -24,4 +24,4 @@ Checks: >
   -readability-function-cognitive-complexity
 
 
-HeaderFilterRegex: ".*multiblend.*src.*"
+HeaderFilterRegex: ".*multiblend.*include/mb.*"

@@ -1,21 +1,21 @@
-#include "src/image.h"
+#include "mb/image.h"
 
 #include <cmath>
 #include <cstdio>
 #include <memory>
 #include <optional>
 
-#include "src/functions.h"
+#include "mb/functions.h"
 #ifdef MULTIBLEND_WITH_JPEG
-#include "src/jpeg.h"
+#include "mb/jpeg.h"
 #endif
-#include "src/linux_overrides.h"
-#include "src/mapalloc.h"
-#include "src/pnger.h"
-#include "src/pyramid.h"
-#include "src/threadpool.h"
+#include "mb/linux_overrides.h"
+#include "mb/mapalloc.h"
+#include "mb/pnger.h"
+#include "mb/pyramid.h"
+#include "mb/threadpool.h"
 #ifdef MULTIBLEND_WITH_TIFF
-#include "src/tiff.h"
+#include "mb/tiff.h"
 #endif
 
 namespace multiblend::io {

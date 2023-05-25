@@ -1,4 +1,4 @@
-#include "src/pnger.h"
+#include "mb/pnger.h"
 
 #include <algorithm>
 #include <cmath>
@@ -8,8 +8,8 @@
 #include <png.h>
 #endif
 
-#include "src/functions.h"
-#include "src/linux_overrides.h"
+#include "mb/functions.h"
+#include "mb/linux_overrides.h"
 
 namespace multiblend::io::png {
 

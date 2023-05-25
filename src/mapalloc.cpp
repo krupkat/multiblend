@@ -1,4 +1,4 @@
-#include "src/mapalloc.h"
+#include "mb/mapalloc.h"
 
 #include <cstring>
 #include <stdexcept>
@@ -11,7 +11,7 @@
 #include <sys/mman.h>
 #endif
 
-#include "src/linux_overrides.h"
+#include "mb/linux_overrides.h"
 
 namespace multiblend::memory {
 
