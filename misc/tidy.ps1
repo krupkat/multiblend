@@ -7,4 +7,4 @@ Param
 )
 
 $tidy_runner = (Get-Command run-clang-tidy).Path
-python $tidy_runner src -p $BuildDirParam -quiet -export-fixes $ExportFixesParam
+python $tidy_runner src tests -p $BuildDirParam -quiet -export-fixes $ExportFixesParam
