@@ -76,12 +76,12 @@ if(MULTIBLEND_WITH_ASAN)
   set(ASAN_CXX_OPTIONS "-fsanitize=address;-g")
   set(ASAN_LINK_OPTIONS "-fsanitize=address")
 
-  target_compile_options(MultiblendLib PRIVATE "${ASAN_CXX_OPTIONS}")
-  target_link_options(MultiblendLib PRIVATE "${ASAN_LINK_OPTIONS}")
+  target_compile_options(MultiblendLib PUBLIC "${ASAN_CXX_OPTIONS}")
+  target_link_options(MultiblendLib PUBLIC "${ASAN_LINK_OPTIONS}")
 
   if(MULTIBLEND_BUILD_EXE)
-    target_compile_options(Multiblend PRIVATE "${ASAN_CXX_OPTIONS}")
-    target_link_options(Multiblend PRIVATE "${ASAN_LINK_OPTIONS}")
+    target_compile_options(Multiblend PUBLIC "${ASAN_CXX_OPTIONS}")
+    target_link_options(Multiblend PUBLIC "${ASAN_LINK_OPTIONS}")
   endif()
 endif()
 

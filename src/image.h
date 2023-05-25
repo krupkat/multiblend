@@ -31,6 +31,12 @@ struct InMemoryImage {
   std::vector<uint8_t> data;
 };
 
+template <class Archive>
+void serialize(Archive& archive, InMemoryImage& image) {
+  archive(image.tiff_width, image.tiff_height, image.bpp, image.spp,
+          image.xpos_add, image.ypos_add, image.data);
+}
+
 enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG, MB_IN_MEMORY };
 
 class Channel {
