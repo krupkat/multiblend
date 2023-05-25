@@ -25,6 +25,8 @@ struct InMemoryImage {
   int tiff_height;
   uint16_t bpp;
   uint16_t spp;
+  int xpos_add;
+  int ypos_add;
 
   std::vector<uint8_t> data;
 };

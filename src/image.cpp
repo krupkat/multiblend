@@ -302,6 +302,8 @@ void Image::Open() {
       tiff_height_ = tiff_u_height_ = image_->tiff_height;
       bpp_ = image_->bpp;
       spp_ = image_->spp;
+      xpos_add_ = image_->xpos_add;
+      ypos_add_ = image_->ypos_add;
       xpos_ = ypos_ = 0;
       tiff_xres_ = tiff_yres_ = 90;
     } break;
