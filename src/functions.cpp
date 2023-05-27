@@ -13,8 +13,6 @@
 
 namespace multiblend::utils {
 
-int verbosity = 1;
-
 /***********************************************************************
  * ShrinkMasks
  ***********************************************************************/
@@ -707,7 +705,7 @@ void SwapV(Pyramid* py) { SwapUnswapV(py, false); }
 void UnswapV(Pyramid* py) { SwapUnswapV(py, true); }
 
 void Timer::Report(const char* name) {
-  spdlog::info("{}: {:.3f}s", name, Read());
+  Output(1, "{}: {:.3f}s", name, Read());
 };
 
 std::shared_ptr<spdlog::logger> my_logger_ = nullptr;
@@ -720,9 +718,9 @@ void Info(const std::string& msg) {
   }
 }
 
-void Debug(const std::string& msg) {
+void Warn(const std::string& msg) {
   if (my_logger_) {
-    my_logger_->debug(msg);
+    my_logger_->warn(msg);
   }
 }
 

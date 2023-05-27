@@ -18,7 +18,6 @@ if(MULTIBLEND_BUILD_EXE)
   endif()
 endif()
 
-
 include(CTest)
 
 set(CMAKE_CXX_STANDARD 20)

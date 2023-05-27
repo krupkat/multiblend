@@ -46,7 +46,34 @@ namespace utils = mb::utils;
 namespace io = mb::io;
 namespace memory = mb::memory;
 
-void run_main(int argc, char* argv[]) {
+void SetVerbosity(std::shared_ptr<spdlog::logger>, int verbosity) {
+  switch (verbosity) {
+    case 0:
+      spdlog::set_level(spdlog::level::warn);
+      return;
+    case 1:
+      spdlog::set_level(spdlog::level::info);
+      return;
+    case 2:
+      spdlog::set_level(spdlog::level::debug);
+      return;
+    default:
+      break;
+  }
+  if (verbosity < 0) {
+    spdlog::set_level(spdlog::level::off);
+  }
+  if (verbosity > 2) {
+    spdlog::set_level(spdlog::level::trace);
+  }
+}
+
+void RunMain(int argc, char* argv[]) {
+  auto logger = spdlog::stdout_logger_mt("console");
+  logger->flush_on(spdlog::level::warn);
+  logger->set_pattern("%v");
+  mb::utils::SetLogger(logger);
+
   mb::utils::Timer timer_all;
   mb::utils::Timer timer;
   timer_all.Start();
@@ -59,6 +86,7 @@ void run_main(int argc, char* argv[]) {
   std::vector<io::Image> images;
   int fixed_levels = 0;
   int add_levels = 0;
+  int verbosity = 1;
 
   bool no_mask = false;
   bool big_tiff = false;
@@ -344,10 +372,10 @@ void run_main(int argc, char* argv[]) {
       }
     } else if ((strcmp(my_argv[pos], "-v") == 0) ||
                (strcmp(my_argv[pos], "--verbose") == 0)) {
-      ++utils::verbosity;
+      SetVerbosity(logger, ++verbosity);
     } else if ((strcmp(my_argv[pos], "-q") == 0) ||
                (strcmp(my_argv[pos], "--quiet") == 0)) {
-      --utils::verbosity;
+      SetVerbosity(logger, --verbosity);
     } else if (((strcmp(my_argv[pos], "--saveseams") == 0) ||
                 (strcmp(my_argv[pos], "--save-seams") == 0)) &&
                pos < (int)my_argv.size() - 1) {
@@ -778,15 +806,7 @@ void run_main(int argc, char* argv[]) {
 
 int main(int argc, char* argv[]) {
   try {
-    auto logger = spdlog::stdout_logger_mt("console");
-    logger->flush_on(spdlog::level::info);
-    logger->set_pattern("%l: %v");
-    spdlog::set_default_logger(logger);
-    spdlog::info("Running version {}", 123);
-
-    multiblend::utils::SetLogger(logger);
-
-    run_main(argc, argv);
+    RunMain(argc, argv);
   } catch (const std::exception& e) {
     fprintf(stderr, "Error: %s\n", e.what());
     return EXIT_FAILURE;

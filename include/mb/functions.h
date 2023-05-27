@@ -14,8 +14,6 @@
 
 namespace multiblend::utils {
 
-extern int verbosity;
-
 class FreeDeleter {
  public:
   void operator()(void* ptr) const { free(ptr); }
@@ -155,14 +153,14 @@ class Timer {
 };
 
 void Info(const std::string& msg);
-void Debug(const std::string& msg);
+void Warn(const std::string& msg);
 
 template <typename... Args>
 void Output(int level, fmt::format_string<Args...> fmt, Args&&... args) {
-  if (level == 0) {
+  if (level == 1) {
     Info(fmt::format(fmt, std::forward<Args>(args)...));
   } else {
-    Debug(fmt::format(fmt, std::forward<Args>(args)...));
+    Warn(fmt::format(fmt, std::forward<Args>(args)...));
   }
 }
 
