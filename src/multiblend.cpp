@@ -5,8 +5,6 @@
 #include <optional>
 #include <vector>
 
-#include <spdlog/fmt/fmt.h>
-
 #include "mb/image.h"
 #include "mb/linux_overrides.h"
 #include "mb/logging.h"
@@ -427,7 +425,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         threadpool->Queue([=, &seam_flex, &flex_cond_p, &flex_mutex_p] {
           int p = utils::CompressSeamLine(this_line, comp, width);
           if (p > width) {
-            throw std::runtime_error(fmt::format("bad p: {} at line {}", p, y));
+            utils::Throw("bad p: {} at line {}", p, y);
           }
 
           {

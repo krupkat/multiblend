@@ -7,9 +7,6 @@
 #include <stdexcept>
 #include <vector>
 
-#include <spdlog/fmt/fmt.h>
-#include <spdlog/spdlog.h>
-
 #include "mb/pyramid.h"
 
 namespace multiblend::utils {

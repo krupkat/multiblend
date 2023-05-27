@@ -537,8 +537,7 @@ void RunMain(int argc, char* argv[]) {
     } break;
     case io::ImageType::MB_JPEG: {
       if (output_bpp == 16) {
-        utils::Throw(
-            "Error: 16bpp output is incompatible with JPEG output");
+        utils::Throw("Error: 16bpp output is incompatible with JPEG output");
       }
     }
       [[fallthrough]];
