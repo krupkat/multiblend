@@ -328,10 +328,10 @@ Options:
       }
     } else if ((strcmp(my_argv[pos], "-v") == 0) ||
                (strcmp(my_argv[pos], "--verbose") == 0)) {
-      utils::SetVerbosity(logger, ++verbosity);
+      utils::SetVerbosity(logger.get(), ++verbosity);
     } else if ((strcmp(my_argv[pos], "-q") == 0) ||
                (strcmp(my_argv[pos], "--quiet") == 0)) {
-      utils::SetVerbosity(logger, --verbosity);
+      utils::SetVerbosity(logger.get(), --verbosity);
     } else if (((strcmp(my_argv[pos], "--saveseams") == 0) ||
                 (strcmp(my_argv[pos], "--save-seams") == 0)) &&
                pos < (int)my_argv.size() - 1) {

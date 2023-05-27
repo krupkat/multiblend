@@ -23,7 +23,7 @@ void Output(int level, fmt::format_string<Args...> fmt, Args&&... args) {
 
 void SetLogger(std::shared_ptr<spdlog::logger> logger);
 
-void SetVerbosity(std::shared_ptr<spdlog::logger>, int verbosity);
+void SetVerbosity(spdlog::logger* logger, int verbosity);
 
 template <typename... Args>
 void Throw(fmt::format_string<Args...> fmt, Args&&... args) {

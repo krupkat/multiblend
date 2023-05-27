@@ -1459,7 +1459,7 @@ void Pyramid::Png(const char* filename) {
   int height =
       levels_[0].height + (levels_.size() > 1 ? 1 + levels_[1].height : 0);
 
-  auto temp = std::vector<uint8_t>(width * height, 0);
+  auto temp = std::vector<uint8_t>(static_cast<std::size_t>(width) * height, 0);
 
   int px = 0;
   int py = 0;

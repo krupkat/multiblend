@@ -25,27 +25,29 @@ void Warn(const std::string& msg) {
   }
 }
 
-void SetLogger(std::shared_ptr<spdlog::logger> logger) { mb_logger_ = logger; }
+void SetLogger(std::shared_ptr<spdlog::logger> logger) {
+  mb_logger_ = std::move(logger);
+}
 
-void SetVerbosity(std::shared_ptr<spdlog::logger>, int verbosity) {
+void SetVerbosity(spdlog::logger* logger, int verbosity) {
   switch (verbosity) {
     case 0:
-      spdlog::set_level(spdlog::level::warn);
+      logger->set_level(spdlog::level::warn);
       return;
     case 1:
-      spdlog::set_level(spdlog::level::info);
+      logger->set_level(spdlog::level::info);
       return;
     case 2:
-      spdlog::set_level(spdlog::level::debug);
+      logger->set_level(spdlog::level::debug);
       return;
     default:
       break;
   }
   if (verbosity < 0) {
-    spdlog::set_level(spdlog::level::err);
+    logger->set_level(spdlog::level::err);
   }
   if (verbosity > 2) {
-    spdlog::set_level(spdlog::level::trace);
+    logger->set_level(spdlog::level::trace);
   }
 }
 
