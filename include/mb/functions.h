@@ -4,13 +4,12 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <stdexcept>
 #include <vector>
 
 #include "mb/pyramid.h"
 
 namespace multiblend::utils {
-
-extern int verbosity;
 
 class FreeDeleter {
  public:
@@ -144,15 +143,11 @@ class Timer {
     return elapsed.count();
   };
 
-  void Report(const char* name) { printf("%s: %.3fs\n", name, Read()); };
+  void Report(const char* name);
 
  private:
   std::chrono::high_resolution_clock::time_point start_time_;
 };
-
-void Output(int level, const char* fmt, ...);
-
-void die(const char* error, ...);
 
 void ShrinkMasks(std::vector<Flex>& masks, int n_levels);
 

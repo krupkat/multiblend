@@ -7,6 +7,7 @@
 
 #include "mb/image.h"
 #include "mb/linux_overrides.h"
+#include "mb/logging.h"
 #include "mb/pnger.h"
 
 namespace multiblend {
@@ -83,7 +84,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   for (int i = 1; i < n_images; ++i) {
     if (images[i].tiff_xres_ != images[0].tiff_xres_ ||
         images[i].tiff_yres_ != images[0].tiff_yres_) {
-      utils::Output(0, "Warning: TIFF resolution mismatch (%f %f/%f %f)\n",
+      utils::Output(0, "Warning: TIFF resolution mismatch ({} {}/{} {})",
                     images[0].tiff_xres_, images[0].tiff_yres_,
                     images[i].tiff_xres_, images[i].tiff_yres_);
     }
@@ -94,9 +95,9 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       opts.output_bpp = 16;
     }
     if (images[i].bpp_ != images[0].bpp_) {
-      utils::die(
+      utils::Throw(
           "Error: mixture of 8bpp and 16bpp images detected (not currently "
-          "handled)\n");
+          "handled)");
     }
   }
 
@@ -104,7 +105,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     opts.output_bpp = 8;
   } else if (opts.output_bpp == 16 &&
              opts.output_type == io::ImageType::MB_JPEG) {
-    utils::Output(0, "Warning: 8bpp output forced by JPEG output\n");
+    utils::Output(0, "Warning: 8bpp output forced by JPEG output");
     opts.output_bpp = 8;
   }
 
@@ -118,13 +119,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
    * Read/trim/extract
    ***********************************************************************/
   for (int i = 0; i < n_images; ++i) {
-    try {
-      images[i].Read(untrimmed_data.get(), opts.gamma);
-    } catch (char* e) {
-      printf("\n\n");
-      printf("%s\n", e);
-      exit(EXIT_FAILURE);
-    }
+    images[i].Read(untrimmed_data.get(), opts.gamma);
   }
 
   /***********************************************************************
@@ -198,10 +193,10 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
   if (n_images == 1) {
     blend_levels = 0;
-    utils::Output(1, "\n%d x %d, %d bpp\n\n", width, height, opts.output_bpp);
+    utils::Output(1, "{} x {}, {} bpp", width, height, opts.output_bpp);
   } else {
-    utils::Output(1, "\n%d x %d, %d levels, %d bpp\n\n", width, height,
-                  blend_levels, opts.output_bpp);
+    utils::Output(1, "{} x {}, {} levels, {} bpp", width, height, blend_levels,
+                  opts.output_bpp);
   }
 
   /***********************************************************************
@@ -224,7 +219,6 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       utils::Output(1, " (saving XOR and seam maps)");
       break;
   }
-  utils::Output(1, "...\n");
 
   int min_count;
   int xor_count;
@@ -431,8 +425,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         threadpool->Queue([=, &seam_flex, &flex_cond_p, &flex_mutex_p] {
           int p = utils::CompressSeamLine(this_line, comp, width);
           if (p > width) {
-            printf("bad p: %d at line %d", p, y);
-            exit(0);
+            utils::Throw("bad p: {} at line {}", p, y);
           }
 
           {
@@ -454,8 +447,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
     for (int i = 0; i < n_images; ++i) {
       if (!images[i].seam_present_) {
-        utils::Output(1, "Warning: %s is fully obscured by other images\n",
-                      images[i].filename_.c_str());
+        utils::Output(1, "Warning: {} is fully obscured by other images",
+                      images[i].filename_);
       }
     }
 
@@ -850,7 +843,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     FILE* tmp_file;
     fopen_s(&tmp_file, opts.seamload_filename, "rb");
     if (tmp_file == nullptr) {
-      utils::die("Error: Couldn't open seam file");
+      utils::Throw("Error: Couldn't open seam file");
     }
     auto output_file = std::unique_ptr<FILE, io::FileDeleter>{tmp_file};
 
@@ -858,7 +851,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         fread(sig, 1, 8,
               output_file.get());  // assignment suppresses g++ -Ofast warning
     if (!png_check_sig(sig, 8)) {
-      utils::die("Error: Bad PNG signature");
+      utils::Throw("Error: Bad PNG signature");
     }
 
     auto png_ptr = std::unique_ptr<png_struct, io::png::PngReadStructDeleter>{
@@ -867,7 +860,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         io::png::PngReadStructDeleter{}};
 
     if (png_ptr == nullptr) {
-      utils::die("Error: Seam PNG problem");
+      utils::Throw("Error: Seam PNG problem");
     }
 
     auto info_ptr = std::unique_ptr<png_info, io::png::PngInfoStructDeleter>{
@@ -875,7 +868,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         io::png::PngInfoStructDeleter{png_ptr.get()}};
 
     if (info_ptr == nullptr) {
-      utils::die("Error: Seam PNG problem");
+      utils::Throw("Error: Seam PNG problem");
     }
 
     png_init_io(png_ptr.get(), output_file.get());
@@ -885,10 +878,10 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                  &png_depth, &png_colour, nullptr, nullptr, nullptr);
 
     if (png_width != width || png_height != height) {
-      utils::die("Error: Seam PNG dimensions don't match workspace");
+      utils::Throw("Error: Seam PNG dimensions don't match workspace");
     }
     if (png_depth != 8 || png_colour != PNG_COLOR_TYPE_PALETTE) {
-      utils::die("Error: Incorrect seam PNG format");
+      utils::Throw("Error: Incorrect seam PNG format");
     }
 
     auto png_line = std::make_unique<png_byte[]>(width);
@@ -902,7 +895,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
       for (x = 0; x < width; ++x) {
         if (png_line[x] > n_images) {
-          utils::die("Error: Bad pixel found in seam file: %d,%d", x, y);
+          utils::Throw("Error: Bad pixel found in seam file: {},{}", x, y);
         }
         Record(png_line[x], 1, x, state, images, empty);
       }
@@ -928,7 +921,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     /***********************************************************************
      * Shrink masks
      ***********************************************************************/
-    utils::Output(1, "Shrinking masks...\n");
+    utils::Output(1, "Shrinking masks...");
 
     timer.Start();
 
@@ -1016,16 +1009,9 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         }
       }
 
-      std::shared_ptr<float> temp = nullptr;
-
-      try {
-        temp =
-            std::shared_ptr<float>{(float*)memory::MapAlloc::Alloc(max_bytes),
-                                   memory::MapAllocDeleter{}};
-      } catch (char* e) {
-        printf("%s\n", e);
-        exit(EXIT_FAILURE);
-      }
+      auto temp =
+          std::shared_ptr<float>{(float*)memory::MapAlloc::Alloc(max_bytes),
+                                 memory::MapAllocDeleter{}};
 
       if (level < blend_levels) {
         for (auto& image : images) {
@@ -1046,18 +1032,9 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     auto output_pyramid = Pyramid{width, height, total_levels, 0, 0};
 
     for (int level = total_levels - 1; level >= 0; --level) {
-      std::shared_ptr<float> temp = nullptr;
-
-      try {
-        temp = std::shared_ptr<float>{(float*)memory::MapAlloc::Alloc(
-                                          output_pyramid.GetLevel(level).bytes),
-                                      memory::MapAllocDeleter{}};
-      } catch (char* e) {
-        printf("%s\n", e);
-        exit(EXIT_FAILURE);
-      }
-
-      output_pyramid.GetLevel(level).data = temp;
+      output_pyramid.GetLevel(level).data = {
+          (float*)memory::MapAlloc::Alloc(output_pyramid.GetLevel(level).bytes),
+          memory::MapAllocDeleter{}};
     }
 
     /***********************************************************************
@@ -1065,15 +1042,15 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
      ***********************************************************************/
     if (n_images == 1) {
       if (opts.wrap != 0) {
-        utils::Output(1, "Wrapping...\n");
+        utils::Output(1, "Wrapping...");
       } else {
-        utils::Output(1, "Processing...\n");
+        utils::Output(1, "Processing...");
       }
     } else {
       if (opts.wrap != 0) {
-        utils::Output(1, "Blending/wrapping...\n");
+        utils::Output(1, "Blending/wrapping...");
       } else {
-        utils::Output(1, "Blending...\n");
+        utils::Output(1, "Blending...");
       }
     }
 
@@ -1290,13 +1267,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
        ***********************************************************************/
       timer.Start();
 
-      try {
-        output_channels[c] = memory::MapAllocPtr<void>{memory::MapAlloc::Alloc(
-            ((std::size_t)width * height) << (opts.output_bpp >> 4))};
-      } catch (char* e) {
-        printf("%s\n", e);
-        exit(EXIT_FAILURE);
-      }
+      output_channels[c] = memory::MapAllocPtr<void>{memory::MapAlloc::Alloc(
+          ((std::size_t)width * height) << (opts.output_bpp >> 4))};
 
       switch (opts.output_bpp) {
         case 8:

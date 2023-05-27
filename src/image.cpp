@@ -4,12 +4,16 @@
 #include <cstdio>
 #include <memory>
 #include <optional>
+#include <string>
+
+#include <spdlog/fmt/fmt.h>
 
 #include "mb/functions.h"
 #ifdef MULTIBLEND_WITH_JPEG
 #include "mb/jpeg.h"
 #endif
 #include "mb/linux_overrides.h"
+#include "mb/logging.h"
 #include "mb/mapalloc.h"
 #include "mb/pnger.h"
 #include "mb/pyramid.h"
@@ -44,7 +48,7 @@ void Image::Open() {
   } else {
     const char* ext = strrchr(filename_.c_str(), '.');
     if (ext == nullptr) {
-      utils::die("Could not identify file extension: %s", filename_.c_str());
+      utils::Throw("Could not identify file extension: {}", filename_);
     }
     ++ext;
 
@@ -55,7 +59,7 @@ void Image::Open() {
     } else if (_stricmp(ext, "png") == 0) {
       type_ = ImageType::MB_PNG;
     } else {
-      utils::die("Unknown file extension: %s", filename_.c_str());
+      utils::Throw("Unknown file extension: {}", filename_);
     }
   }
 
@@ -64,7 +68,7 @@ void Image::Open() {
 #ifdef MULTIBLEND_WITH_TIFF
       tiff_ = {TIFFOpen(filename_.c_str(), "r"), tiff::CloseDeleter{}};
       if (tiff_ == nullptr) {
-        utils::die("Could not open %s", filename_.c_str());
+        utils::Throw("Could not open {}", filename_);
       }
 
       if (TIFFGetField(tiff_.get(), TIFFTAG_XPOSITION, &tiff_xpos) == 0) {
@@ -87,11 +91,11 @@ void Image::Open() {
       TIFFGetField(tiff_.get(), TIFFTAG_COMPRESSION, &compression);
 
       if (bpp_ != 8 && bpp_ != 16) {
-        printf("Invalid bpp %d (%s)", bpp_, filename_.c_str());
-        printf("%d, %d\n", tiff_width_, tiff_height_);
+        utils::Output(1, "Invalid bpp {} ({})", bpp_, filename_);
+        utils::Output(1, "{}, {}", tiff_width_, tiff_height_);
         TIFFGetField(tiff_.get(), TIFFTAG_BITSPERSAMPLE, &bpp_);
         if (bpp_ != 8 && bpp_ != 16) {
-          utils::die("Invalid bpp %d (%s)", bpp_, filename_.c_str());
+          utils::Throw("Invalid bpp {} ({})", bpp_, filename_);
         }
       }
       //   if (spp != 4) die("Images must be RGBA (%s)",
@@ -196,7 +200,7 @@ void Image::Open() {
       FILE* tmp_file = nullptr;
       fopen_s(&tmp_file, filename_.c_str(), "rb");
       if (tmp_file == nullptr) {
-        utils::die("Could not open %s", filename_.c_str());
+        utils::Throw("Could not open {}", filename_);
       }
       file_ = {tmp_file, FileDeleter{}};
 
@@ -210,11 +214,11 @@ void Image::Open() {
       jpeg_start_decompress(cinfo_.get());
 
       if ((cinfo_->output_width == 0u) || (cinfo_->output_height == 0u)) {
-        utils::die("Unknown JPEG format (%s)", filename_.c_str());
+        utils::Throw("Unknown JPEG format ({})", filename_);
       }
 
       if (cinfo_->out_color_components != 3) {
-        utils::die("Unknown JPEG format (%s)", filename_.c_str());
+        utils::Throw("Unknown JPEG format ({})", filename_);
       }
 
       tiff_width_ = cinfo_->output_width;
@@ -235,7 +239,7 @@ void Image::Open() {
       FILE* tmp_file = nullptr;
       fopen_s(&tmp_file, filename_.c_str(), "rb");
       if (tmp_file == nullptr) {
-        utils::die("Could not open %s", filename_.c_str());
+        utils::Throw("Could not open {}", filename_);
       }
       file_ = {tmp_file, FileDeleter{}};
 
@@ -243,14 +247,14 @@ void Image::Open() {
       std::size_t r = fread(
           sig, 1, 8, file_.get());  // assignment suppresses g++ -Ofast warning
       if (!png_check_sig(sig, 8)) {
-        utils::die("Bad PNG signature (%s)", filename_.c_str());
+        utils::Throw("Bad PNG signature ({})", filename_);
       }
 
       png_ptr_ = {png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr,
                                          nullptr, nullptr),
                   png::PngReadStructDeleter{}};
       if (png_ptr_ == nullptr) {
-        utils::die("Error: libpng problem");
+        utils::Throw("Error: libpng problem");
       }
 
       auto info_ptr = std::unique_ptr<png_info, png::PngInfoStructDeleter>{
@@ -258,7 +262,7 @@ void Image::Open() {
           png::PngInfoStructDeleter{png_ptr_.get()}};
 
       if (info_ptr == nullptr) {
-        utils::die("Error: libpng problem");
+        utils::Throw("Error: libpng problem");
       }
 
       png_init_io(png_ptr_.get(), file_.get());
@@ -283,11 +287,11 @@ void Image::Open() {
           spp_ = 4;
           break;
         default:
-          utils::die("Bad PNG colour type (%s)", filename_.c_str());
+          utils::Throw("Bad PNG colour type ({})", filename_);
       }
 
       if (bpp_ != 8 && bpp_ != 16) {
-        utils::die("Bad bit depth (%s)", filename_.c_str());
+        utils::Throw("Bad bit depth ({})", filename_);
       }
 
       xpos_ = ypos_ = 0;
@@ -322,7 +326,7 @@ void Image::Open() {
 ************************************************************************
 ***********************************************************************/
 void Image::Read(void* data, bool gamma) {
-  utils::Output(1, "Processing %s...", filename_.c_str());
+  utils::Output(1, "Processing {}...", filename_);
 
   switch (type_) {
     case ImageType::MB_TIFF: {
@@ -902,17 +906,12 @@ void Image::Read(void* data, bool gamma) {
 
     //  total_pixels += width * height;
   }
-
-  utils::Output(1, "\n");
 }
 
 /***********************************************************************
  * Debugging
  ***********************************************************************/
 void Image::MaskPng(int i) {
-  char filename[256];
-  sprintf_s(filename, "masks-%d.png", i);
-
   int width = masks_[0].width_;
   int height = masks_[0].height_;  // +1 + masks[1]->height;
 
@@ -964,7 +963,8 @@ void Image::MaskPng(int i) {
     break;
   }
 
-  io::png::Pnger::Quick(filename, temp.get(), width, height, width,
+  std::string filename = fmt::format("masks-{}.png", i);
+  io::png::Pnger::Quick(filename.c_str(), temp.get(), width, height, width,
                         io::png::ColorType::GRAY);
 }
 

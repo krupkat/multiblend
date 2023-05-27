@@ -5,6 +5,7 @@
     "libpng",
     "tiff",
     "catch2",
-    "cereal"
+    "cereal",
+    "spdlog"
   ]
 }

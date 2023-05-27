@@ -1458,14 +1458,16 @@ void Pyramid::Png(const char* filename) {
   int width = levels_[0].pitch;
   int height =
       levels_[0].height + (levels_.size() > 1 ? 1 + levels_[1].height : 0);
-  auto* temp = (uint8_t*)calloc(static_cast<std::size_t>(width) * height, 1);
+
+  auto temp = std::vector<uint8_t>(static_cast<std::size_t>(width) * height, 0);
 
   int px = 0;
   int py = 0;
 
   for (int l = 0; l < (int)levels_.size(); ++l) {
     auto* data = (float*)levels_[l].data.get();
-    uint8_t* line = temp + static_cast<ptrdiff_t>(py) * levels_[0].pitch + px;
+    uint8_t* line =
+        temp.data() + static_cast<ptrdiff_t>(py) * levels_[0].pitch + px;
     for (int y = 0; y < levels_[l].height; ++y) {
       for (int x = 0; x < levels_[l].pitch; ++x) {
         int f = (int)floor(data[x] + 0.5);
@@ -1481,10 +1483,8 @@ void Pyramid::Png(const char* filename) {
     }
   }
 
-  io::png::Pnger::Quick((char*)filename, temp, width, height, width,
+  io::png::Pnger::Quick(filename, temp.data(), width, height, width,
                         io::png::ColorType::GRAY);
-
-  free(temp);
 }
 
 /***********************************************************************

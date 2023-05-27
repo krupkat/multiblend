@@ -8,8 +8,8 @@
 #include <png.h>
 #endif
 
-#include "mb/functions.h"
 #include "mb/linux_overrides.h"
+#include "mb/logging.h"
 
 namespace multiblend::io::png {
 
@@ -81,7 +81,7 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
     fopen_s(&tmp_file, filename, "wb");
     if (tmp_file == nullptr) {
       if (name != nullptr) {
-        utils::Output(0, "WARNING: Could not save %s\n", name);
+        utils::Output(0, "WARNING: Could not save {}", name);
       }
       return;
     }
@@ -95,7 +95,7 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
       PngWriteStructDeleter{}};
   if (png_ptr_ == nullptr) {
     if (name != nullptr) {
-      utils::Output(0, "WARNING: PNG create failed\n");
+      utils::Output(0, "WARNING: PNG create failed");
     }
     file_.reset();
     remove(filename);
@@ -106,7 +106,7 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
                PngInfoStructDeleter{png_ptr_.get()}};
   if (info_ptr_ == nullptr) {
     if (name != nullptr) {
-      utils::Output(0, "WARNING: PNG create failed\n");
+      utils::Output(0, "WARNING: PNG create failed");
     }
     png_ptr_.reset();
     file_.reset();
@@ -178,7 +178,7 @@ void Pnger::WriteRows(uint8_t** rows, int num_rows) {
 #endif
 }
 
-void Pnger::Quick(char* filename, uint8_t* data, int width, int height,
+void Pnger::Quick(const char* filename, uint8_t* data, int width, int height,
                   int pitch, ColorType type) {
 #ifdef MULTIBLEND_WITH_PNG
   Pnger temp(filename, nullptr, width, height, type);

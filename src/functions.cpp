@@ -7,39 +7,10 @@
 #include <memory>
 #include <vector>
 
+#include "mb/logging.h"
 #include "mb/pyramid.h"
 
 namespace multiblend::utils {
-
-int verbosity = 1;
-
-/***********************************************************************
- * Output
- ***********************************************************************/
-void Output(int level, const char* fmt, ...) {
-  va_list args;
-
-  if (level <= verbosity) {
-    va_start(args, fmt);
-    vprintf(fmt, args);
-    va_end(args);
-  }
-  fflush(stdout);
-}
-
-/***********************************************************************
- * Die
- ***********************************************************************/
-void die(const char* error, ...) {
-  va_list args;
-
-  va_start(args, error);
-  vprintf(error, args);
-  va_end(args);
-  printf("\n");
-
-  exit(EXIT_FAILURE);
-}
 
 /***********************************************************************
  * ShrinkMasks
@@ -731,5 +702,9 @@ void SwapUnswapV(Pyramid* py, bool unswap) {
 void SwapV(Pyramid* py) { SwapUnswapV(py, false); }
 
 void UnswapV(Pyramid* py) { SwapUnswapV(py, true); }
+
+void Timer::Report(const char* name) {
+  Output(1, "{}: {:.3f}s", name, Read());
+};
 
 }  // namespace multiblend::utils
