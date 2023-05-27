@@ -88,8 +88,8 @@ void Image::Open() {
       TIFFGetField(tiff_.get(), TIFFTAG_COMPRESSION, &compression);
 
       if (bpp_ != 8 && bpp_ != 16) {
-        printf("Invalid bpp %d (%s)", bpp_, filename_.c_str());
-        printf("%d, %d\n", tiff_width_, tiff_height_);
+        utils::Output(1, "Invalid bpp {} ({})", bpp_, filename_);
+        utils::Output(1, "{}, {}", tiff_width_, tiff_height_);
         TIFFGetField(tiff_.get(), TIFFTAG_BITSPERSAMPLE, &bpp_);
         if (bpp_ != 8 && bpp_ != 16) {
           utils::Throw("Invalid bpp {} ({})", bpp_, filename_);

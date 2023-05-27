@@ -97,78 +97,55 @@ void RunMain(int argc, char* argv[]) {
    ***********************************************************************/
   if (argc == 1 || (strcmp(argv[1], "-h") == 0) ||
       (strcmp(argv[1], "--help") == 0) || (strcmp(argv[1], "/?") == 0)) {
-    utils::Output(1,
-                  "Multiblend v2.0.0 (c) 2021 David Horman        "
-                  "http://horman.net/multiblend/");
-    utils::Output(
-        1,
-        "-------------------------------------------------------------------"
-        "---------");
+    utils::Output(1, R"(
+Multiblend v2.0.0 (c) 2021 David Horman
+http://horman.net/multiblend/
 
-    printf(
-        "Usage: multiblend [options] [-o OUTPUT] INPUT [X,Y] [INPUT] [X,Y] "
-        "[INPUT]...\n");
-    printf("\n");
-    printf("Options:\n");
-    printf("  --levels X / -l X      X: set number of blending levels to X\n");
-    printf(
-        "                        -X: decrease number of blending levels by "
-        "X\n");
-    printf(
-        "                        +X: increase number of blending levels by "
-        "X\n");
-    printf(
-        "  --depth D / -d D       Override automatic output image depth (8 or "
-        "16)\n");
-    printf("  --bgr                  Swap RGB order\n");
-    printf(
-        "  --wideblend            Calculate number of levels based on output "
-        "image size,\n");
-    printf("                         rather than input image size\n");
-    printf(
-        "  -w, --wrap=[mode]      Blend around images boundaries (NONE "
-        "(default),\n");
-    printf(
-        "                         HORIZONTAL, VERTICAL). When specified "
-        "without a mode,\n");
-    printf("                         defaults to HORIZONTAL.\n");
-    printf(
-        "  --compression=X        Output file compression. For TIFF output, X "
-        "may be:\n");
-    printf("                         NONE (default), PACKBITS, or LZW\n");
-    printf(
-        "                         For JPEG output, X is JPEG quality (0-100, "
-        "default 75)\n");
-    printf(
-        "                         For PNG output, X is PNG filter (0-9, "
-        "default 3)\n");
-    printf(
-        "  --cache-threshold=     Allocate memory beyond X "
-        "bytes/[K]ilobytes/\n");
-    printf("      X[K/M/G]           [M]egabytes/[G]igabytes to disk\n");
-    printf("  --no-dither            Disable dithering\n");
-    printf(
-        "  --tempdir <dir>        Specify temporary directory (default: system "
-        "temp)\n");
-    printf(
-        "  --save-seams <file>    Save seams to PNG file for external "
-        "editing\n");
-    printf("  --load-seams <file>    Load seams from PNG file\n");
-    printf(
-        "  --no-output            Do not blend (for use with --save-seams)\n");
-    printf(
-        "                         Must be specified as last option before "
-        "input images\n");
-    printf("  --bigtiff              BigTIFF output\n");
-    printf(
-        "  --reverse              Reverse image priority (last=highest) for "
-        "resolving\n");
-    printf("                         indeterminate pixels\n");
-    printf("  --quiet                Suppress output (except warnings)\n");
-    printf("  --all-threads          Use all available CPU threads\n");
-    printf(
-        "  [X,Y]                  Optional position adjustment for previous "
-        "input image\n");
+----------------------------------------------------------------------------
+
+Usage: multiblend [options] [-o OUTPUT] INPUT [X,Y] [INPUT] [X,Y] [INPUT]...
+
+Options:
+  --levels X / -l X      X: set number of blending levels to X
+                                -X: decrease number of blending levels by X
+                                +X: increase number of blending levels by X
+  --depth D / -d D       Override automatic output image depth (8 or 16)
+  --bgr                  Swap RGB order
+
+  --wideblend            Calculate number of levels based on output image size,
+                         rather than input image size
+
+  -w, --wrap=[mode]      Blend around images boundaries (NONE (default), 
+                         HORIZONTAL, VERTICAL). When specified without a mode,
+                         defaults to HORIZONTAL.
+
+  --compression=X        Output file compression. For TIFF output, X may be:
+                         NONE (default), PACKBITS, or LZW
+
+                         For JPEG output, X is JPEG quality (0-100, default 75)
+
+                         For PNG output, X is PNG filter (0-9, default 3)
+
+  --cache-threshold=     Allocate memory beyond X bytes/[K]ilobytes
+      /X[K/M/G]          [M]egabytes/[G]igabytes to disk
+
+  --no-dither            Disable dithering
+
+  --tempdir <dir>        Specify temporary directory (default: system temp)
+
+  --save-seams <file>    Save seams to PNG file for external editing
+  --load-seams <file>    Load seams from PNG file
+
+  --no-output            Do not blend (for use with --save-seams)
+                         Must be specified as last option before input images
+  --bigtiff              BigTIFF output
+
+  --reverse              Reverse image priority (last=highest) for resolving
+                         indeterminate pixels
+  --quiet                Suppress output (except warnings)
+  --all-threads          Use all available CPU threads
+
+  [X,Y]                  Optional position adjustment for previous input image)");
     exit(EXIT_SUCCESS);
   }
 
@@ -490,13 +467,9 @@ void RunMain(int argc, char* argv[]) {
    * Print banner
    ***********************************************************************/
   utils::Output(1,
-                "Multiblend v2.0.0 (c) 2021 David Horman        "
-                "http://horman.net/multiblend/");
-  utils::Output(
-      1,
-      "---------------------------------------------------------------------"
-      "-------");
-
+                R"(Multiblend v2.0.0 (c) 2021 David Horman
+http://horman.net/multiblend/
+----------------------------------------------------------------------------)");
   /***********************************************************************
   ************************************************************************
   * Open output
@@ -752,21 +725,20 @@ void RunMain(int argc, char* argv[]) {
    * Timing
    ***********************************************************************/
   if (timing) {
-    printf("\n");
-    printf("Images:   %.3fs\n", result.timing.images_time);
-    printf("Seaming:  %.3fs\n", result.timing.seam_time);
+    utils::Output(1, "Images:   {:.3f}s\n", result.timing.images_time);
+    utils::Output(1, "Seaming:  {:.3f}s\n", result.timing.seam_time);
     if (output_type != io::ImageType::MB_NONE) {
-      printf("Masks:    %.3fs\n", result.timing.shrink_mask_time);
-      printf("Copy:     %.3fs\n", result.timing.copy_time);
-      printf("Shrink:   %.3fs\n", result.timing.shrink_time);
-      printf("Laplace:  %.3fs\n", result.timing.laplace_time);
-      printf("Blend:    %.3fs\n", result.timing.blend_time);
-      printf("Collapse: %.3fs\n", result.timing.collapse_time);
+      utils::Output(1, "Masks:    {:.3f}s\n", result.timing.shrink_mask_time);
+      utils::Output(1, "Copy:     {:.3f}s\n", result.timing.copy_time);
+      utils::Output(1, "Shrink:   {:.3f}s\n", result.timing.shrink_time);
+      utils::Output(1, "Laplace:  {:.3f}s\n", result.timing.laplace_time);
+      utils::Output(1, "Blend:    {:.3f}s\n", result.timing.blend_time);
+      utils::Output(1, "Collapse: {:.3f}s\n", result.timing.collapse_time);
       if (wrap != 0) {
-        printf("Wrapping: %.3fs\n", result.timing.wrap_time);
+        utils::Output(1, "Wrapping: {:.3f}s\n", result.timing.wrap_time);
       }
-      printf("Output:   %.3fs\n", result.timing.out_time);
-      printf("Write:    %.3fs\n", write_time);
+      utils::Output(1, "Output:   {:.3f}s\n", result.timing.out_time);
+      utils::Output(1, "Write:    {:.3f}s\n", write_time);
     }
   }
 
