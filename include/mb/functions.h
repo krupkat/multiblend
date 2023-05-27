@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <spdlog/fmt/fmt.h>
+#include <spdlog/spdlog.h>
 
 #include "mb/pyramid.h"
 
@@ -153,7 +154,19 @@ class Timer {
   std::chrono::high_resolution_clock::time_point start_time_;
 };
 
-void Output(int level, const char* fmt, ...);
+void Info(const std::string& msg);
+void Debug(const std::string& msg);
+
+template <typename... Args>
+void Output(int level, fmt::format_string<Args...> fmt, Args&&... args) {
+  if (level == 0) {
+    Info(fmt::format(fmt, std::forward<Args>(args)...));
+  } else {
+    Debug(fmt::format(fmt, std::forward<Args>(args)...));
+  }
+}
+
+void SetLogger(std::shared_ptr<spdlog::logger> logger);
 
 template <typename... Args>
 void die_throw(fmt::format_string<Args...> fmt, Args&&... args) {

@@ -322,7 +322,7 @@ void Image::Open() {
 ************************************************************************
 ***********************************************************************/
 void Image::Read(void* data, bool gamma) {
-  utils::Output(1, "Processing %s...", filename_.c_str());
+  utils::Output(1, "Processing {}...", filename_);
 
   switch (type_) {
     case ImageType::MB_TIFF: {
@@ -902,8 +902,6 @@ void Image::Read(void* data, bool gamma) {
 
     //  total_pixels += width * height;
   }
-
-  utils::Output(1, "\n");
 }
 
 /***********************************************************************

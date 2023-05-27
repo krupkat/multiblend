@@ -81,7 +81,7 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
     fopen_s(&tmp_file, filename, "wb");
     if (tmp_file == nullptr) {
       if (name != nullptr) {
-        utils::Output(0, "WARNING: Could not save %s\n", name);
+        utils::Output(0, "WARNING: Could not save {}", name);
       }
       return;
     }
@@ -95,7 +95,7 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
       PngWriteStructDeleter{}};
   if (png_ptr_ == nullptr) {
     if (name != nullptr) {
-      utils::Output(0, "WARNING: PNG create failed\n");
+      utils::Output(0, "WARNING: PNG create failed");
     }
     file_.reset();
     remove(filename);
@@ -106,7 +106,7 @@ Pnger::Pnger(const char* filename, const char* name, int width, int height,
                PngInfoStructDeleter{png_ptr_.get()}};
   if (info_ptr_ == nullptr) {
     if (name != nullptr) {
-      utils::Output(0, "WARNING: PNG create failed\n");
+      utils::Output(0, "WARNING: PNG create failed");
     }
     png_ptr_.reset();
     file_.reset();

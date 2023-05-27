@@ -85,7 +85,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   for (int i = 1; i < n_images; ++i) {
     if (images[i].tiff_xres_ != images[0].tiff_xres_ ||
         images[i].tiff_yres_ != images[0].tiff_yres_) {
-      utils::Output(0, "Warning: TIFF resolution mismatch (%f %f/%f %f)\n",
+      utils::Output(0, "Warning: TIFF resolution mismatch ({} {}/{} {})",
                     images[0].tiff_xres_, images[0].tiff_yres_,
                     images[i].tiff_xres_, images[i].tiff_yres_);
     }
@@ -106,7 +106,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     opts.output_bpp = 8;
   } else if (opts.output_bpp == 16 &&
              opts.output_type == io::ImageType::MB_JPEG) {
-    utils::Output(0, "Warning: 8bpp output forced by JPEG output\n");
+    utils::Output(0, "Warning: 8bpp output forced by JPEG output");
     opts.output_bpp = 8;
   }
 
@@ -194,10 +194,10 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
   if (n_images == 1) {
     blend_levels = 0;
-    utils::Output(1, "\n%d x %d, %d bpp\n\n", width, height, opts.output_bpp);
+    utils::Output(1, "{} x {}, {} bpp", width, height, opts.output_bpp);
   } else {
-    utils::Output(1, "\n%d x %d, %d levels, %d bpp\n\n", width, height,
-                  blend_levels, opts.output_bpp);
+    utils::Output(1, "{} x {}, {} levels, {} bpp", width, height, blend_levels,
+                  opts.output_bpp);
   }
 
   /***********************************************************************
@@ -220,7 +220,6 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       utils::Output(1, " (saving XOR and seam maps)");
       break;
   }
-  utils::Output(1, "...\n");
 
   int min_count;
   int xor_count;
@@ -449,8 +448,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
     for (int i = 0; i < n_images; ++i) {
       if (!images[i].seam_present_) {
-        utils::Output(1, "Warning: %s is fully obscured by other images\n",
-                      images[i].filename_.c_str());
+        utils::Output(1, "Warning: {} is fully obscured by other images",
+                      images[i].filename_);
       }
     }
 
@@ -923,7 +922,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     /***********************************************************************
      * Shrink masks
      ***********************************************************************/
-    utils::Output(1, "Shrinking masks...\n");
+    utils::Output(1, "Shrinking masks...");
 
     timer.Start();
 
@@ -1044,15 +1043,15 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
      ***********************************************************************/
     if (n_images == 1) {
       if (opts.wrap != 0) {
-        utils::Output(1, "Wrapping...\n");
+        utils::Output(1, "Wrapping...");
       } else {
-        utils::Output(1, "Processing...\n");
+        utils::Output(1, "Processing...");
       }
     } else {
       if (opts.wrap != 0) {
-        utils::Output(1, "Blending/wrapping...\n");
+        utils::Output(1, "Blending/wrapping...");
       } else {
-        utils::Output(1, "Blending...\n");
+        utils::Output(1, "Blending...");
       }
     }
 

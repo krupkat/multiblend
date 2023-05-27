@@ -27,6 +27,8 @@
 #include <vector>
 
 #include <jpeglib.h>
+#include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/spdlog.h>
 #include <tiffio.h>
 
 #include "mb/file.h"
@@ -88,14 +90,13 @@ void run_main(int argc, char* argv[]) {
    ***********************************************************************/
   if (argc == 1 || (strcmp(argv[1], "-h") == 0) ||
       (strcmp(argv[1], "--help") == 0) || (strcmp(argv[1], "/?") == 0)) {
-    utils::Output(1, "\n");
     utils::Output(1,
                   "Multiblend v2.0.0 (c) 2021 David Horman        "
-                  "http://horman.net/multiblend/\n");
+                  "http://horman.net/multiblend/");
     utils::Output(
         1,
         "-------------------------------------------------------------------"
-        "---------\n");
+        "---------");
 
     printf(
         "Usage: multiblend [options] [-o OUTPUT] INPUT [X,Y] [INPUT] [X,Y] "
@@ -311,13 +312,13 @@ void run_main(int argc, char* argv[]) {
       //  else if (!strcmp(my_argv[i], "--force"))     force_coverage =
       // true;
     } else if (strncmp(my_argv[pos], "-f", 2) == 0) {
-      utils::Output(0, "ignoring Enblend option -f\n");
+      utils::Output(0, "ignoring Enblend option -f");
     } else if (strcmp(my_argv[pos], "-a") == 0) {
-      utils::Output(0, "ignoring Enblend option -a\n");
+      utils::Output(0, "ignoring Enblend option -a");
     } else if (strcmp(my_argv[pos], "--no-ciecam") == 0) {
-      utils::Output(0, "ignoring Enblend option --no-ciecam\n");
+      utils::Output(0, "ignoring Enblend option --no-ciecam");
     } else if (strcmp(my_argv[pos], "--primary-seam-generator") == 0) {
-      utils::Output(0, "ignoring Enblend option --primary-seam-generator\n");
+      utils::Output(0, "ignoring Enblend option --primary-seam-generator");
       ++pos;
     }
 
@@ -404,7 +405,7 @@ void run_main(int argc, char* argv[]) {
   if (compression != -1) {
     if (output_type != io::ImageType::MB_TIFF) {
       utils::Output(
-          0, "Warning: non-TIFF output; ignoring TIFF compression setting\n");
+          0, "Warning: non-TIFF output; ignoring TIFF compression setting");
     }
   } else if (output_type == io::ImageType::MB_TIFF) {
     compression = COMPRESSION_LZW;
@@ -414,7 +415,7 @@ void run_main(int argc, char* argv[]) {
       output_type != io::ImageType::MB_PNG) {
     utils::Output(0,
                   "Warning: non-JPEG/PNG output; ignoring compression quality "
-                  "setting\n");
+                  "setting");
   }
 
   if ((jpeg_quality < -1 || jpeg_quality > 9) &&
@@ -481,14 +482,13 @@ void run_main(int argc, char* argv[]) {
   /***********************************************************************
    * Print banner
    ***********************************************************************/
-  utils::Output(1, "\n");
   utils::Output(1,
                 "Multiblend v2.0.0 (c) 2021 David Horman        "
-                "http://horman.net/multiblend/\n");
+                "http://horman.net/multiblend/");
   utils::Output(
       1,
       "---------------------------------------------------------------------"
-      "-------\n");
+      "-------");
 
   /***********************************************************************
   ************************************************************************
@@ -552,7 +552,7 @@ void run_main(int argc, char* argv[]) {
   constexpr int rows_per_strip = 64;
 
   if (output_type != io::ImageType::MB_NONE) {
-    utils::Output(1, "Writing %s...\n", output_filename);
+    utils::Output(1, "Writing {}...", output_filename);
 
     timer.Start();
 
@@ -614,7 +614,7 @@ void run_main(int argc, char* argv[]) {
           io::tiff::GeoTIFFInfo info(images[0].geotiff_);
           info.XGeoRef = result.min_xpos * images[0].geotiff_.XCellRes;
           info.YGeoRef = -result.min_ypos * images[0].geotiff_.YCellRes;
-          utils::Output(1, "Output georef: UL: %f %f, pixel size: %f %f\n",
+          utils::Output(1, "Output georef: UL: {} {}, pixel size: {} {}",
                         info.XGeoRef, info.YGeoRef, info.XCellRes,
                         info.YCellRes);
           io::tiff::geotiff_write(tiff_file.get(), &info);
@@ -769,15 +769,23 @@ void run_main(int argc, char* argv[]) {
    ***********************************************************************/
   if (timing) {
     if (output_type == io::ImageType::MB_NONE) {
-      timer_all.Report("\nExecution complete. Total execution time");
+      timer_all.Report("Execution complete. Total execution time");
     } else {
-      timer_all.Report("\nBlend complete. Total execution time");
+      timer_all.Report("Blend complete. Total execution time");
     }
   }
 }
 
 int main(int argc, char* argv[]) {
   try {
+    auto logger = spdlog::stdout_logger_mt("console");
+    logger->flush_on(spdlog::level::info);
+    logger->set_pattern("%l: %v");
+    spdlog::set_default_logger(logger);
+    spdlog::info("Running version {}", 123);
+
+    multiblend::utils::SetLogger(logger);
+
     run_main(argc, argv);
   } catch (const std::exception& e) {
     fprintf(stderr, "Error: %s\n", e.what());

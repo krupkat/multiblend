@@ -16,20 +16,6 @@ namespace multiblend::utils {
 int verbosity = 1;
 
 /***********************************************************************
- * Output
- ***********************************************************************/
-void Output(int level, const char* fmt, ...) {
-  va_list args;
-
-  if (level <= verbosity) {
-    va_start(args, fmt);
-    vprintf(fmt, args);
-    va_end(args);
-  }
-  fflush(stdout);
-}
-
-/***********************************************************************
  * ShrinkMasks
  ***********************************************************************/
 int Squish(const uint32_t* in, uint32_t* out, int in_width, int out_width) {
@@ -723,5 +709,21 @@ void UnswapV(Pyramid* py) { SwapUnswapV(py, true); }
 void Timer::Report(const char* name) {
   spdlog::info("{}: {:.3f}s", name, Read());
 };
+
+std::shared_ptr<spdlog::logger> my_logger_ = nullptr;
+
+void SetLogger(std::shared_ptr<spdlog::logger> logger) { my_logger_ = logger; }
+
+void Info(const std::string& msg) {
+  if (my_logger_) {
+    my_logger_->info(msg);
+  }
+}
+
+void Debug(const std::string& msg) {
+  if (my_logger_) {
+    my_logger_->debug(msg);
+  }
+}
 
 }  // namespace multiblend::utils
