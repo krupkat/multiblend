@@ -44,8 +44,7 @@ namespace utils = mb::utils;
 namespace io = mb::io;
 namespace memory = mb::memory;
 
-// NOLINTNEXTLINE(bugprone-exception-escape)
-int main(int argc, char* argv[]) {
+void run_main(int argc, char* argv[]) {
   mb::utils::Timer timer_all;
   mb::utils::Timer timer;
   timer_all.Start();
@@ -775,6 +774,14 @@ int main(int argc, char* argv[]) {
       timer_all.Report("\nBlend complete. Total execution time");
     }
   }
+}
 
+int main(int argc, char* argv[]) {
+  try {
+    run_main(argc, argv);
+  } catch (const std::exception& e) {
+    fprintf(stderr, "Error: %s\n", e.what());
+    return EXIT_FAILURE;
+  }
   return EXIT_SUCCESS;
 }
