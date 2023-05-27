@@ -47,28 +47,6 @@ namespace utils = mb::utils;
 namespace io = mb::io;
 namespace memory = mb::memory;
 
-void SetVerbosity(std::shared_ptr<spdlog::logger>, int verbosity) {
-  switch (verbosity) {
-    case 0:
-      spdlog::set_level(spdlog::level::warn);
-      return;
-    case 1:
-      spdlog::set_level(spdlog::level::info);
-      return;
-    case 2:
-      spdlog::set_level(spdlog::level::debug);
-      return;
-    default:
-      break;
-  }
-  if (verbosity < 0) {
-    spdlog::set_level(spdlog::level::off);
-  }
-  if (verbosity > 2) {
-    spdlog::set_level(spdlog::level::trace);
-  }
-}
-
 void RunMain(int argc, char* argv[]) {
   auto logger = spdlog::stdout_logger_mt("console");
   logger->flush_on(spdlog::level::warn);
@@ -373,10 +351,10 @@ void RunMain(int argc, char* argv[]) {
       }
     } else if ((strcmp(my_argv[pos], "-v") == 0) ||
                (strcmp(my_argv[pos], "--verbose") == 0)) {
-      SetVerbosity(logger, ++verbosity);
+      utils::SetVerbosity(logger, ++verbosity);
     } else if ((strcmp(my_argv[pos], "-q") == 0) ||
                (strcmp(my_argv[pos], "--quiet") == 0)) {
-      SetVerbosity(logger, --verbosity);
+      utils::SetVerbosity(logger, --verbosity);
     } else if (((strcmp(my_argv[pos], "--saveseams") == 0) ||
                 (strcmp(my_argv[pos], "--save-seams") == 0)) &&
                pos < (int)my_argv.size() - 1) {
