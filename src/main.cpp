@@ -29,15 +29,15 @@
 #include <jpeglib.h>
 #include <tiffio.h>
 
-#include "src/file.h"
-#include "src/functions.h"
-#include "src/image.h"
-#include "src/jpeg.h"
-#include "src/linux_overrides.h"
-#include "src/mapalloc.h"
-#include "src/multiblend.h"
-#include "src/pnger.h"
-#include "src/tiff.h"
+#include "mb/file.h"
+#include "mb/functions.h"
+#include "mb/image.h"
+#include "mb/jpeg.h"
+#include "mb/linux_overrides.h"
+#include "mb/mapalloc.h"
+#include "mb/multiblend.h"
+#include "mb/pnger.h"
+#include "mb/tiff.h"
 
 namespace mb = multiblend;
 namespace utils = mb::utils;
@@ -639,7 +639,8 @@ int main(int argc, char* argv[]) {
       case io::ImageType::MB_PNG: {
         png_file = io::png::Pnger(
             output_filename, nullptr, result.width, result.height,
-            result.no_mask ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGB_ALPHA,
+            result.no_mask ? io::png::ColorType::RGB
+                           : io::png::ColorType::RGB_ALPHA,
             result.output_bpp, std::move(jpeg_file), jpeg_quality);
       } break;
     }

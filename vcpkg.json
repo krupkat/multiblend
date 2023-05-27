@@ -3,6 +3,8 @@
   "dependencies": [
     "libjpeg-turbo",
     "libpng",
-    "tiff"
+    "tiff",
+    "catch2",
+    "cereal"
   ]
 }

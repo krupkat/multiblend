@@ -3,23 +3,41 @@
 #include <cstdio>
 #include <memory>
 #include <optional>
+#include <string>
+#include <vector>
 
-#include <jpeglib.h>
-#include <png.h>
-#include <tiffio.h>
-
-#include "src/file.h"
-#include "src/functions.h"
-#include "src/geotiff.h"
-#include "src/jpeg.h"
-#include "src/mapalloc.h"
-#include "src/pnger.h"
-#include "src/pyramid.h"
-#include "src/tiff.h"
+#include "mb/file.h"
+#include "mb/functions.h"
+#ifdef MULTIBLEND_WITH_JPEG
+#include "mb/jpeg.h"
+#endif
+#include "mb/mapalloc.h"
+#include "mb/pnger.h"
+#include "mb/pyramid.h"
+#ifdef MULTIBLEND_WITH_TIFF
+#include "mb/tiff.h"
+#endif
 
 namespace multiblend::io {
 
-enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG };
+struct InMemoryImage {
+  int tiff_width;
+  int tiff_height;
+  uint16_t bpp;
+  uint16_t spp;
+  int xpos_add;
+  int ypos_add;
+
+  std::vector<uint8_t> data;
+};
+
+template <class Archive>
+void serialize(Archive& archive, InMemoryImage& image) {
+  archive(image.tiff_width, image.tiff_height, image.bpp, image.spp,
+          image.xpos_add, image.ypos_add, image.data);
+}
+
+enum class ImageType { MB_NONE, MB_TIFF, MB_JPEG, MB_PNG, MB_IN_MEMORY };
 
 class Channel {
  public:
@@ -34,14 +52,15 @@ class Channel {
 class Image {
  public:
   explicit Image(char* filename);
+  explicit Image(InMemoryImage image);
 
   Image(const Image&) = delete;
   Image& operator=(const Image&) = delete;
   Image(Image&&) = default;
   Image& operator=(Image&&) = default;
 
-  char* filename_;
-  ImageType type_;
+  std::string filename_;
+  ImageType type_ = ImageType::MB_NONE;
   int width_;
   int height_;
   int xpos_;
@@ -50,7 +69,9 @@ class Image {
   int ypos_add_ = 0;
   std::vector<Channel> channels_;
   std::optional<Pyramid> pyramid_;
+#ifdef MULTIBLEND_WITH_TIFF
   tiff::GeoTIFFInfo geotiff_;
+#endif
   int tiff_width_;
   int tiff_height_;
   int tiff_u_height_;
@@ -78,12 +99,19 @@ class Image {
   void MaskPng(int i);
 
  private:
-  tiff::TiffPtr tiff_;
   FilePtr file_;
+  std::optional<InMemoryImage> image_;
 
+#ifdef MULTIBLEND_WITH_TIFF
+  tiff::TiffPtr tiff_;
+#endif
+#ifdef MULTIBLEND_WITH_JPEG
   std::unique_ptr<jpeg_error_mgr> jerr_;
   std::unique_ptr<jpeg_decompress_struct, jpeg::DecompressDeleter> cinfo_;
+#endif
+#ifdef MULTIBLEND_WITH_PNG
   std::unique_ptr<png_struct, png::PngReadStructDeleter> png_ptr_;
+#endif
 };
 
 }  // namespace multiblend::io

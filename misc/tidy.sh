@@ -12,4 +12,4 @@ else
     result="$2"
 fi
 
-run-clang-tidy `pwd`/src "-p=$target" -quiet "-export-fixes=$result"
+run-clang-tidy `pwd`/src `pwd`/tests "-p=$target" -quiet "-export-fixes=$result"

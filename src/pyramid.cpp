@@ -1,4 +1,4 @@
-#include "src/pyramid.h"
+#include "mb/pyramid.h"
 
 #ifdef PYR_DENOISE
 #define USE_SSE2
@@ -7,10 +7,10 @@
 
 #include <cmath>
 
-#include "src/aligned_ptr.h"
-#include "src/linux_overrides.h"
-#include "src/pnger.h"
-#include "src/threadpool.h"
+#include "mb/aligned_ptr.h"
+#include "mb/linux_overrides.h"
+#include "mb/pnger.h"
+#include "mb/threadpool.h"
 
 namespace multiblend {
 
@@ -1482,7 +1482,7 @@ void Pyramid::Png(const char* filename) {
   }
 
   io::png::Pnger::Quick((char*)filename, temp, width, height, width,
-                        PNG_COLOR_TYPE_GRAY);
+                        io::png::ColorType::GRAY);
 
   free(temp);
 }

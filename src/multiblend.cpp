@@ -1,12 +1,13 @@
-#include "src/multiblend.h"
+#include "mb/multiblend.h"
 
 #include <cmath>
 #include <memory>
 #include <optional>
 #include <vector>
 
-#include "src/linux_overrides.h"
-#include "src/pnger.h"
+#include "mb/image.h"
+#include "mb/linux_overrides.h"
+#include "mb/pnger.h"
 
 namespace multiblend {
 
@@ -454,7 +455,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     for (int i = 0; i < n_images; ++i) {
       if (!images[i].seam_present_) {
         utils::Output(1, "Warning: %s is fully obscured by other images\n",
-                      images[i].filename_);
+                      images[i].filename_.c_str());
       }
     }
 
@@ -477,13 +478,13 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   std::optional<io::png::Pnger> xor_map;
   if (opts.xor_filename != nullptr) {
     xor_map = io::png::Pnger(opts.xor_filename, "XOR map", width, height,
-                             PNG_COLOR_TYPE_PALETTE);
+                             io::png::ColorType::PALETTE);
   }
 
   std::optional<io::png::Pnger> seam_map;
   if (opts.seamsave_filename != nullptr) {
     seam_map = io::png::Pnger(opts.seamsave_filename, "Seam map", width, height,
-                              PNG_COLOR_TYPE_PALETTE);
+                              io::png::ColorType::PALETTE);
   }
 
   /***********************************************************************
@@ -835,24 +836,27 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     opts.no_mask = true;
   }
 
-  /***********************************************************************
-   * Seam load
-   ***********************************************************************/
+/***********************************************************************
+ * Seam load
+ ***********************************************************************/
+#ifdef MULTIBLEND_WITH_PNG
   if (opts.seamload_filename != nullptr) {
     int png_depth;
     int png_colour;
     png_uint_32 png_width;
     png_uint_32 png_height;
     uint8_t sig[8];
-    FILE* f;
 
-    fopen_s(&f, opts.seamload_filename, "rb");
-    if (f == nullptr) {
+    FILE* tmp_file;
+    fopen_s(&tmp_file, opts.seamload_filename, "rb");
+    if (tmp_file == nullptr) {
       utils::die("Error: Couldn't open seam file");
     }
+    auto output_file = std::unique_ptr<FILE, io::FileDeleter>{tmp_file};
 
     std::size_t r =
-        fread(sig, 1, 8, f);  // assignment suppresses g++ -Ofast warning
+        fread(sig, 1, 8,
+              output_file.get());  // assignment suppresses g++ -Ofast warning
     if (!png_check_sig(sig, 8)) {
       utils::die("Error: Bad PNG signature");
     }
@@ -874,7 +878,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       utils::die("Error: Seam PNG problem");
     }
 
-    png_init_io(png_ptr.get(), f);
+    png_init_io(png_ptr.get(), output_file.get());
     png_set_sig_bytes(png_ptr.get(), 8);
     png_read_info(png_ptr.get(), info_ptr.get());
     png_get_IHDR(png_ptr.get(), info_ptr.get(), &png_width, &png_height,
@@ -888,6 +892,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     }
 
     auto png_line = std::make_unique<png_byte[]>(width);
+    std::optional<io::png::Pnger> empty;
 
     for (int y = 0; y < height; ++y) {
       png_read_row(png_ptr.get(), png_line.get(), nullptr);
@@ -899,16 +904,17 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         if (png_line[x] > n_images) {
           utils::die("Error: Bad pixel found in seam file: %d,%d", x, y);
         }
-        Record(png_line[x], 1, x, state, images, seam_map);
+        Record(png_line[x], 1, x, state, images, empty);
       }
 
-      Record(-1, 0, x, state, images, seam_map);
+      Record(-1, 0, x, state, images, empty);
 
       for (int i = 0; i < n_images; ++i) {
         images[i].masks_[0].NextLine();
       }
     }
   }
+#endif
 
   timing.seam_time = timer.Read();
 

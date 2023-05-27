@@ -5,9 +5,9 @@
 #include <memory>
 #include <vector>
 
-#include "src/aligned_ptr.h"
-#include "src/mapalloc.h"
-#include "src/threadpool.h"
+#include "mb/aligned_ptr.h"
+#include "mb/mapalloc.h"
+#include "mb/threadpool.h"
 
 namespace multiblend {
 
