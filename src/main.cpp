@@ -198,7 +198,7 @@ int main(int argc, char* argv[]) {
   }
 
   if ((int)my_argv.size() < 3) {
-    utils::die("Error: Not enough arguments (try -h for help)");
+    utils::die_throw("Error: Not enough arguments (try -h for help)");
   }
 
   int pos;
@@ -210,10 +210,10 @@ int main(int argc, char* argv[]) {
       if (++pos < (int)my_argv.size()) {
         output_bpp = atoi(my_argv[pos]);
         if (output_bpp != 8 && output_bpp != 16) {
-          utils::die("Error: Invalid output depth specified");
+          utils::die_throw("Error: Invalid output depth specified");
         }
       } else {
-        utils::die("Error: Missing parameter value");
+        utils::die_throw("Error: Missing parameter value");
       }
     } else if ((strcmp(my_argv[pos], "-l") == 0) ||
                (strcmp(my_argv[pos], "--levels") == 0)) {
@@ -228,15 +228,15 @@ int main(int argc, char* argv[]) {
           }
         }
         if (my_argv[pos][n] != 0) {
-          utils::die("Error: Bad --levels parameter");
+          utils::die_throw("Error: Bad --levels parameter");
         }
       } else {
-        utils::die("Error: Missing parameter value");
+        utils::die_throw("Error: Missing parameter value");
       }
     } else if ((strcmp(my_argv[pos], "--wrap") == 0) ||
                (strcmp(my_argv[pos], "-w") == 0)) {
       if (pos + 1 >= (int)my_argv.size()) {
-        utils::die("Error: Missing parameters");
+        utils::die_throw("Error: Missing parameters");
       }
       if ((strcmp(my_argv[pos + 1], "none") == 0) ||
           (strcmp(my_argv[pos + 1], "open") == 0)) {
@@ -258,7 +258,7 @@ int main(int argc, char* argv[]) {
       }
     } else if (strcmp(my_argv[pos], "--cache-threshold") == 0) {
       if (pos + 1 >= (int)my_argv.size()) {
-        utils::die("Error: Missing parameters");
+        utils::die_throw("Error: Missing parameters");
       }
       ++pos;
       int shift = 0;
@@ -282,11 +282,11 @@ int main(int argc, char* argv[]) {
               shift = 30;
               break;
             default:
-              utils::die("Error: Bad --cache-threshold parameter");
+              utils::die_throw("Error: Bad --cache-threshold parameter");
           }
           threshold <<= shift;
         } else {
-          utils::die("Error: Bad --cache-threshold parameter");
+          utils::die_throw("Error: Bad --cache-threshold parameter");
         }
       }
       memory::MapAlloc::CacheThreshold(threshold);
@@ -337,10 +337,10 @@ int main(int argc, char* argv[]) {
         } else if (_stricmp(my_argv[pos], "none") == 0) {
           compression = COMPRESSION_NONE;
         } else {
-          utils::die("Error: Unknown compression codec %s", my_argv[pos]);
+          utils::die_throw("Error: Unknown compression codec {}", my_argv[pos]);
         }
       } else {
-        utils::die("Error: Missing parameter value");
+        utils::die_throw("Error: Missing parameter value");
       }
     } else if ((strcmp(my_argv[pos], "-v") == 0) ||
                (strcmp(my_argv[pos], "--verbose") == 0)) {
@@ -373,7 +373,7 @@ int main(int argc, char* argv[]) {
         char* ext = strrchr(output_filename, '.');
 
         if (ext == nullptr) {
-          utils::die("Error: Unknown output filetype");
+          utils::die_throw("Error: Unknown output filetype");
         }
 
         ++ext;
@@ -388,7 +388,7 @@ int main(int argc, char* argv[]) {
         } else if (_stricmp(ext, "png") == 0) {
           output_type = io::ImageType::MB_PNG;
         } else {
-          utils::die("Error: Unknown file extension");
+          utils::die_throw("Error: Unknown file extension");
         }
 
         ++pos;
@@ -398,7 +398,7 @@ int main(int argc, char* argv[]) {
       ++pos;
       break;
     } else {
-      utils::die("Error: Unknown argument \"%s\"", my_argv[pos]);
+      utils::die_throw("Error: Unknown argument \"{}\"", my_argv[pos]);
     }
   }
 
@@ -420,17 +420,18 @@ int main(int argc, char* argv[]) {
 
   if ((jpeg_quality < -1 || jpeg_quality > 9) &&
       output_type == io::ImageType::MB_PNG) {
-    utils::die("Error: Bad PNG compression quality setting\n");
+    utils::die_throw("Error: Bad PNG compression quality setting\n");
   }
 
   if (output_type == io::ImageType::MB_NONE && (seamsave_filename == nullptr)) {
-    utils::die("Error: No output file specified");
+    utils::die_throw("Error: No output file specified");
   }
   if ((seamload_filename != nullptr) && (seamsave_filename != nullptr)) {
-    utils::die("Error: Cannot load and save seams at the same time");
+    utils::die_throw("Error: Cannot load and save seams at the same time");
   }
   if (wrap == 3) {
-    utils::die("Error: Wrapping in both directions is not currently supported");
+    utils::die_throw(
+        "Error: Wrapping in both directions is not currently supported");
   }
 
   if (strcmp(my_argv[pos], "--") == 0) {
@@ -460,7 +461,7 @@ int main(int argc, char* argv[]) {
   int n_images = (int)images.size();
 
   if (n_images == 0) {
-    utils::die("Error: No input files specified");
+    utils::die_throw("Error: No input files specified");
   }
   if ((seamsave_filename != nullptr) && n_images > 256) {
     seamsave_filename = nullptr;
@@ -503,12 +504,13 @@ int main(int argc, char* argv[]) {
         tiff_file = {TIFFOpen(output_filename, "w8"), io::tiff::CloseDeleter{}};
       }
       if (tiff_file == nullptr) {
-        utils::die("Error: Could not open output file");
+        utils::die_throw("Error: Could not open output file");
       }
     } break;
     case io::ImageType::MB_JPEG: {
       if (output_bpp == 16) {
-        utils::die("Error: 16bpp output is incompatible with JPEG output");
+        utils::die_throw(
+            "Error: 16bpp output is incompatible with JPEG output");
       }
     }
       [[fallthrough]];
@@ -516,7 +518,7 @@ int main(int argc, char* argv[]) {
       FILE* tmp_jpeg_file = nullptr;
       fopen_s(&tmp_jpeg_file, output_filename, "wb");
       if (tmp_jpeg_file == nullptr) {
-        utils::die("Error: Could not open output file");
+        utils::die_throw("Error: Could not open output file");
       }
       jpeg_file = {tmp_jpeg_file, io::FileDeleter{}};
     } break;

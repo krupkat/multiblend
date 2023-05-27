@@ -38,6 +38,9 @@ target_include_directories(MultiblendLib PUBLIC
   "include"
 )
 
+find_package(spdlog REQUIRED)
+target_link_libraries(MultiblendLib spdlog::spdlog)
+
 if(MULTIBLEND_LIB_WITH_JPEG)
   find_package(JPEG REQUIRED)
   target_link_libraries(MultiblendLib JPEG::JPEG)

@@ -7,6 +7,8 @@
 #include <memory>
 #include <vector>
 
+#include <spdlog/spdlog.h>
+
 #include "mb/pyramid.h"
 
 namespace multiblend::utils {
@@ -25,20 +27,6 @@ void Output(int level, const char* fmt, ...) {
     va_end(args);
   }
   fflush(stdout);
-}
-
-/***********************************************************************
- * Die
- ***********************************************************************/
-void die(const char* error, ...) {
-  va_list args;
-
-  va_start(args, error);
-  vprintf(error, args);
-  va_end(args);
-  printf("\n");
-
-  exit(EXIT_FAILURE);
 }
 
 /***********************************************************************
@@ -731,5 +719,9 @@ void SwapUnswapV(Pyramid* py, bool unswap) {
 void SwapV(Pyramid* py) { SwapUnswapV(py, false); }
 
 void UnswapV(Pyramid* py) { SwapUnswapV(py, true); }
+
+void Timer::Report(const char* name) {
+  spdlog::info("{}: {:.3f}s", name, Read());
+};
 
 }  // namespace multiblend::utils

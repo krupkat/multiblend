@@ -4,7 +4,10 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <stdexcept>
 #include <vector>
+
+#include <spdlog/fmt/fmt.h>
 
 #include "mb/pyramid.h"
 
@@ -144,7 +147,7 @@ class Timer {
     return elapsed.count();
   };
 
-  void Report(const char* name) { printf("%s: %.3fs\n", name, Read()); };
+  void Report(const char* name);
 
  private:
   std::chrono::high_resolution_clock::time_point start_time_;
@@ -152,7 +155,10 @@ class Timer {
 
 void Output(int level, const char* fmt, ...);
 
-void die(const char* error, ...);
+template <typename... Args>
+void die_throw(fmt::format_string<Args...> fmt, Args&&... args) {
+  throw std::runtime_error(fmt::format(fmt, std::forward<Args>(args)...));
+}
 
 void ShrinkMasks(std::vector<Flex>& masks, int n_levels);
 

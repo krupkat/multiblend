@@ -5,6 +5,8 @@
 #include <optional>
 #include <vector>
 
+#include <spdlog/fmt/fmt.h>
+
 #include "mb/image.h"
 #include "mb/linux_overrides.h"
 #include "mb/pnger.h"
@@ -94,9 +96,9 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       opts.output_bpp = 16;
     }
     if (images[i].bpp_ != images[0].bpp_) {
-      utils::die(
+      utils::die_throw(
           "Error: mixture of 8bpp and 16bpp images detected (not currently "
-          "handled)\n");
+          "handled)");
     }
   }
 
@@ -118,13 +120,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
    * Read/trim/extract
    ***********************************************************************/
   for (int i = 0; i < n_images; ++i) {
-    try {
-      images[i].Read(untrimmed_data.get(), opts.gamma);
-    } catch (char* e) {
-      printf("\n\n");
-      printf("%s\n", e);
-      exit(EXIT_FAILURE);
-    }
+    images[i].Read(untrimmed_data.get(), opts.gamma);
   }
 
   /***********************************************************************
@@ -431,8 +427,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         threadpool->Queue([=, &seam_flex, &flex_cond_p, &flex_mutex_p] {
           int p = utils::CompressSeamLine(this_line, comp, width);
           if (p > width) {
-            printf("bad p: %d at line %d", p, y);
-            exit(0);
+            throw std::runtime_error(fmt::format("bad p: {} at line {}", p, y));
           }
 
           {
@@ -850,7 +845,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     FILE* tmp_file;
     fopen_s(&tmp_file, opts.seamload_filename, "rb");
     if (tmp_file == nullptr) {
-      utils::die("Error: Couldn't open seam file");
+      utils::die_throw("Error: Couldn't open seam file");
     }
     auto output_file = std::unique_ptr<FILE, io::FileDeleter>{tmp_file};
 
@@ -858,7 +853,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         fread(sig, 1, 8,
               output_file.get());  // assignment suppresses g++ -Ofast warning
     if (!png_check_sig(sig, 8)) {
-      utils::die("Error: Bad PNG signature");
+      utils::die_throw("Error: Bad PNG signature");
     }
 
     auto png_ptr = std::unique_ptr<png_struct, io::png::PngReadStructDeleter>{
@@ -867,7 +862,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         io::png::PngReadStructDeleter{}};
 
     if (png_ptr == nullptr) {
-      utils::die("Error: Seam PNG problem");
+      utils::die_throw("Error: Seam PNG problem");
     }
 
     auto info_ptr = std::unique_ptr<png_info, io::png::PngInfoStructDeleter>{
@@ -875,7 +870,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         io::png::PngInfoStructDeleter{png_ptr.get()}};
 
     if (info_ptr == nullptr) {
-      utils::die("Error: Seam PNG problem");
+      utils::die_throw("Error: Seam PNG problem");
     }
 
     png_init_io(png_ptr.get(), output_file.get());
@@ -885,10 +880,10 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                  &png_depth, &png_colour, nullptr, nullptr, nullptr);
 
     if (png_width != width || png_height != height) {
-      utils::die("Error: Seam PNG dimensions don't match workspace");
+      utils::die_throw("Error: Seam PNG dimensions don't match workspace");
     }
     if (png_depth != 8 || png_colour != PNG_COLOR_TYPE_PALETTE) {
-      utils::die("Error: Incorrect seam PNG format");
+      utils::die_throw("Error: Incorrect seam PNG format");
     }
 
     auto png_line = std::make_unique<png_byte[]>(width);
@@ -902,7 +897,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
       for (x = 0; x < width; ++x) {
         if (png_line[x] > n_images) {
-          utils::die("Error: Bad pixel found in seam file: %d,%d", x, y);
+          utils::die_throw("Error: Bad pixel found in seam file: {},{}", x, y);
         }
         Record(png_line[x], 1, x, state, images, empty);
       }
@@ -1016,16 +1011,9 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         }
       }
 
-      std::shared_ptr<float> temp = nullptr;
-
-      try {
-        temp =
-            std::shared_ptr<float>{(float*)memory::MapAlloc::Alloc(max_bytes),
-                                   memory::MapAllocDeleter{}};
-      } catch (char* e) {
-        printf("%s\n", e);
-        exit(EXIT_FAILURE);
-      }
+      auto temp =
+          std::shared_ptr<float>{(float*)memory::MapAlloc::Alloc(max_bytes),
+                                 memory::MapAllocDeleter{}};
 
       if (level < blend_levels) {
         for (auto& image : images) {
@@ -1046,18 +1034,9 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     auto output_pyramid = Pyramid{width, height, total_levels, 0, 0};
 
     for (int level = total_levels - 1; level >= 0; --level) {
-      std::shared_ptr<float> temp = nullptr;
-
-      try {
-        temp = std::shared_ptr<float>{(float*)memory::MapAlloc::Alloc(
-                                          output_pyramid.GetLevel(level).bytes),
-                                      memory::MapAllocDeleter{}};
-      } catch (char* e) {
-        printf("%s\n", e);
-        exit(EXIT_FAILURE);
-      }
-
-      output_pyramid.GetLevel(level).data = temp;
+      output_pyramid.GetLevel(level).data = {
+          (float*)memory::MapAlloc::Alloc(output_pyramid.GetLevel(level).bytes),
+          memory::MapAllocDeleter{}};
     }
 
     /***********************************************************************
@@ -1290,13 +1269,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
        ***********************************************************************/
       timer.Start();
 
-      try {
-        output_channels[c] = memory::MapAllocPtr<void>{memory::MapAlloc::Alloc(
-            ((std::size_t)width * height) << (opts.output_bpp >> 4))};
-      } catch (char* e) {
-        printf("%s\n", e);
-        exit(EXIT_FAILURE);
-      }
+      output_channels[c] = memory::MapAllocPtr<void>{memory::MapAlloc::Alloc(
+          ((std::size_t)width * height) << (opts.output_bpp >> 4))};
 
       switch (opts.output_bpp) {
         case 8:
