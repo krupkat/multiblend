@@ -152,25 +152,6 @@ class Timer {
   std::chrono::high_resolution_clock::time_point start_time_;
 };
 
-void Info(const std::string& msg);
-void Warn(const std::string& msg);
-
-template <typename... Args>
-void Output(int level, fmt::format_string<Args...> fmt, Args&&... args) {
-  if (level == 1) {
-    Info(fmt::format(fmt, std::forward<Args>(args)...));
-  } else {
-    Warn(fmt::format(fmt, std::forward<Args>(args)...));
-  }
-}
-
-void SetLogger(std::shared_ptr<spdlog::logger> logger);
-
-template <typename... Args>
-void die_throw(fmt::format_string<Args...> fmt, Args&&... args) {
-  throw std::runtime_error(fmt::format(fmt, std::forward<Args>(args)...));
-}
-
 void ShrinkMasks(std::vector<Flex>& masks, int n_levels);
 
 void CompositeLine(const float* input_p, float* output_p, int i, int x_offset,

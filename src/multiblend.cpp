@@ -9,6 +9,7 @@
 
 #include "mb/image.h"
 #include "mb/linux_overrides.h"
+#include "mb/logging.h"
 #include "mb/pnger.h"
 
 namespace multiblend {
@@ -96,7 +97,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       opts.output_bpp = 16;
     }
     if (images[i].bpp_ != images[0].bpp_) {
-      utils::die_throw(
+      utils::Throw(
           "Error: mixture of 8bpp and 16bpp images detected (not currently "
           "handled)");
     }
@@ -844,7 +845,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     FILE* tmp_file;
     fopen_s(&tmp_file, opts.seamload_filename, "rb");
     if (tmp_file == nullptr) {
-      utils::die_throw("Error: Couldn't open seam file");
+      utils::Throw("Error: Couldn't open seam file");
     }
     auto output_file = std::unique_ptr<FILE, io::FileDeleter>{tmp_file};
 
@@ -852,7 +853,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         fread(sig, 1, 8,
               output_file.get());  // assignment suppresses g++ -Ofast warning
     if (!png_check_sig(sig, 8)) {
-      utils::die_throw("Error: Bad PNG signature");
+      utils::Throw("Error: Bad PNG signature");
     }
 
     auto png_ptr = std::unique_ptr<png_struct, io::png::PngReadStructDeleter>{
@@ -861,7 +862,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         io::png::PngReadStructDeleter{}};
 
     if (png_ptr == nullptr) {
-      utils::die_throw("Error: Seam PNG problem");
+      utils::Throw("Error: Seam PNG problem");
     }
 
     auto info_ptr = std::unique_ptr<png_info, io::png::PngInfoStructDeleter>{
@@ -869,7 +870,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         io::png::PngInfoStructDeleter{png_ptr.get()}};
 
     if (info_ptr == nullptr) {
-      utils::die_throw("Error: Seam PNG problem");
+      utils::Throw("Error: Seam PNG problem");
     }
 
     png_init_io(png_ptr.get(), output_file.get());
@@ -879,10 +880,10 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                  &png_depth, &png_colour, nullptr, nullptr, nullptr);
 
     if (png_width != width || png_height != height) {
-      utils::die_throw("Error: Seam PNG dimensions don't match workspace");
+      utils::Throw("Error: Seam PNG dimensions don't match workspace");
     }
     if (png_depth != 8 || png_colour != PNG_COLOR_TYPE_PALETTE) {
-      utils::die_throw("Error: Incorrect seam PNG format");
+      utils::Throw("Error: Incorrect seam PNG format");
     }
 
     auto png_line = std::make_unique<png_byte[]>(width);
@@ -896,7 +897,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
       for (x = 0; x < width; ++x) {
         if (png_line[x] > n_images) {
-          utils::die_throw("Error: Bad pixel found in seam file: {},{}", x, y);
+          utils::Throw("Error: Bad pixel found in seam file: {},{}", x, y);
         }
         Record(png_line[x], 1, x, state, images, empty);
       }

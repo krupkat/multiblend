@@ -9,6 +9,7 @@
 
 #include <spdlog/spdlog.h>
 
+#include "mb/logging.h"
 #include "mb/pyramid.h"
 
 namespace multiblend::utils {
@@ -707,21 +708,5 @@ void UnswapV(Pyramid* py) { SwapUnswapV(py, true); }
 void Timer::Report(const char* name) {
   Output(1, "{}: {:.3f}s", name, Read());
 };
-
-std::shared_ptr<spdlog::logger> my_logger_ = nullptr;
-
-void SetLogger(std::shared_ptr<spdlog::logger> logger) { my_logger_ = logger; }
-
-void Info(const std::string& msg) {
-  if (my_logger_) {
-    my_logger_->info(msg);
-  }
-}
-
-void Warn(const std::string& msg) {
-  if (my_logger_) {
-    my_logger_->warn(msg);
-  }
-}
 
 }  // namespace multiblend::utils

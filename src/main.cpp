@@ -36,6 +36,7 @@
 #include "mb/image.h"
 #include "mb/jpeg.h"
 #include "mb/linux_overrides.h"
+#include "mb/logging.h"
 #include "mb/mapalloc.h"
 #include "mb/multiblend.h"
 #include "mb/pnger.h"
@@ -226,7 +227,7 @@ void RunMain(int argc, char* argv[]) {
   }
 
   if ((int)my_argv.size() < 3) {
-    utils::die_throw("Error: Not enough arguments (try -h for help)");
+    utils::Throw("Error: Not enough arguments (try -h for help)");
   }
 
   int pos;
@@ -238,10 +239,10 @@ void RunMain(int argc, char* argv[]) {
       if (++pos < (int)my_argv.size()) {
         output_bpp = atoi(my_argv[pos]);
         if (output_bpp != 8 && output_bpp != 16) {
-          utils::die_throw("Error: Invalid output depth specified");
+          utils::Throw("Error: Invalid output depth specified");
         }
       } else {
-        utils::die_throw("Error: Missing parameter value");
+        utils::Throw("Error: Missing parameter value");
       }
     } else if ((strcmp(my_argv[pos], "-l") == 0) ||
                (strcmp(my_argv[pos], "--levels") == 0)) {
@@ -256,15 +257,15 @@ void RunMain(int argc, char* argv[]) {
           }
         }
         if (my_argv[pos][n] != 0) {
-          utils::die_throw("Error: Bad --levels parameter");
+          utils::Throw("Error: Bad --levels parameter");
         }
       } else {
-        utils::die_throw("Error: Missing parameter value");
+        utils::Throw("Error: Missing parameter value");
       }
     } else if ((strcmp(my_argv[pos], "--wrap") == 0) ||
                (strcmp(my_argv[pos], "-w") == 0)) {
       if (pos + 1 >= (int)my_argv.size()) {
-        utils::die_throw("Error: Missing parameters");
+        utils::Throw("Error: Missing parameters");
       }
       if ((strcmp(my_argv[pos + 1], "none") == 0) ||
           (strcmp(my_argv[pos + 1], "open") == 0)) {
@@ -286,7 +287,7 @@ void RunMain(int argc, char* argv[]) {
       }
     } else if (strcmp(my_argv[pos], "--cache-threshold") == 0) {
       if (pos + 1 >= (int)my_argv.size()) {
-        utils::die_throw("Error: Missing parameters");
+        utils::Throw("Error: Missing parameters");
       }
       ++pos;
       int shift = 0;
@@ -310,11 +311,11 @@ void RunMain(int argc, char* argv[]) {
               shift = 30;
               break;
             default:
-              utils::die_throw("Error: Bad --cache-threshold parameter");
+              utils::Throw("Error: Bad --cache-threshold parameter");
           }
           threshold <<= shift;
         } else {
-          utils::die_throw("Error: Bad --cache-threshold parameter");
+          utils::Throw("Error: Bad --cache-threshold parameter");
         }
       }
       memory::MapAlloc::CacheThreshold(threshold);
@@ -365,10 +366,10 @@ void RunMain(int argc, char* argv[]) {
         } else if (_stricmp(my_argv[pos], "none") == 0) {
           compression = COMPRESSION_NONE;
         } else {
-          utils::die_throw("Error: Unknown compression codec {}", my_argv[pos]);
+          utils::Throw("Error: Unknown compression codec {}", my_argv[pos]);
         }
       } else {
-        utils::die_throw("Error: Missing parameter value");
+        utils::Throw("Error: Missing parameter value");
       }
     } else if ((strcmp(my_argv[pos], "-v") == 0) ||
                (strcmp(my_argv[pos], "--verbose") == 0)) {
@@ -401,7 +402,7 @@ void RunMain(int argc, char* argv[]) {
         char* ext = strrchr(output_filename, '.');
 
         if (ext == nullptr) {
-          utils::die_throw("Error: Unknown output filetype");
+          utils::Throw("Error: Unknown output filetype");
         }
 
         ++ext;
@@ -416,7 +417,7 @@ void RunMain(int argc, char* argv[]) {
         } else if (_stricmp(ext, "png") == 0) {
           output_type = io::ImageType::MB_PNG;
         } else {
-          utils::die_throw("Error: Unknown file extension");
+          utils::Throw("Error: Unknown file extension");
         }
 
         ++pos;
@@ -426,7 +427,7 @@ void RunMain(int argc, char* argv[]) {
       ++pos;
       break;
     } else {
-      utils::die_throw("Error: Unknown argument \"{}\"", my_argv[pos]);
+      utils::Throw("Error: Unknown argument \"{}\"", my_argv[pos]);
     }
   }
 
@@ -448,17 +449,17 @@ void RunMain(int argc, char* argv[]) {
 
   if ((jpeg_quality < -1 || jpeg_quality > 9) &&
       output_type == io::ImageType::MB_PNG) {
-    utils::die_throw("Error: Bad PNG compression quality setting\n");
+    utils::Throw("Error: Bad PNG compression quality setting\n");
   }
 
   if (output_type == io::ImageType::MB_NONE && (seamsave_filename == nullptr)) {
-    utils::die_throw("Error: No output file specified");
+    utils::Throw("Error: No output file specified");
   }
   if ((seamload_filename != nullptr) && (seamsave_filename != nullptr)) {
-    utils::die_throw("Error: Cannot load and save seams at the same time");
+    utils::Throw("Error: Cannot load and save seams at the same time");
   }
   if (wrap == 3) {
-    utils::die_throw(
+    utils::Throw(
         "Error: Wrapping in both directions is not currently supported");
   }
 
@@ -489,7 +490,7 @@ void RunMain(int argc, char* argv[]) {
   int n_images = (int)images.size();
 
   if (n_images == 0) {
-    utils::die_throw("Error: No input files specified");
+    utils::Throw("Error: No input files specified");
   }
   if ((seamsave_filename != nullptr) && n_images > 256) {
     seamsave_filename = nullptr;
@@ -531,12 +532,12 @@ void RunMain(int argc, char* argv[]) {
         tiff_file = {TIFFOpen(output_filename, "w8"), io::tiff::CloseDeleter{}};
       }
       if (tiff_file == nullptr) {
-        utils::die_throw("Error: Could not open output file");
+        utils::Throw("Error: Could not open output file");
       }
     } break;
     case io::ImageType::MB_JPEG: {
       if (output_bpp == 16) {
-        utils::die_throw(
+        utils::Throw(
             "Error: 16bpp output is incompatible with JPEG output");
       }
     }
@@ -545,7 +546,7 @@ void RunMain(int argc, char* argv[]) {
       FILE* tmp_jpeg_file = nullptr;
       fopen_s(&tmp_jpeg_file, output_filename, "wb");
       if (tmp_jpeg_file == nullptr) {
-        utils::die_throw("Error: Could not open output file");
+        utils::Throw("Error: Could not open output file");
       }
       jpeg_file = {tmp_jpeg_file, io::FileDeleter{}};
     } break;

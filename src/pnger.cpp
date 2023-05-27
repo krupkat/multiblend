@@ -8,8 +8,8 @@
 #include <png.h>
 #endif
 
-#include "mb/functions.h"
 #include "mb/linux_overrides.h"
+#include "mb/logging.h"
 
 namespace multiblend::io::png {
 

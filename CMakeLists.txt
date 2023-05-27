@@ -26,6 +26,7 @@ add_library(MultiblendLib
   "src/aligned_ptr.cpp"
   "src/functions.cpp"
   "src/image.cpp"
+  "src/logging.cpp"
   "src/mapalloc.cpp"
   "src/multiblend.cpp"
   "src/pnger.cpp"
