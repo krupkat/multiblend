@@ -4,6 +4,9 @@
 #include <cstdio>
 #include <memory>
 #include <optional>
+#include <string>
+
+#include <spdlog/fmt/fmt.h>
 
 #include "mb/functions.h"
 #ifdef MULTIBLEND_WITH_JPEG
@@ -909,9 +912,6 @@ void Image::Read(void* data, bool gamma) {
  * Debugging
  ***********************************************************************/
 void Image::MaskPng(int i) {
-  char filename[256];
-  sprintf_s(filename, "masks-%d.png", i);
-
   int width = masks_[0].width_;
   int height = masks_[0].height_;  // +1 + masks[1]->height;
 
@@ -963,7 +963,8 @@ void Image::MaskPng(int i) {
     break;
   }
 
-  io::png::Pnger::Quick(filename, temp.get(), width, height, width,
+  std::string filename = fmt::format("masks-{}.png", i);
+  io::png::Pnger::Quick(filename.c_str(), temp.get(), width, height, width,
                         io::png::ColorType::GRAY);
 }
 

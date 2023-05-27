@@ -65,7 +65,7 @@ class Pnger {
   bool Ready() { return !(file_ == nullptr); };
   void WriteRows(uint8_t** rows, int num_rows);
   void Write();
-  static void Quick(char* filename, uint8_t* data, int width, int height,
+  static void Quick(const char* filename, uint8_t* data, int width, int height,
                     int pitch, ColorType type);
 
   std::vector<uint8_t> line_;

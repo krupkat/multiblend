@@ -178,7 +178,7 @@ void Pnger::WriteRows(uint8_t** rows, int num_rows) {
 #endif
 }
 
-void Pnger::Quick(char* filename, uint8_t* data, int width, int height,
+void Pnger::Quick(const char* filename, uint8_t* data, int width, int height,
                   int pitch, ColorType type) {
 #ifdef MULTIBLEND_WITH_PNG
   Pnger temp(filename, nullptr, width, height, type);
