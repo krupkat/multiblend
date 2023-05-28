@@ -509,7 +509,7 @@ void Image::Read(void* data, bool gamma) {
     uint32_t d;
     uint32_t* this_line = nullptr;
     uint32_t* prev_line = nullptr;
-    mt::Threadpool* threadpool = mt::Threadpool::GetInstance();
+    auto* threadpool = mt::GetInstance();
 
     tiff_mask_ = std::make_unique<utils::Flex>(width_, height_);
     auto dt = utils::Flex(width_, height_);

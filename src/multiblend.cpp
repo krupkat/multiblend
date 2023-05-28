@@ -244,8 +244,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   /***********************************************************************
    * Backward distance transform
    ***********************************************************************/
-  mt::Threadpool* threadpool =
-      mt::Threadpool::GetInstance(opts.all_threads ? 2 : 0);
+  auto* threadpool = mt::GetInstance(opts.all_threads ? 2 : 0);
 
   int n_threads = std::max(2, threadpool->GetNThreads());
   std::vector<std::vector<uint64_t>> thread_lines(n_threads);

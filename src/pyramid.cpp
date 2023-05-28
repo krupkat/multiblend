@@ -70,7 +70,7 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y) {
     height = (height + static_cast<int>(y_shift) + 6) >> 1;
   }
 
-  threadpool_ = mt::Threadpool::GetInstance();
+  threadpool_ = mt::GetInstance();
 
   for (auto level = levels_.begin(); level < levels_.end(); ++level) {
     level->bands.push_back(0);
