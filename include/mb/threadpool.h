@@ -6,12 +6,13 @@
 
 namespace multiblend::mt {
 
-using MultiFuture = BS::multi_future<void>;
+template <typename TReturnType>
+using MultiFuture = BS::multi_future<TReturnType>;
 
 class Threadpool {
  public:
   template <typename... Args>
-  [[nodiscard]] std::future<void> Queue(Args&&... args) {
+  [[nodiscard]] auto Queue(Args&&... args) {
     return instance_.submit(std::forward<Args>(args)...);
   }
 

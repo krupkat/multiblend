@@ -123,7 +123,7 @@ void Pyramid::Copy(uint8_t* src_p, int step, int pitch, bool gamma, int bits) {
   if (step > 1) {
     set_lut(bits, gamma);
 
-    auto tasks = mt::MultiFuture{};
+    auto tasks = mt::MultiFuture<void>{};
     for (int t = 0; t < (int)levels_[0].bands.size() - 1; ++t) {
       switch (bits) {
         case 8:
@@ -145,7 +145,7 @@ void Pyramid::Copy(uint8_t* src_p, int step, int pitch, bool gamma, int bits) {
     }
     tasks.get();
   } else {
-    auto tasks = mt::MultiFuture{};
+    auto tasks = mt::MultiFuture<void>{};
     for (int t = 0; t < (int)levels_[0].bands.size() - 1; ++t) {
       // planar (only slight improvement with MT, but increases CPU usage)
       switch (bits) {
@@ -585,7 +585,7 @@ void Pyramid::Shrink() {
         (levels_[l].height & 1) ^ static_cast<int>(levels_[l].y_shift);
     int first_bad_line = levels_[l + 1].height - (3 - height_odd);
 
-    auto tasks = mt::MultiFuture{};
+    auto tasks = mt::MultiFuture<void>{};
     for (int t = 0; t < (int)levels_[l + 1].bands.size() - 1; ++t) {
       tasks.push_back(threadpool_->Queue([=, this] {
         ShrinkThread(lines_[t].get(), hi, lo, levels_[l].m128_pitch,
@@ -810,7 +810,7 @@ void Pyramid::LaplaceCollapse(int n_levels, bool Collapse) {
       l = j;
     }
 
-    auto tasks = mt::MultiFuture{};
+    auto tasks = mt::MultiFuture<void>{};
     for (int t = 0; t < (int)levels_[l].bands.size() - 1; ++t) {
       tasks.push_back(threadpool_->Queue([=, this] {
         LaplaceThreadWrapper(&levels_[l], &levels_[l + 1], levels_[l].bands[t],
@@ -1055,7 +1055,7 @@ void Pyramid::Add(float add, int levels) {
   for (int l = 0; l < lim; ++l) {
     auto* data = (__m128*)levels_[l].data.get();
 
-    auto tasks = mt::MultiFuture{};
+    auto tasks = mt::MultiFuture<void>{};
     for (int t = 0; t < (int)levels_[l].bands.size() - 1; ++t) {
       tasks.push_back(threadpool_->Queue([=, this]() {
         __m128* data =
@@ -1191,7 +1191,7 @@ void Pyramid::Fuse(Pyramid* _b, Pyramid* mask, bool pre = false,
     // fuse doesn't see any gains from multithreading; leave this here as
     // reference
 
-    auto tasks = mt::MultiFuture{};
+    auto tasks = mt::MultiFuture<void>{};
     for (int t = 0; t < (int)levels_[l].bands.size() - 1; ++t) {
       tasks.push_back(threadpool_->Queue([=, this] {
         FuseThread((__m128*)levels_[l].data.get(),
@@ -1314,7 +1314,7 @@ void Pyramid::Blend(Pyramid* b) {
  ***********************************************************************/
 
 void Pyramid::BlurX(float radius, Pyramid* transpose) {
-  auto tasks = mt::MultiFuture{};
+  auto tasks = mt::MultiFuture<void>{};
   for (int i = 0; i < (int)levels_[0].bands.size() - 1; ++i) {
     tasks.push_back(threadpool_->Queue([=, this] {
       BlurXThread(radius, transpose, levels_[0].bands[i],
@@ -2026,7 +2026,7 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
 
   int s = (gamma ? 1 : 0) | (dither && bytes != 4 ? 2 : 0) | (clamp ? 4 : 0);
 
-  auto tasks = mt::MultiFuture{};
+  auto tasks = mt::MultiFuture<void>{};
   if (step) {  // interleaved
     for (int band = 0; band < eb; ++band) {
       switch (s) {

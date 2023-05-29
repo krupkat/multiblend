@@ -250,9 +250,6 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   std::vector<std::vector<uint64_t>> thread_lines(n_threads);
 
   if (opts.seamload_filename == nullptr) {
-    auto flex_mutex_p = std::mutex{};
-    auto flex_cond_p = std::condition_variable{};
-
     std::vector<std::vector<uint8_t>> thread_comp_lines(n_threads);
 
     for (int i = 0; i < n_threads; ++i) {
@@ -265,7 +262,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       images[i].tiff_mask_->End();
     }
 
-    auto tasks = mt::MultiFuture{};
+    auto tasks = mt::MultiFuture<std::pair<uint8_t*, int>>{};
     for (int y = height - 1; y >= 0; --y) {
       int t = y % n_threads;
       this_line = thread_lines[t].data();
@@ -285,12 +282,12 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
       int x = width - 1;
 
-      {  // make sure the last compression thread to use this chunk of memory
-         // is finished
-        std::unique_lock<std::mutex> mlock(flex_mutex_p);
-        flex_cond_p.wait(mlock, [=, &seam_flex] {
-          return seam_flex.y_ > (height - 1) - y - n_threads;
-        });
+      if (tasks.size() == n_threads) {
+        for (auto [comp_line, length] : tasks.get()) {
+          seam_flex.Copy(comp_line, length);
+          seam_flex.NextLine();
+        }
+        tasks = {};
       }
 
       while (x >= 0) {
@@ -422,29 +419,22 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       }
 
       if (y != 0) {
-        tasks.push_back(
-            threadpool->Queue([=, &seam_flex, &flex_cond_p, &flex_mutex_p] {
-              int p = utils::CompressSeamLine(this_line, comp, width);
-              if (p > width) {
-                utils::Throw("bad p: {} at line {}", p, y);
-              }
-
-              {
-                std::unique_lock<std::mutex> mlock(flex_mutex_p);
-                flex_cond_p.wait(mlock, [=, &seam_flex] {
-                  return seam_flex.y_ == (height - 1) - y;
-                });
-                seam_flex.Copy(comp, p);
-                seam_flex.NextLine();
-              }
-              flex_cond_p.notify_all();
-            }));
+        tasks.push_back(threadpool->Queue([=, &seam_flex] {
+          int p = utils::CompressSeamLine(this_line, comp, width);
+          if (p > width) {
+            utils::Throw("bad p: {} at line {}", p, y);
+          }
+          return std::pair{comp, p};
+        }));
       }
 
       prev_line = this_line;
     }  // end of row loop
 
-    tasks.get();
+    for (auto [comp_line, length] : tasks.get()) {
+      seam_flex.Copy(comp_line, length);
+      seam_flex.NextLine();
+    }
 
     for (int i = 0; i < n_images; ++i) {
       if (!images[i].seam_present_) {
@@ -921,7 +911,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
     timer.Start();
     {
-      auto tasks = mt::MultiFuture{};
+      auto tasks = mt::MultiFuture<void>{};
       for (int i = 0; i < n_images; ++i) {
         tasks.push_back(threadpool->Queue(
             [=, &images] { ShrinkMasks(images[i].masks_, blend_levels); }));
@@ -955,7 +945,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
     // masks
     {
-      auto tasks = mt::MultiFuture{};
+      auto tasks = mt::MultiFuture<void>{};
       for (auto& pyr : wrap_pyramids) {
         tasks.push_back(threadpool->Queue([=, &pyr] {
           pyr.masks.emplace_back(width, height);
@@ -1092,7 +1082,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
             int x_offset = (in_level.x - out_level.x) >> level;
             int y_offset = (in_level.y - out_level.y) >> level;
 
-            auto tasks = mt::MultiFuture{};
+            auto tasks = mt::MultiFuture<void>{};
             for (int b = 0; b < (int)out_level.bands.size() - 1; ++b) {
               int sy = out_level.bands[b];
               int ey = out_level.bands[b + 1];
@@ -1179,7 +1169,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                 int x_offset = (in_level.x - out_level.x) >> level;
                 int y_offset = (in_level.y - out_level.y) >> level;
 
-                auto tasks = mt::MultiFuture{};
+                auto tasks = mt::MultiFuture<void>{};
                 for (int b = 0; b < (int)out_level.bands.size() - 1; ++b) {
                   int sy = out_level.bands[b];
                   int ey = out_level.bands[b + 1];

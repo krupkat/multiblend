@@ -538,7 +538,7 @@ void Image::Read(void* data, bool gamma) {
           ((uint64_t*)data) + static_cast<ptrdiff_t>(top) * tiff_width_ + left;
     }
 
-    auto tasks = mt::MultiFuture{};
+    auto tasks = mt::MultiFuture<void>{};
     for (y = 0; y < height_; ++y) {
       int t = y % n_threads;
       this_line = thread_lines[t].data();
