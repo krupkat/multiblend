@@ -538,6 +538,7 @@ void Image::Read(void* data, bool gamma) {
           ((uint64_t*)data) + static_cast<ptrdiff_t>(top) * tiff_width_ + left;
     }
 
+    auto tasks = mt::MultiFuture{};
     for (y = 0; y < height_; ++y) {
       int t = y % n_threads;
       this_line = thread_lines[t].data();
@@ -671,23 +672,24 @@ void Image::Read(void* data, bool gamma) {
       }
 
       if (y < height_ - 1) {
-        threadpool->Queue([=, this, &dt, &flex_mutex_p, &flex_cond_p] {
-          int p = utils::CompressDTLine(this_line, (uint8_t*)comp, width_);
-          {
-            std::unique_lock<std::mutex> mlock(flex_mutex_p);
-            flex_cond_p.wait(mlock, [=, &dt] { return dt.y_ == y; });
-            dt.Copy((uint8_t*)comp, p);
-            dt.NextLine();
-          }
-          flex_cond_p.notify_all();
-        });
+        tasks.push_back(
+            threadpool->Queue([=, this, &dt, &flex_mutex_p, &flex_cond_p] {
+              int p = utils::CompressDTLine(this_line, (uint8_t*)comp, width_);
+              {
+                std::unique_lock<std::mutex> mlock(flex_mutex_p);
+                flex_cond_p.wait(mlock, [=, &dt] { return dt.y_ == y; });
+                dt.Copy((uint8_t*)comp, p);
+                dt.NextLine();
+              }
+              flex_cond_p.notify_all();
+            }));
       }
 
       tiff_mask_->NextLine();
       prev_line = this_line;
     }
 
-    threadpool->Wait();
+    tasks.get();
 
     // backward
     int current_count = 0;

@@ -123,57 +123,59 @@ void Pyramid::Copy(uint8_t* src_p, int step, int pitch, bool gamma, int bits) {
   if (step > 1) {
     set_lut(bits, gamma);
 
+    auto tasks = mt::MultiFuture{};
     for (int t = 0; t < (int)levels_[0].bands.size() - 1; ++t) {
       switch (bits) {
         case 8:
-          threadpool_->Queue([=, this] {
+          tasks.push_back(threadpool_->Queue([=, this] {
             CopyInterleavedThread_8bit(src_p, step, pitch, levels_[0].bands[t],
                                        levels_[0].bands[t + 1]);
-          });
+          }));
           break;
         case 16:
-          threadpool_->Queue([=, this] {
+          tasks.push_back(threadpool_->Queue([=, this] {
             CopyInterleavedThread_16bit((uint16_t*)src_p, step, pitch,
                                         levels_[0].bands[t],
                                         levels_[0].bands[t + 1]);
-          });
+          }));
           break;
         case 32:
           break;
       }
     }
-    threadpool_->Wait();
+    tasks.get();
   } else {
+    auto tasks = mt::MultiFuture{};
     for (int t = 0; t < (int)levels_[0].bands.size() - 1; ++t) {
       // planar (only slight improvement with MT, but increases CPU usage)
       switch (bits) {
         case 8:
-          threadpool_->Queue([=, this] {
+          tasks.push_back(threadpool_->Queue([=, this] {
             CopyPlanarThread_8bit(src_p, pitch, gamma, levels_[0].bands[t],
                                   levels_[0].bands[t + 1]);
-          });
+          }));
           break;
         case 10:
         case 12:
         case 14:
         case 16:
-          threadpool_->Queue([=, this] {
+          tasks.push_back(threadpool_->Queue([=, this] {
             CopyPlanarThread_16bit((uint16_t*)src_p, pitch, gamma,
                                    levels_[0].bands[t],
                                    levels_[0].bands[t + 1]);
-          });
+          }));
           break;
         case 32:
-          threadpool_->Queue([=, this] {
+          tasks.push_back(threadpool_->Queue([=, this] {
             CopyPlanarThread_32bit((__m128*)src_p, pitch, gamma,
                                    levels_[0].bands[t],
                                    levels_[0].bands[t + 1]);
-          });
+          }));
           break;
       }
     }
 
-    threadpool_->Wait();
+    tasks.get();
   }
 }
 
@@ -583,16 +585,17 @@ void Pyramid::Shrink() {
         (levels_[l].height & 1) ^ static_cast<int>(levels_[l].y_shift);
     int first_bad_line = levels_[l + 1].height - (3 - height_odd);
 
+    auto tasks = mt::MultiFuture{};
     for (int t = 0; t < (int)levels_[l + 1].bands.size() - 1; ++t) {
-      threadpool_->Queue([=, this] {
+      tasks.push_back(threadpool_->Queue([=, this] {
         ShrinkThread(lines_[t].get(), hi, lo, levels_[l].m128_pitch,
                      levels_[l + 1].m128_pitch, first_bad_line, height_odd,
                      levels_[l + 1].bands[t], levels_[l + 1].bands[t + 1],
                      levels_[l].x_shift, levels_[l].y_shift);
-      });
+      }));
     }
 
-    threadpool_->Wait();
+    tasks.get();
   }
 }
 
@@ -807,14 +810,15 @@ void Pyramid::LaplaceCollapse(int n_levels, bool Collapse) {
       l = j;
     }
 
+    auto tasks = mt::MultiFuture{};
     for (int t = 0; t < (int)levels_[l].bands.size() - 1; ++t) {
-      threadpool_->Queue([=, this] {
+      tasks.push_back(threadpool_->Queue([=, this] {
         LaplaceThreadWrapper(&levels_[l], &levels_[l + 1], levels_[l].bands[t],
                              levels_[l].bands[t + 1]);
-      });
+      }));
     }
 
-    threadpool_->Wait();
+    tasks.get();
   }
 }
 
@@ -1051,8 +1055,9 @@ void Pyramid::Add(float add, int levels) {
   for (int l = 0; l < lim; ++l) {
     auto* data = (__m128*)levels_[l].data.get();
 
+    auto tasks = mt::MultiFuture{};
     for (int t = 0; t < (int)levels_[l].bands.size() - 1; ++t) {
-      threadpool_->Queue([=, this]() {
+      tasks.push_back(threadpool_->Queue([=, this]() {
         __m128* data =
             (__m128*)levels_[l].data.get() +
             static_cast<ptrdiff_t>(levels_[l].bands[t]) * levels_[l].m128_pitch;
@@ -1062,10 +1067,10 @@ void Pyramid::Add(float add, int levels) {
           }
           data += levels_[l].m128_pitch;
         }
-      });
+      }));
     }
 
-    threadpool_->Wait();
+    tasks.get();
   }
 }
 
@@ -1186,15 +1191,16 @@ void Pyramid::Fuse(Pyramid* _b, Pyramid* mask, bool pre = false,
     // fuse doesn't see any gains from multithreading; leave this here as
     // reference
 
+    auto tasks = mt::MultiFuture{};
     for (int t = 0; t < (int)levels_[l].bands.size() - 1; ++t) {
-      threadpool_->Queue([=, this] {
+      tasks.push_back(threadpool_->Queue([=, this] {
         FuseThread((__m128*)levels_[l].data.get(),
                    (__m128*)_b->levels_[l].data.get(),
                    (__m128*)mask->levels_[l].data.get(), levels_[l].m128_pitch,
                    levels_[l].bands[t], levels_[l].bands[t + 1], pre, black);
-      });
+      }));
     }
-    threadpool_->Wait();
+    tasks.get();
   }
 }
 
@@ -1308,13 +1314,14 @@ void Pyramid::Blend(Pyramid* b) {
  ***********************************************************************/
 
 void Pyramid::BlurX(float radius, Pyramid* transpose) {
+  auto tasks = mt::MultiFuture{};
   for (int i = 0; i < (int)levels_[0].bands.size() - 1; ++i) {
-    threadpool_->Queue([=, this] {
+    tasks.push_back(threadpool_->Queue([=, this] {
       BlurXThread(radius, transpose, levels_[0].bands[i],
                   levels_[0].bands[i + 1]);
-    });
+    }));
   }
-  threadpool_->Wait();
+  tasks.get();
 }
 
 void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
@@ -2019,56 +2026,57 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
 
   int s = (gamma ? 1 : 0) | (dither && bytes != 4 ? 2 : 0) | (clamp ? 4 : 0);
 
+  auto tasks = mt::MultiFuture{};
   if (step) {  // interleaved
     for (int band = 0; band < eb; ++band) {
       switch (s) {
         case 0:
-          threadpool_->Queue([=, this] {
+          tasks.push_back(threadpool_->Queue([=, this] {
             OutInterleaved((Type)dst_p, Loader<Transform::kNone>{}, pitch,
                            levels_[level], band, chroma, step, offset);
-          });
+          }));
           break;
         case 1:
-          threadpool_->Queue([=, this] {
+          tasks.push_back(threadpool_->Queue([=, this] {
             OutInterleaved((Type)dst_p, Loader<Transform::kGamma>{}, pitch,
                            levels_[level], band, chroma, step, offset);
-          });
+          }));
           break;
         case 2:
-          threadpool_->Queue([=, this] {
+          tasks.push_back(threadpool_->Queue([=, this] {
             OutInterleaved((Type)dst_p, Loader<Transform::kDither>{}, pitch,
                            levels_[level], band, chroma, step, offset);
-          });
+          }));
           break;
         case 3:
-          threadpool_->Queue([=, this] {
+          tasks.push_back(threadpool_->Queue([=, this] {
             OutInterleaved((Type)dst_p, Loader<Transform::kDitherGamma>{},
                            pitch, levels_[level], band, chroma, step, offset);
-          });
+          }));
           break;
         case 4:
-          threadpool_->Queue([=, this] {
+          tasks.push_back(threadpool_->Queue([=, this] {
             OutInterleaved((Type)dst_p, Loader<Transform::kClamp>{}, pitch,
                            levels_[level], band, chroma, step, offset);
-          });
+          }));
           break;
         case 5:
-          threadpool_->Queue([=, this] {
+          tasks.push_back(threadpool_->Queue([=, this] {
             OutInterleaved((Type)dst_p, Loader<Transform::kClampGamma>{}, pitch,
                            levels_[level], band, chroma, step, offset);
-          });
+          }));
           break;
         case 6:
-          threadpool_->Queue([=, this] {
+          tasks.push_back(threadpool_->Queue([=, this] {
             OutInterleaved((Type)dst_p, Loader<Transform::kClampDither>{},
                            pitch, levels_[level], band, chroma, step, offset);
-          });
+          }));
           break;
         case 7:
-          threadpool_->Queue([=, this] {
+          tasks.push_back(threadpool_->Queue([=, this] {
             OutInterleaved((Type)dst_p, Loader<Transform::kClampDitherGamma>{},
                            pitch, levels_[level], band, chroma, step, offset);
-          });
+          }));
           break;
       }
     }
@@ -2078,52 +2086,52 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
         for (int band = 0; band < eb; ++band) {
           switch (s) {
             case 0:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar8(dst_p, Loader<Transform::kNone>{}, pitch,
                            levels_[level], band, chroma);
-              });
+              }));
               break;
             case 1:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar8(dst_p, Loader<Transform::kGamma>{}, pitch,
                            levels_[level], band, chroma);
-              });
+              }));
               break;
             case 2:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar8(dst_p, Loader<Transform::kDither>{}, pitch,
                            levels_[level], band, chroma);
-              });
+              }));
               break;
             case 3:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar8(dst_p, Loader<Transform::kDitherGamma>{}, pitch,
                            levels_[level], band, chroma);
-              });
+              }));
               break;
             case 4:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar8(dst_p, Loader<Transform::kClamp>{}, pitch,
                            levels_[level], band, chroma);
-              });
+              }));
               break;
             case 5:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar8(dst_p, Loader<Transform::kClampGamma>{}, pitch,
                            levels_[level], band, chroma);
-              });
+              }));
               break;
             case 6:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar8(dst_p, Loader<Transform::kClampDither>{}, pitch,
                            levels_[level], band, chroma);
-              });
+              }));
               break;
             case 7:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar8(dst_p, Loader<Transform::kClampDitherGamma>{}, pitch,
                            levels_[level], band, chroma);
-              });
+              }));
               break;
           }
         }
@@ -2132,52 +2140,52 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
         for (int band = 0; band < eb; ++band) {
           switch (s) {
             case 0:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar16(dst_p, Loader<Transform::kNone>{}, pitch,
                             levels_[level], band, chroma);
-              });
+              }));
               break;
             case 1:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar16(dst_p, Loader<Transform::kGamma>{}, pitch,
                             levels_[level], band, chroma);
-              });
+              }));
               break;
             case 2:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar16(dst_p, Loader<Transform::kDither>{}, pitch,
                             levels_[level], band, chroma);
-              });
+              }));
               break;
             case 3:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar16(dst_p, Loader<Transform::kDitherGamma>{}, pitch,
                             levels_[level], band, chroma);
-              });
+              }));
               break;
             case 4:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar16(dst_p, Loader<Transform::kClamp>{}, pitch,
                             levels_[level], band, chroma);
-              });
+              }));
               break;
             case 5:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar16(dst_p, Loader<Transform::kClampGamma>{}, pitch,
                             levels_[level], band, chroma);
-              });
+              }));
               break;
             case 6:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar16(dst_p, Loader<Transform::kClampDither>{}, pitch,
                             levels_[level], band, chroma);
-              });
+              }));
               break;
             case 7:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar16(dst_p, Loader<Transform::kClampDitherGamma>{},
                             pitch, levels_[level], band, chroma);
-              });
+              }));
               break;
           }
         }
@@ -2186,28 +2194,28 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
         for (int band = 0; band < eb; ++band) {
           switch (s) {
             case 0:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar32(dst_p, Loader<Transform::kNone>{}, pitch,
                             levels_[level], band, chroma);
-              });
+              }));
               break;
             case 1:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar32(dst_p, Loader<Transform::kGamma>{}, pitch,
                             levels_[level], band, chroma);
-              });
+              }));
               break;
             case 4:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar32(dst_p, Loader<Transform::kClamp>{}, pitch,
                             levels_[level], band, chroma);
-              });
+              }));
               break;
             case 5:
-              threadpool_->Queue([=, this] {
+              tasks.push_back(threadpool_->Queue([=, this] {
                 OutPlanar32(dst_p, Loader<Transform::kClampGamma>{}, pitch,
                             levels_[level], band, chroma);
-              });
+              }));
               break;
           }
         }
@@ -2215,7 +2223,7 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
     }
   }
 
-  threadpool_->Wait();
+  tasks.get();
 }
 
 template void Pyramid::Out(uint16_t* dst_p, int pitch, bool gamma, bool dither,

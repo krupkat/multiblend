@@ -265,6 +265,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       images[i].tiff_mask_->End();
     }
 
+    auto tasks = mt::MultiFuture{};
     for (int y = height - 1; y >= 0; --y) {
       int t = y % n_threads;
       this_line = thread_lines[t].data();
@@ -421,28 +422,29 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       }
 
       if (y != 0) {
-        threadpool->Queue([=, &seam_flex, &flex_cond_p, &flex_mutex_p] {
-          int p = utils::CompressSeamLine(this_line, comp, width);
-          if (p > width) {
-            utils::Throw("bad p: {} at line {}", p, y);
-          }
+        tasks.push_back(
+            threadpool->Queue([=, &seam_flex, &flex_cond_p, &flex_mutex_p] {
+              int p = utils::CompressSeamLine(this_line, comp, width);
+              if (p > width) {
+                utils::Throw("bad p: {} at line {}", p, y);
+              }
 
-          {
-            std::unique_lock<std::mutex> mlock(flex_mutex_p);
-            flex_cond_p.wait(mlock, [=, &seam_flex] {
-              return seam_flex.y_ == (height - 1) - y;
-            });
-            seam_flex.Copy(comp, p);
-            seam_flex.NextLine();
-          }
-          flex_cond_p.notify_all();
-        });
+              {
+                std::unique_lock<std::mutex> mlock(flex_mutex_p);
+                flex_cond_p.wait(mlock, [=, &seam_flex] {
+                  return seam_flex.y_ == (height - 1) - y;
+                });
+                seam_flex.Copy(comp, p);
+                seam_flex.NextLine();
+              }
+              flex_cond_p.notify_all();
+            }));
       }
 
       prev_line = this_line;
     }  // end of row loop
 
-    threadpool->Wait();
+    tasks.get();
 
     for (int i = 0; i < n_images; ++i) {
       if (!images[i].seam_present_) {
@@ -918,12 +920,14 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     utils::Output(1, "Shrinking masks...");
 
     timer.Start();
-
-    for (int i = 0; i < n_images; ++i) {
-      threadpool->Queue(
-          [=, &images] { ShrinkMasks(images[i].masks_, blend_levels); });
+    {
+      auto tasks = mt::MultiFuture{};
+      for (int i = 0; i < n_images; ++i) {
+        tasks.push_back(threadpool->Queue(
+            [=, &images] { ShrinkMasks(images[i].masks_, blend_levels); }));
+      }
+      tasks.get();
     }
-    threadpool->Wait();
 
     timing.shrink_mask_time = timer.Read();
 
@@ -950,32 +954,35 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     }
 
     // masks
-    for (auto& pyr : wrap_pyramids) {
-      threadpool->Queue([=, &pyr] {
-        pyr.masks.emplace_back(width, height);
-        for (int y = 0; y < height; ++y) {
-          if (y < pyr.GetY() || y >= pyr.GetY() + pyr.GetHeight()) {
-            pyr.masks[0].Write32(0x80000000 | width);
-          } else {
-            if (pyr.GetX() != 0) {
-              pyr.masks[0].Write32(0x80000000 | pyr.GetX());
-              pyr.masks[0].Write32(0xc0000000 | pyr.GetWidth());
+    {
+      auto tasks = mt::MultiFuture{};
+      for (auto& pyr : wrap_pyramids) {
+        tasks.push_back(threadpool->Queue([=, &pyr] {
+          pyr.masks.emplace_back(width, height);
+          for (int y = 0; y < height; ++y) {
+            if (y < pyr.GetY() || y >= pyr.GetY() + pyr.GetHeight()) {
+              pyr.masks[0].Write32(0x80000000 | width);
             } else {
-              pyr.masks[0].Write32(0xc0000000 | pyr.GetWidth());
-              if (pyr.GetWidth() != width) {
-                pyr.masks[0].Write32(0x80000000 | (width - pyr.GetWidth()));
+              if (pyr.GetX() != 0) {
+                pyr.masks[0].Write32(0x80000000 | pyr.GetX());
+                pyr.masks[0].Write32(0xc0000000 | pyr.GetWidth());
+              } else {
+                pyr.masks[0].Write32(0xc0000000 | pyr.GetWidth());
+                if (pyr.GetWidth() != width) {
+                  pyr.masks[0].Write32(0x80000000 | (width - pyr.GetWidth()));
+                }
               }
             }
+            pyr.masks[0].NextLine();
           }
-          pyr.masks[0].NextLine();
-        }
 
-        ShrinkMasks(pyr.masks,
-                    pyr.GetWidth() == width ? wrap_levels_v : wrap_levels_h);
-      });
+          ShrinkMasks(pyr.masks,
+                      pyr.GetWidth() == width ? wrap_levels_v : wrap_levels_h);
+        }));
+      }
+
+      tasks.get();
     }
-
-    threadpool->Wait();
     // end wrapping
 
     int total_levels =
@@ -1085,33 +1092,35 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
             int x_offset = (in_level.x - out_level.x) >> level;
             int y_offset = (in_level.y - out_level.y) >> level;
 
+            auto tasks = mt::MultiFuture{};
             for (int b = 0; b < (int)out_level.bands.size() - 1; ++b) {
               int sy = out_level.bands[b];
               int ey = out_level.bands[b + 1];
 
-              threadpool->Queue([=, &images, &in_level, &out_level] {
-                for (int y = sy; y < ey; ++y) {
-                  int in_line = y - y_offset;
-                  if (in_line < 0) {
-                    in_line = 0;
-                  } else if (in_line > in_level.height - 1) {
-                    in_line = in_level.height - 1;
-                  }
-                  float* input_p = in_level.data.get() +
-                                   (std::size_t)in_line * in_level.pitch;
-                  float* output_p =
-                      out_level.data.get() + (std::size_t)y * out_level.pitch;
+              tasks.push_back(
+                  threadpool->Queue([=, &images, &in_level, &out_level] {
+                    for (int y = sy; y < ey; ++y) {
+                      int in_line = y - y_offset;
+                      if (in_line < 0) {
+                        in_line = 0;
+                      } else if (in_line > in_level.height - 1) {
+                        in_line = in_level.height - 1;
+                      }
+                      float* input_p = in_level.data.get() +
+                                       (std::size_t)in_line * in_level.pitch;
+                      float* output_p = out_level.data.get() +
+                                        (std::size_t)y * out_level.pitch;
 
-                  utils::CompositeLine(input_p, output_p, i, x_offset,
-                                       in_level.width, out_level.width,
-                                       out_level.pitch,
-                                       images[i].masks_[level].data_.get(),
-                                       images[i].masks_[level].rows_[y]);
-                }
-              });
+                      utils::CompositeLine(input_p, output_p, i, x_offset,
+                                           in_level.width, out_level.width,
+                                           out_level.pitch,
+                                           images[i].masks_[level].data_.get(),
+                                           images[i].masks_[level].rows_[y]);
+                    }
+                  }));
             }
 
-            threadpool->Wait();
+            tasks.get();
           }
 
           timing.blend_time += timer.Read();
@@ -1170,11 +1179,13 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                 int x_offset = (in_level.x - out_level.x) >> level;
                 int y_offset = (in_level.y - out_level.y) >> level;
 
+                auto tasks = mt::MultiFuture{};
                 for (int b = 0; b < (int)out_level.bands.size() - 1; ++b) {
                   int sy = out_level.bands[b];
                   int ey = out_level.bands[b + 1];
 
-                  threadpool->Queue([=, &in_level, &out_level, &wrap_pyramids] {
+                  tasks.push_back(threadpool->Queue([=, &in_level, &out_level,
+                                                     &wrap_pyramids] {
                     for (int y = sy; y < ey; ++y) {
                       int in_line = y - y_offset;
                       if (in_line < 0) {
@@ -1194,10 +1205,10 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                           wrap_pyramids[p].masks[level].data_.get(),
                           wrap_pyramids[p].masks[level].rows_[y]);
                     }
-                  });
+                  }));
                 }
 
-                threadpool->Wait();
+                tasks.get();
               }
               ++p;
             }

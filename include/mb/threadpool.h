@@ -1,23 +1,27 @@
 #pragma once
 
+#include <future>
+
 #include <BS_thread_pool.hpp>
 
 namespace multiblend::mt {
 
+using MultiFuture = BS::multi_future<void>;
+
 class Threadpool {
  public:
-  void Queue(std::function<void()> function) {
-    instance_.push_task(std::move(function));
+  template <typename... Args>
+  [[nodiscard]] std::future<void> Queue(Args&&... args) {
+    return instance_.submit(std::forward<Args>(args)...);
   }
 
   [[nodiscard]] int GetNThreads() const {
     return instance_.get_thread_count();
   };
 
-  void Wait() { instance_.wait_for_tasks(); }
-
  private:
-  explicit Threadpool(int threads) : instance_{threads} {}
+  explicit Threadpool(int threads)
+      : instance_{static_cast<BS::concurrency_t>(threads)} {}
   BS::thread_pool instance_;
 
   friend Threadpool* GetInstance(int threads);
