@@ -244,7 +244,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   /***********************************************************************
    * Backward distance transform
    ***********************************************************************/
-  auto* threadpool = mt::GetInstance(opts.all_threads ? 2 : 0);
+  auto* threadpool = mt::GetInstance();
 
   int n_threads = std::max(2, threadpool->GetNThreads());
   std::vector<std::vector<uint64_t>> thread_lines(n_threads);
@@ -451,11 +451,6 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       }
     }
 
-    for (int i = 0; i < n_threads; ++i) {
-      if (i >= 2) {
-        thread_lines.resize(0);
-      }
-    }
   } else {  // if seamload_filename:
     for (int i = 0; i < n_images; ++i) {
       images[i].tiff_mask_->Start();
