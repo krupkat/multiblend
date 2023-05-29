@@ -419,7 +419,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       }
 
       if (y != 0) {
-        tasks.push_back(threadpool->Queue([=, &seam_flex] {
+        tasks.push_back(threadpool->Queue([=] {
           int p = utils::CompressSeamLine(this_line, comp, width);
           if (p > width) {
             utils::Throw("bad p: {} at line {}", p, y);

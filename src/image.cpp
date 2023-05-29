@@ -520,9 +520,6 @@ void Image::Read(void* data, bool gamma) {
     auto thread_lines = std::vector<std::vector<uint32_t>>(n_threads);
     auto thread_comp_lines = std::vector<std::vector<uint32_t>>(n_threads);
 
-    auto flex_mutex_p = std::mutex{};
-    auto flex_cond_p = std::condition_variable{};
-
     for (int i = 0; i < n_threads; ++i) {
       thread_lines[i].resize(width_);
       thread_comp_lines[i].resize(width_);
@@ -538,7 +535,7 @@ void Image::Read(void* data, bool gamma) {
           ((uint64_t*)data) + static_cast<ptrdiff_t>(top) * tiff_width_ + left;
     }
 
-    auto tasks = mt::MultiFuture<void>{};
+    auto tasks = mt::MultiFuture<std::pair<uint32_t*, int>>{};
     for (y = 0; y < height_; ++y) {
       int t = y % n_threads;
       this_line = thread_lines[t].data();
@@ -547,10 +544,12 @@ void Image::Read(void* data, bool gamma) {
 
       x = 0;
 
-      {  // make sure the last compression thread to use this chunk of memory is
-         // finished
-        std::unique_lock<std::mutex> mlock(flex_mutex_p);
-        flex_cond_p.wait(mlock, [=, &dt] { return dt.y_ > y - n_threads; });
+      if (tasks.size() == n_threads) {
+        for (auto [comp_line, length] : tasks.get()) {
+          dt.Copy((uint8_t*)comp_line, length);
+          dt.NextLine();
+        }
+        tasks = {};
       }
 
       while (x < width_) {
@@ -672,24 +671,20 @@ void Image::Read(void* data, bool gamma) {
       }
 
       if (y < height_ - 1) {
-        tasks.push_back(
-            threadpool->Queue([=, this, &dt, &flex_mutex_p, &flex_cond_p] {
-              int p = utils::CompressDTLine(this_line, (uint8_t*)comp, width_);
-              {
-                std::unique_lock<std::mutex> mlock(flex_mutex_p);
-                flex_cond_p.wait(mlock, [=, &dt] { return dt.y_ == y; });
-                dt.Copy((uint8_t*)comp, p);
-                dt.NextLine();
-              }
-              flex_cond_p.notify_all();
-            }));
+        tasks.push_back(threadpool->Queue([=, this] {
+          int p = utils::CompressDTLine(this_line, (uint8_t*)comp, width_);
+          return std::pair{comp, p};
+        }));
       }
 
       tiff_mask_->NextLine();
       prev_line = this_line;
     }
 
-    tasks.get();
+    for (auto [comp_line, length] : tasks.get()) {
+      dt.Copy((uint8_t*)comp_line, length);
+      dt.NextLine();
+    }
 
     // backward
     int current_count = 0;
