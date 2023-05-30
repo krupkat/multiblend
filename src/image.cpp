@@ -545,6 +545,7 @@ void Image::Read(void* data, bool gamma) {
       x = 0;
 
       if (tasks.size() == n_threads) {
+        tasks.wait();
         for (auto [comp_line, length] : tasks.get()) {
           dt.Copy((uint8_t*)comp_line, length);
           dt.NextLine();
@@ -681,6 +682,7 @@ void Image::Read(void* data, bool gamma) {
       prev_line = this_line;
     }
 
+    tasks.wait();
     for (auto [comp_line, length] : tasks.get()) {
       dt.Copy((uint8_t*)comp_line, length);
       dt.NextLine();

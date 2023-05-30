@@ -143,6 +143,7 @@ void Pyramid::Copy(uint8_t* src_p, int step, int pitch, bool gamma, int bits) {
           break;
       }
     }
+    tasks.wait();
     tasks.get();
   } else {
     auto tasks = mt::MultiFuture<void>{};
@@ -174,7 +175,7 @@ void Pyramid::Copy(uint8_t* src_p, int step, int pitch, bool gamma, int bits) {
           break;
       }
     }
-
+    tasks.wait();
     tasks.get();
   }
 }
@@ -594,7 +595,7 @@ void Pyramid::Shrink() {
                      levels_[l].x_shift, levels_[l].y_shift);
       }));
     }
-
+    tasks.wait();
     tasks.get();
   }
 }
@@ -817,7 +818,7 @@ void Pyramid::LaplaceCollapse(int n_levels, bool Collapse) {
                              levels_[l].bands[t + 1]);
       }));
     }
-
+    tasks.wait();
     tasks.get();
   }
 }
@@ -1069,7 +1070,7 @@ void Pyramid::Add(float add, int levels) {
         }
       }));
     }
-
+    tasks.wait();
     tasks.get();
   }
 }
@@ -1200,6 +1201,7 @@ void Pyramid::Fuse(Pyramid* _b, Pyramid* mask, bool pre = false,
                    levels_[l].bands[t], levels_[l].bands[t + 1], pre, black);
       }));
     }
+    tasks.wait();
     tasks.get();
   }
 }
@@ -1321,6 +1323,7 @@ void Pyramid::BlurX(float radius, Pyramid* transpose) {
                   levels_[0].bands[i + 1]);
     }));
   }
+  tasks.wait();
   tasks.get();
 }
 
@@ -2223,6 +2226,7 @@ void Pyramid::Out(T dst_p, int pitch, bool gamma, bool dither, bool clamp,
     }
   }
 
+  tasks.wait();
   tasks.get();
 }
 

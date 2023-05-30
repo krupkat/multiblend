@@ -283,6 +283,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       int x = width - 1;
 
       if (tasks.size() == n_threads) {
+        tasks.wait();
         for (auto [comp_line, length] : tasks.get()) {
           seam_flex.Copy(comp_line, length);
           seam_flex.NextLine();
@@ -431,6 +432,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       prev_line = this_line;
     }  // end of row loop
 
+    tasks.wait();
     for (auto [comp_line, length] : tasks.get()) {
       seam_flex.Copy(comp_line, length);
       seam_flex.NextLine();
@@ -916,6 +918,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
         tasks.push_back(threadpool->Queue(
             [=, &images] { ShrinkMasks(images[i].masks_, blend_levels); }));
       }
+      tasks.wait();
       tasks.get();
     }
 
@@ -970,7 +973,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                       pyr.GetWidth() == width ? wrap_levels_v : wrap_levels_h);
         }));
       }
-
+      tasks.wait();
       tasks.get();
     }
     // end wrapping
@@ -1109,7 +1112,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                     }
                   }));
             }
-
+            tasks.wait();
             tasks.get();
           }
 
@@ -1197,7 +1200,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
                     }
                   }));
                 }
-
+                tasks.wait();
                 tasks.get();
               }
               ++p;
