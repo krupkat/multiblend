@@ -6,6 +6,7 @@
     "tiff",
     "catch2",
     "cereal",
-    "spdlog"
+    "spdlog",
+    "bshoshany-thread-pool"
   ]
 }
