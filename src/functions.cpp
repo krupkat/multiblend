@@ -30,6 +30,7 @@ void SafeRealloc(std::unique_ptr<uint8_t, FreeDeleter>& data, size_t size) {
       tmp) {
     data.release();  // NOLINT(bugprone-unused-return-value): used in realloc
     data = std::move(tmp);
+    return;
   }
   throw std::runtime_error("out of memory");
 }
