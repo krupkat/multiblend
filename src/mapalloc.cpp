@@ -28,9 +28,9 @@ int MapAlloc::suffix_ = 0;
 std::size_t MapAlloc::cache_threshold_ = ~(std::size_t)0;
 std::size_t MapAlloc::total_allocated_ = 0;
 
-//***********************************************************************
-//* MapAlloc
-//***********************************************************************
+// ***********************************************************************
+// * MapAlloc
+// ***********************************************************************
 void MapAlloc::CacheThreshold(std::size_t limit) { cache_threshold_ = limit; }
 
 void* MapAlloc::Alloc(std::size_t size, int alignment) {
@@ -67,9 +67,9 @@ void MapAlloc::SetTmpdir(const char* _tmpdir) {
   }
 }
 
-//***********************************************************************
-//* MapAllocObject
-//***********************************************************************
+// ***********************************************************************
+// * MapAllocObject
+// ***********************************************************************
 MapAlloc::MapAllocObject::MapAllocObject(std::size_t size, int alignment)
     : size_(size) {
   if (total_allocated_ + size_ < cache_threshold_) {

@@ -720,6 +720,9 @@ http://horman.net/multiblend/
         case io::ImageType::MB_PNG: {
           png_file->WriteRows(scanlines.get(), rows);
         } break;
+        default: {
+          utils::Throw("Unknown image type ({})", output_filename);
+        }
       }
 
       remaining -= rows_per_strip;
