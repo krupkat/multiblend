@@ -311,6 +311,9 @@ void Image::Open() {
       xpos_ = ypos_ = 0;
       tiff_xres_ = tiff_yres_ = 90;
     } break;
+    default: {
+      utils::Throw("Unknown image type ({})", filename_);
+    }
   }
 
   xpos_ += xpos_add_;
@@ -368,7 +371,11 @@ void Image::Read(void* data, bool gamma) {
     case ImageType::MB_IN_MEMORY: {
       auto size_bytes = image_->data.size() << (bpp_ >> 4);
       memcpy(data, image_->data.data(), size_bytes);
+      image_.reset();
     } break;
+    default: {
+      utils::Throw("Unknown image type ({})", filename_);
+    }
   }
 
   /***********************************************************************

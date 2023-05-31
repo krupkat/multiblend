@@ -22,6 +22,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -500,6 +501,9 @@ http://horman.net/multiblend/
       }
       jpeg_file = {tmp_jpeg_file, io::FileDeleter{}};
     } break;
+    default: {
+      utils::Throw("Unknown image type ({})", output_filename);
+    }
   }
 
   /***********************************************************************
@@ -623,6 +627,9 @@ http://horman.net/multiblend/
                            : io::png::ColorType::RGB_ALPHA,
             result.output_bpp, std::move(jpeg_file), jpeg_quality);
       } break;
+      default: {
+        utils::Throw("Unknown image type ({})", output_filename);
+      }
     }
 
     if (output_type == io::ImageType::MB_PNG ||
@@ -677,10 +684,10 @@ http://horman.net/multiblend/
             std::size_t t = (std::size_t)cur * bytes_per_pixel;
             switch (result.output_bpp) {
               case 8: {
-                ZeroMemory(&(strip.get())[strip_p], t);
+                memset(&(strip.get())[strip_p], 0, t);
               } break;
               case 16: {
-                ZeroMemory(&((uint16_t*)strip.get())[strip_p], t);
+                memset(&((uint16_t*)strip.get())[strip_p], 0, t);
               } break;
             }
             strip_p += cur * spp;
@@ -713,6 +720,9 @@ http://horman.net/multiblend/
         case io::ImageType::MB_PNG: {
           png_file->WriteRows(scanlines.get(), rows);
         } break;
+        default: {
+          utils::Throw("Unknown image type ({})", output_filename);
+        }
       }
 
       remaining -= rows_per_strip;
