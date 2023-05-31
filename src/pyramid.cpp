@@ -93,8 +93,7 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y) {
   lines_.resize(threadpool_->GetNThreads());
 
   for (int i = 0; i < threadpool_->GetNThreads(); ++i) {
-    lines_[i] = memory::AlignedM128Ptr{
-        (__m128*)_aligned_malloc(levels_[0].pitch * sizeof(float), 16)};
+    lines_[i] = memory::AllocAlignedM128(levels_[0].pitch * sizeof(float));
   }
 }
 
@@ -961,9 +960,9 @@ void Pyramid::LaplaceThreadWrapper(Level* upper_level, Level* lower_level,
                                    int sy, int ey) {
   int temp = upper_level->m128_pitch << 4;
 
-  auto temp1 = memory::AlignedM128Ptr{(__m128*)_aligned_malloc(temp, 16)};
-  auto temp2 = memory::AlignedM128Ptr{(__m128*)_aligned_malloc(temp, 16)};
-  auto temp3 = memory::AlignedM128Ptr{(__m128*)_aligned_malloc(temp, 16)};
+  auto temp1 = memory::AllocAlignedM128(temp);
+  auto temp2 = memory::AllocAlignedM128(temp);
+  auto temp3 = memory::AllocAlignedM128(temp);
 
   LaplaceThread(upper_level, lower_level, sy, ey, temp1.get(), temp2.get(),
                 temp3.get());

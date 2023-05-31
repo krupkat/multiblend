@@ -45,7 +45,7 @@ struct Result {
   int height = 0;
   bool no_mask = false;
 
-  std::array<memory::MapAllocPtr<void>, 3> output_channels;
+  std::array<memory::AlignedAllocPtr<void>, 3> output_channels;
   int min_xpos = 0x7fffffff;
   int min_ypos = 0x7fffffff;
 

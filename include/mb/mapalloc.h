@@ -2,18 +2,35 @@
 
 #include <cstddef>
 #include <memory>
+#include <new>
 
 namespace multiblend::memory {
 
-class MapAlloc {
+template <typename TType>
+class AlignedAllocDeleter {
  public:
-  static void* Alloc(std::size_t size, int alignment = 16);
-  static void Free(void* p);
-  static void CacheThreshold(std::size_t limit);
-  static void SetTmpdir(const char* _tmpdir);
+  AlignedAllocDeleter() = default;
+  explicit AlignedAllocDeleter(std::align_val_t alignment)
+      : alignment_{alignment} {}
+  void operator()(TType* ptr) const { ::operator delete(ptr, alignment_); }
 
  private:
+  std::align_val_t alignment_{16};
 };
+
+template <typename TType>
+using AlignedAllocPtr = std::unique_ptr<TType, AlignedAllocDeleter<TType>>;
+
+template <typename TType>
+AlignedAllocPtr<TType> AllocAligned(std::size_t size_bytes,
+                                    std::size_t alignment = 16) {
+  auto alignment_val = std::align_val_t{alignment};
+  return {static_cast<TType*>(::operator new(size_bytes, alignment_val)),
+          AlignedAllocDeleter<TType>{alignment_val}};
+}
+
+void CacheThreshold(std::size_t limit);
+void SetTmpdir(const char* _tmpdir);
 
 // TODO(krupkat): cleanup the original MapAlloc class
 
@@ -56,13 +73,5 @@ class MapAlloc {
   // static bool last_mapped;
 };
 */
-
-class MapAllocDeleter {
- public:
-  void operator()(void* p) const { MapAlloc::Free(p); }
-};
-
-template <typename TType>
-using MapAllocPtr = std::unique_ptr<TType, MapAllocDeleter>;
 
 }  // namespace multiblend::memory

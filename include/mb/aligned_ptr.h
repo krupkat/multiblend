@@ -1,6 +1,7 @@
 #pragma once
 
 #include <immintrin.h>
+#include <new>
 
 namespace multiblend::memory {
 
@@ -10,8 +11,9 @@ namespace multiblend::memory {
 class AlignedM128Ptr {
   // RAII class for an array of __m128
  public:
+  static constexpr std::align_val_t kAlignment = std::align_val_t{16};
+
   AlignedM128Ptr() = default;
-  explicit AlignedM128Ptr(__m128* ptr) : ptr_(ptr) {}
   ~AlignedM128Ptr();
 
   AlignedM128Ptr(const AlignedM128Ptr& other) = delete;
@@ -25,6 +27,12 @@ class AlignedM128Ptr {
   const __m128& operator[](int i) const { return ptr_[i]; }
 
  private:
+  explicit AlignedM128Ptr(__m128* ptr) : ptr_(ptr) {}
   __m128* ptr_ = nullptr;
+
+  friend AlignedM128Ptr AllocAlignedM128(std::size_t size_bytes);
 };
+
+AlignedM128Ptr AllocAlignedM128(std::size_t size_bytes);
+
 }  // namespace multiblend::memory

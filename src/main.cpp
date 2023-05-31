@@ -274,7 +274,7 @@ Options:
           utils::Throw("Error: Bad --cache-threshold parameter");
         }
       }
-      memory::MapAlloc::CacheThreshold(threshold);
+      memory::CacheThreshold(threshold);
     } else if ((strcmp(my_argv[pos], "--nomask") == 0) ||
                (strcmp(my_argv[pos], "--no-mask") == 0)) {
       no_mask = true;
@@ -348,7 +348,7 @@ Options:
     } else if ((strcmp(my_argv[pos], "--tempdir") == 0) ||
                (strcmp(my_argv[pos], "--tmpdir") == 0) &&
                    pos < (int)my_argv.size() - 1) {
-      memory::MapAlloc::SetTmpdir(my_argv[++pos]);
+      memory::SetTmpdir(my_argv[++pos]);
     } else if (strcmp(my_argv[pos], "--all-threads") == 0) {
       all_threads = true;
     } else if ((strcmp(my_argv[pos], "-o") == 0) ||

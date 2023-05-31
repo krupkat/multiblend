@@ -112,8 +112,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   /***********************************************************************
    * Allocate working space for reading/trimming/extraction
    ***********************************************************************/
-  auto untrimmed_data =
-      memory::MapAllocPtr<void>{memory::MapAlloc::Alloc(untrimmed_bytes)};
+  auto untrimmed_data = memory::AllocAligned<void>(untrimmed_bytes);
 
   /***********************************************************************
    * Read/trim/extract
@@ -902,8 +901,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   /***********************************************************************
    * No output?
    ***********************************************************************/
-  std::array<memory::MapAllocPtr<void>, 3> output_channels = {nullptr, nullptr,
-                                                              nullptr};
+  std::array<memory::AlignedAllocPtr<void>, 3> output_channels = {
+      nullptr, nullptr, nullptr};
 
   if (opts.output_type != io::ImageType::MB_NONE) {
     /***********************************************************************
@@ -1004,8 +1003,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
       }
 
       auto temp =
-          std::shared_ptr<float>{(float*)memory::MapAlloc::Alloc(max_bytes),
-                                 memory::MapAllocDeleter{}};
+          std::shared_ptr<float>(memory::AllocAligned<float>(max_bytes));
 
       if (level < blend_levels) {
         for (auto& image : images) {
@@ -1026,9 +1024,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     auto output_pyramid = Pyramid{width, height, total_levels, 0, 0};
 
     for (int level = total_levels - 1; level >= 0; --level) {
-      output_pyramid.GetLevel(level).data = {
-          (float*)memory::MapAlloc::Alloc(output_pyramid.GetLevel(level).bytes),
-          memory::MapAllocDeleter{}};
+      output_pyramid.GetLevel(level).data =
+          memory::AllocAligned<float>(output_pyramid.GetLevel(level).bytes);
     }
 
     /***********************************************************************
@@ -1265,8 +1262,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
        ***********************************************************************/
       timer.Start();
 
-      output_channels[c] = memory::MapAllocPtr<void>{memory::MapAlloc::Alloc(
-          ((std::size_t)width * height) << (opts.output_bpp >> 4))};
+      output_channels[c] = memory::AllocAligned<void>(
+          ((std::size_t)width * height) << (opts.output_bpp >> 4));
 
       switch (opts.output_bpp) {
         case 8:
