@@ -1,20 +1,26 @@
 #include "mb/mapalloc.h"
 
-#include <cstring>
-#include <stdexcept>
-
-#ifndef _WIN32
-#include <cerrno>
-#include <cstdlib>
-#include <unistd.h>
-
-#include <sys/mman.h>
-#endif
-
 #include "mb/linux_overrides.h"
+#include "mb/logging.h"
 
 namespace multiblend::memory {
 
+void* MapAlloc::Alloc(std::size_t size, int alignment) {
+  return _aligned_malloc(size, alignment);
+}
+
+void MapAlloc::Free(void* p) { _aligned_free(p); }
+
+void MapAlloc::CacheThreshold(std::size_t limit) {
+  utils::Throw("MapAlloc::CacheThreshold not implemented");
+}
+
+void MapAlloc::SetTmpdir(const char* _tmpdir) {
+  utils::Throw("MapAlloc::SetTmpdir not implemented");
+}
+
+// TODO(krupkat): cleanup the original MapAlloc class
+/*
 std::vector<MapAlloc::MapAllocObject*> MapAlloc::objects_;
 char MapAlloc::tmpdir_[256] = "";
 char MapAlloc::filename_[512];
@@ -22,9 +28,9 @@ int MapAlloc::suffix_ = 0;
 std::size_t MapAlloc::cache_threshold_ = ~(std::size_t)0;
 std::size_t MapAlloc::total_allocated_ = 0;
 
-/***********************************************************************
- * MapAlloc
- ***********************************************************************/
+//***********************************************************************
+//* MapAlloc
+//***********************************************************************
 void MapAlloc::CacheThreshold(std::size_t limit) { cache_threshold_ = limit; }
 
 void* MapAlloc::Alloc(std::size_t size, int alignment) {
@@ -61,9 +67,9 @@ void MapAlloc::SetTmpdir(const char* _tmpdir) {
   }
 }
 
-/***********************************************************************
- * MapAllocObject
- ***********************************************************************/
+//***********************************************************************
+//* MapAllocObject
+//***********************************************************************
 MapAlloc::MapAllocObject::MapAllocObject(std::size_t size, int alignment)
     : size_(size) {
   if (total_allocated_ + size_ < cache_threshold_) {
@@ -191,5 +197,7 @@ bool MapAlloc::MapAllocObject::IsFile() const {
   return file_ != 0;
 #endif
 }
+
+*/
 
 }  // namespace multiblend::memory

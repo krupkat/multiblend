@@ -368,6 +368,7 @@ void Image::Read(void* data, bool gamma) {
     case ImageType::MB_IN_MEMORY: {
       auto size_bytes = image_->data.size() << (bpp_ >> 4);
       memcpy(data, image_->data.data(), size_bytes);
+      image_.reset();
     } break;
   }
 

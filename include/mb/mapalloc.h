@@ -1,15 +1,23 @@
 #pragma once
 
+#include <cstddef>
 #include <memory>
-#include <vector>
-
-#ifdef _WIN32
-#define NOMINMAX
-#include <Windows.h>
-#endif
 
 namespace multiblend::memory {
 
+class MapAlloc {
+ public:
+  static void* Alloc(std::size_t size, int alignment = 16);
+  static void Free(void* p);
+  static void CacheThreshold(std::size_t limit);
+  static void SetTmpdir(const char* _tmpdir);
+
+ private:
+};
+
+// TODO(krupkat): cleanup the original MapAlloc class
+
+/*
 class MapAlloc {
  private:
   class MapAllocObject {
@@ -47,6 +55,7 @@ class MapAlloc {
   static bool LastFile() { return objects_.back()->IsFile(); }
   // static bool last_mapped;
 };
+*/
 
 class MapAllocDeleter {
  public:
