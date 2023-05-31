@@ -6,10 +6,13 @@
 
 namespace multiblend::memory {
 
+AlignedM128Ptr AllocAlignedM128(std::size_t size_bytes) {
+  return AlignedM128Ptr(static_cast<__m128*>(
+      ::operator new(size_bytes, AlignedM128Ptr::kAlignment)));
+}
+
 AlignedM128Ptr::~AlignedM128Ptr() {
-  if (ptr_ != nullptr) {
-    _aligned_free(ptr_);
-  }
+  ::operator delete(ptr_, AlignedM128Ptr::kAlignment);
 }
 
 AlignedM128Ptr::AlignedM128Ptr(AlignedM128Ptr&& other) noexcept {
@@ -18,9 +21,8 @@ AlignedM128Ptr::AlignedM128Ptr(AlignedM128Ptr&& other) noexcept {
 
 AlignedM128Ptr& AlignedM128Ptr::operator=(AlignedM128Ptr&& other) noexcept {
   if (this != &other) {
-    if (ptr_ != nullptr) {
-      _aligned_free(ptr_);
-    }
+    ::operator delete(ptr_, AlignedM128Ptr::kAlignment);
+
     ptr_ = other.ptr_;
     other.ptr_ = nullptr;
   }

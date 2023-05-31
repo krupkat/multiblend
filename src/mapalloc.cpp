@@ -5,17 +5,11 @@
 
 namespace multiblend::memory {
 
-void* MapAlloc::Alloc(std::size_t size, int alignment) {
-  return _aligned_malloc(size, alignment);
-}
-
-void MapAlloc::Free(void* p) { _aligned_free(p); }
-
-void MapAlloc::CacheThreshold(std::size_t limit) {
+void CacheThreshold(std::size_t limit) {
   utils::Throw("MapAlloc::CacheThreshold not implemented");
 }
 
-void MapAlloc::SetTmpdir(const char* _tmpdir) {
+void SetTmpdir(const char* _tmpdir) {
   utils::Throw("MapAlloc::SetTmpdir not implemented");
 }
 
