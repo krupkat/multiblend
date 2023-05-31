@@ -501,6 +501,9 @@ http://horman.net/multiblend/
       }
       jpeg_file = {tmp_jpeg_file, io::FileDeleter{}};
     } break;
+    default: {
+      utils::Throw("Unknown image type ({})", output_filename);
+    }
   }
 
   /***********************************************************************
@@ -624,6 +627,9 @@ http://horman.net/multiblend/
                            : io::png::ColorType::RGB_ALPHA,
             result.output_bpp, std::move(jpeg_file), jpeg_quality);
       } break;
+      default: {
+        utils::Throw("Unknown image type ({})", output_filename);
+      }
     }
 
     if (output_type == io::ImageType::MB_PNG ||
