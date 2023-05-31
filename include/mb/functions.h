@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
-#include <stdexcept>
 #include <vector>
 
 #include "mb/pyramid.h"
@@ -32,88 +31,31 @@ class Flex {
   Flex(Flex&& other) noexcept = default;
   Flex& operator=(Flex&& other) noexcept = default;
 
-  void NextLine() {
-    end_p_ = p_;
-    if (y_ < height_ - 1) {
-      rows_[++y_] = p_;
-    }
+  void NextLine();
 
-    if (p_ + (width_ << 2) > size_) {
-      if (y_ == 0) {
-        size_ = (std::max)(height_, 16) << 4;  // was << 2
-        data_ = {(uint8_t*)malloc(size_), FreeDeleter{}};
-      } else if (y_ < height_) {
-        int prev_size = size_;
-        int new_size1 = (p_ / y_) * height_ + (width_ << 4);
-        int new_size2 = size_ << 1;
-        size_ = (std::max)(new_size1, new_size2);
-        data_ = {(uint8_t*)realloc(data_.release(), size_), FreeDeleter{}};
-      }
-    }
+  void Shrink();
 
-    MaskFinalise();
-    first_ = true;
-  }
+  void Write32(uint32_t w);
+  void Write64(uint64_t w);
 
-  void Shrink() {
-    data_ = {(uint8_t*)realloc(data_.release(), p_), FreeDeleter{}};
-    end_p_ = p_;
-  }
+  void MaskWrite(int count, bool white);
 
-  void Write32(uint32_t w) {
-    *((uint32_t*)&data_.get()[p_]) = w;
-    p_ += 4;
-  }
-  void Write64(uint64_t w) {
-    *((uint64_t*)&data_.get()[p_]) = w;
-    p_ += 8;
-  }
+  void MaskFinalise();
 
-  void MaskWrite(int count, bool white) {
-    if (first_) {
-      mask_count_ = count;
-      mask_white_ = white;
-      first_ = false;
-    } else {
-      if (white == mask_white_) {
-        mask_count_ += count;
-      } else {
-        Write32((static_cast<int>(mask_white_) << 31) | mask_count_);
-        mask_count_ = count;
-        mask_white_ = white;
-      }
-    }
-  }
+  void IncrementLast32(int inc) const;
 
-  void MaskFinalise() {
-    if (mask_count_ != 0) {
-      Write32((static_cast<int>(mask_white_) << 31) | mask_count_);
-    }
-  }
+  uint8_t ReadBackwards8();
+  uint16_t ReadBackwards16();
+  uint32_t ReadBackwards32();
+  uint64_t ReadBackwards64();
 
-  void IncrementLast32(int inc) const {
-    *((uint32_t*)&data_.get()[p_ - 4]) += inc;
-  }
+  uint32_t ReadForwards32();
 
-  uint8_t ReadBackwards8() { return data_.get()[--p_]; }
-  uint16_t ReadBackwards16() { return *((uint16_t*)&data_.get()[p_ -= 2]); }
-  uint32_t ReadBackwards32() { return *((uint32_t*)&data_.get()[p_ -= 4]); }
-  uint64_t ReadBackwards64() { return *((uint64_t*)&data_.get()[p_ -= 8]); }
+  void Copy(uint8_t* src, int len);
 
-  uint32_t ReadForwards32() {
-    uint32_t out = *((uint32_t*)&data_.get()[p_]);
-    p_ += 4;
-    return out;
-  }
+  void Start();
 
-  void Copy(uint8_t* src, int len) {
-    memcpy(&data_.get()[p_], src, len);
-    p_ += len;
-  }
-
-  void Start() { p_ = 0; }
-
-  void End() { p_ = end_p_; }
+  void End();
 
   std::unique_ptr<uint8_t, FreeDeleter> data_ = nullptr;
   int width_;
