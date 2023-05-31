@@ -6,6 +6,7 @@
 #endif
 
 #include <cmath>
+#include <cstring>
 
 #include "mb/aligned_ptr.h"
 #include "mb/linux_overrides.h"
@@ -1133,9 +1134,9 @@ void Pyramid::Multiply(int level, float mul) {
     return;
   }
   if (mul == 0) {
-    ZeroMemory(levels_[level].data.get(),
-               static_cast<std::size_t>(levels_[level].height) *
-                   levels_[level].pitch * sizeof(float));
+    memset(levels_[level].data.get(), 0,
+           static_cast<std::size_t>(levels_[level].height) *
+               levels_[level].pitch * sizeof(float));
     return;
   }
 

@@ -22,6 +22,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -677,10 +678,10 @@ http://horman.net/multiblend/
             std::size_t t = (std::size_t)cur * bytes_per_pixel;
             switch (result.output_bpp) {
               case 8: {
-                ZeroMemory(&(strip.get())[strip_p], t);
+                memset(&(strip.get())[strip_p], 0, t);
               } break;
               case 16: {
-                ZeroMemory(&((uint16_t*)strip.get())[strip_p], t);
+                memset(&((uint16_t*)strip.get())[strip_p], 0, t);
               } break;
             }
             strip_p += cur * spp;

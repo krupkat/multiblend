@@ -8,12 +8,9 @@
 
 #ifndef _WIN32
 
-#include <cstring>    // memset
 #include <strings.h>  // strcasecmp
 
 inline int _stricmp(const char* a, const char* b) { return strcasecmp(a, b); }
-
-#define ZeroMemory(a, b) memset(a, 0, b)
 
 #define sscanf_s sscanf
 
