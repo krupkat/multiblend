@@ -14,6 +14,7 @@
 #include "mb/mapalloc.h"
 #include "mb/pnger.h"
 #include "mb/pyramid.h"
+#include "mb/threadpool.h"
 #ifdef MULTIBLEND_WITH_TIFF
 #include "mb/tiff.h"
 #endif
@@ -83,7 +84,7 @@ class Image {
 
   void Open();
 
-  void Read(void* data, bool gamma);
+  void Read(void* data, bool gamma, mt::ThreadpoolPtr threadpool);
 
   // std::size_t untrimmed_pixels;
   std::size_t untrimmed_bytes_;

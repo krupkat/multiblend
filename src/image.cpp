@@ -328,7 +328,7 @@ void Image::Open() {
 ** Read
 ************************************************************************
 ***********************************************************************/
-void Image::Read(void* data, bool gamma) {
+void Image::Read(void* data, bool gamma, mt::ThreadpoolPtr threadpool) {
   utils::Output(1, "Processing {}...", filename_);
 
   switch (type_) {
@@ -516,7 +516,6 @@ void Image::Read(void* data, bool gamma) {
     uint32_t d;
     uint32_t* this_line = nullptr;
     uint32_t* prev_line = nullptr;
-    auto* threadpool = mt::GetInstance();
 
     tiff_mask_ = std::make_unique<utils::Flex>(width_, height_);
     auto dt = utils::Flex(width_, height_);

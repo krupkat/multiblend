@@ -8,6 +8,7 @@
 #include <cereal/types/vector.hpp>
 
 #include "mb/image.h"
+#include "mb/threadpool.h"
 
 multiblend::io::Image Load(const char* path) {
   std::ifstream ifs(path, std::ios::binary);
@@ -27,7 +28,10 @@ TEST_CASE("MultiblendLibTest") {
   multiblend::Options options{
       .output_type = multiblend::io::ImageType::MB_IN_MEMORY, .output_bpp = 8};
 
-  auto result = multiblend::Multiblend(images, options);
+  auto threadpool = multiblend::mt::Threadpool{};
+
+  auto result = multiblend::Multiblend(
+      images, options, multiblend::mt::ThreadpoolPtr{&threadpool});
 
   CHECK(result.width == 331);
   CHECK(result.height == 244);

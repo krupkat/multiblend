@@ -5,6 +5,7 @@
 #include "mb/functions.h"
 #include "mb/image.h"
 #include "mb/mapalloc.h"
+#include "mb/threadpool.h"
 
 namespace multiblend {
 
@@ -53,6 +54,7 @@ struct Result {
   TimingResult timing = {};
 };
 
-Result Multiblend(std::vector<io::Image>& images, Options opts);
+Result Multiblend(std::vector<io::Image>& images, Options opts,
+                  mt::ThreadpoolPtr threadpool);
 
 }  // namespace multiblend
