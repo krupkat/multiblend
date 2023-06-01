@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2021 David Horman
+// SPDX-FileCopyrightText: 2023 Tomas Krupka
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "mb/pyramid.h"
 
 #ifdef PYR_DENOISE
@@ -9,7 +13,6 @@
 #include <cstring>
 
 #include "mb/aligned_ptr.h"
-#include "mb/linux_overrides.h"
 #include "mb/pnger.h"
 #include "mb/threadpool.h"
 

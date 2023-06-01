@@ -1,8 +1,9 @@
+// SPDX-FileCopyrightText: 2023 Tomas Krupka
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "mb/aligned_ptr.h"
 
 #include <utility>
-
-#include "mb/linux_overrides.h"
 
 namespace multiblend::memory {
 
