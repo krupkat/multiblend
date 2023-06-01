@@ -1,6 +1,9 @@
+// SPDX-FileCopyrightText: 2021 David Horman
+// SPDX-FileCopyrightText: 2023 Tomas Krupka
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 #include "mb/mapalloc.h"
 
-#include "mb/linux_overrides.h"
 #include "mb/logging.h"
 
 namespace multiblend::memory {
