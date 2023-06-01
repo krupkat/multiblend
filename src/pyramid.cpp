@@ -18,7 +18,9 @@ namespace multiblend {
 /***********************************************************************
  * Constructor/destructor
  ***********************************************************************/
-Pyramid::Pyramid(int width, int height, int _levels, int x, int y) {
+Pyramid::Pyramid(int width, int height, int _levels, int x, int y,
+                 mt::ThreadpoolPtr threadpool)
+    : threadpool_{threadpool} {
   int n_levels = DefaultNumLevels(width, height);
   if (_levels != 0) {
     if (_levels < 0) {
@@ -70,8 +72,6 @@ Pyramid::Pyramid(int width, int height, int _levels, int x, int y) {
     width = (width + static_cast<int>(x_shift) + 6) >> 1;
     height = (height + static_cast<int>(y_shift) + 6) >> 1;
   }
-
-  threadpool_ = mt::GetInstance();
 
   for (auto level = levels_.begin(); level < levels_.end(); ++level) {
     level->bands.push_back(0);

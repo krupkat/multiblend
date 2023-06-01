@@ -37,7 +37,7 @@ class Pyramid {
   int lut_bits_ = 0;
   bool lut_gamma_ = false;
   int out_max_;
-  mt::Threadpool* threadpool_;
+  mt::ThreadpoolPtr threadpool_;
 
   void set_lut(int bits, bool gamma);
   void CopyInterleavedThread_8bit(uint8_t* src_p, int step, int pitch, int sy,
@@ -72,7 +72,8 @@ class Pyramid {
   std::size_t total_bytes_ = 0;
 
  public:
-  Pyramid(int width, int height, int _levels, int x, int y);
+  Pyramid(int width, int height, int _levels, int x, int y,
+          mt::ThreadpoolPtr threadpool);
 
   Pyramid(const Pyramid& other) = delete;
   Pyramid& operator=(const Pyramid& other) = delete;

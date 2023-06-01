@@ -32,7 +32,6 @@ add_library(MultiblendLib
   "src/multiblend.cpp"
   "src/pnger.cpp"
   "src/pyramid.cpp"
-  "src/threadpool.cpp"
 )
 
 target_include_directories(MultiblendLib PUBLIC 

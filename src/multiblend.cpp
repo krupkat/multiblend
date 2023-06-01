@@ -57,7 +57,8 @@ struct PyramidWithMasks : public Pyramid {
 };
 }  // namespace
 
-Result Multiblend(std::vector<io::Image>& images, Options opts) {
+Result Multiblend(std::vector<io::Image>& images, Options opts,
+                  mt::ThreadpoolPtr threadpool) {
   utils::Timer timer;
   timer.Start();
   TimingResult timing;
@@ -118,7 +119,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
    * Read/trim/extract
    ***********************************************************************/
   for (int i = 0; i < n_images; ++i) {
-    images[i].Read(untrimmed_data.get(), opts.gamma);
+    images[i].Read(untrimmed_data.get(), opts.gamma, threadpool);
   }
 
   /***********************************************************************
@@ -243,7 +244,6 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
   /***********************************************************************
    * Backward distance transform
    ***********************************************************************/
-  auto* threadpool = mt::GetInstance();
 
   int n_threads = std::max(2, threadpool->GetNThreads());
   std::vector<std::vector<uint64_t>> thread_lines(n_threads);
@@ -933,16 +933,18 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
 
     if ((opts.wrap & 1) != 0) {
       wrap_levels_h = (int)std::floor(std::log2((width >> 1) + 4.0f) - 1);
-      wrap_pyramids.emplace_back(width >> 1, height, wrap_levels_h, 0, 0);
+      wrap_pyramids.emplace_back(width >> 1, height, wrap_levels_h, 0, 0,
+                                 threadpool);
       wrap_pyramids.emplace_back((width + 1) >> 1, height, wrap_levels_h,
-                                 width >> 1, 0);
+                                 width >> 1, 0, threadpool);
     }
 
     if ((opts.wrap & 2) != 0) {
       wrap_levels_v = (int)std::floor(std::log2((height >> 1) + 4.0f) - 1);
-      wrap_pyramids.emplace_back(width, height >> 1, wrap_levels_v, 0, 0);
+      wrap_pyramids.emplace_back(width, height >> 1, wrap_levels_v, 0, 0,
+                                 threadpool);
       wrap_pyramids.emplace_back(width, (height + 1) >> 1, wrap_levels_v, 0,
-                                 height >> 1);
+                                 height >> 1, threadpool);
     }
 
     // masks
@@ -983,7 +985,7 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     for (int i = 0; i < n_images; ++i) {
       images[i].pyramid_ =
           Pyramid(images[i].width_, images[i].height_, blend_levels,
-                  images[i].xpos_, images[i].ypos_);
+                  images[i].xpos_, images[i].ypos_, threadpool);
     }
 
     for (int level = total_levels - 1; level >= 0; --level) {
@@ -1021,7 +1023,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts) {
     /***********************************************************************
      * Create output pyramid
      ***********************************************************************/
-    auto output_pyramid = Pyramid{width, height, total_levels, 0, 0};
+    auto output_pyramid =
+        Pyramid{width, height, total_levels, 0, 0, threadpool};
 
     for (int level = total_levels - 1; level >= 0; --level) {
       output_pyramid.GetLevel(level).data =

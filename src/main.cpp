@@ -511,23 +511,26 @@ http://horman.net/multiblend/
   * Process images
   ************************************************************************
   ***********************************************************************/
-  auto result =
-      mb::Multiblend(images, {
-                                 .output_type = output_type,
-                                 .output_bpp = output_bpp,
-                                 .fixed_levels = fixed_levels,
-                                 .wideblend = wideblend,
-                                 .add_levels = add_levels,
-                                 .all_threads = all_threads,
-                                 .reverse = reverse,
-                                 .wrap = wrap,
-                                 .dither = dither,
-                                 .gamma = gamma,
-                                 .no_mask = no_mask,
-                                 .seamsave_filename = seamsave_filename,
-                                 .seamload_filename = seamload_filename,
-                                 .xor_filename = xor_filename,
-                             });
+  auto threadpool = multiblend::mt::Threadpool{};
+
+  auto result = mb::Multiblend(images,
+                               {
+                                   .output_type = output_type,
+                                   .output_bpp = output_bpp,
+                                   .fixed_levels = fixed_levels,
+                                   .wideblend = wideblend,
+                                   .add_levels = add_levels,
+                                   .all_threads = all_threads,
+                                   .reverse = reverse,
+                                   .wrap = wrap,
+                                   .dither = dither,
+                                   .gamma = gamma,
+                                   .no_mask = no_mask,
+                                   .seamsave_filename = seamsave_filename,
+                                   .seamload_filename = seamload_filename,
+                                   .xor_filename = xor_filename,
+                               },
+                               mb::mt::ThreadpoolPtr{&threadpool});
 
   /***********************************************************************
    * Write
