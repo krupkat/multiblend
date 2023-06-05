@@ -3,6 +3,7 @@
 
 #include "mb/aligned_ptr.h"
 
+#include <cmath>
 #include <utility>
 
 #include <simde/x86/sse4.1.h>

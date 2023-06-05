@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <cmath>
 #include <new>
 
 #include <simde/x86/sse4.1.h>
