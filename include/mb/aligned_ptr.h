@@ -3,8 +3,9 @@
 
 #pragma once
 
-#include <immintrin.h>
 #include <new>
+
+#include <simde/x86/sse4.1.h>
 
 namespace multiblend::memory {
 
@@ -12,7 +13,7 @@ namespace multiblend::memory {
 // "warning: ignoring attributes on template argument"
 
 class AlignedM128Ptr {
-  // RAII class for an array of __m128
+  // RAII class for an array of simde__m128
  public:
   static constexpr std::align_val_t kAlignment = std::align_val_t{16};
 
@@ -24,14 +25,14 @@ class AlignedM128Ptr {
   AlignedM128Ptr(AlignedM128Ptr&& other) noexcept;
   AlignedM128Ptr& operator=(AlignedM128Ptr&& other) noexcept;
 
-  [[nodiscard]] __m128* get() const { return ptr_; }
+  [[nodiscard]] simde__m128* get() const { return ptr_; }
 
-  __m128& operator[](int i) { return ptr_[i]; }
-  const __m128& operator[](int i) const { return ptr_[i]; }
+  simde__m128& operator[](int i) { return ptr_[i]; }
+  const simde__m128& operator[](int i) const { return ptr_[i]; }
 
  private:
-  explicit AlignedM128Ptr(__m128* ptr) : ptr_(ptr) {}
-  __m128* ptr_ = nullptr;
+  explicit AlignedM128Ptr(simde__m128* ptr) : ptr_(ptr) {}
+  simde__m128* ptr_ = nullptr;
 
   friend AlignedM128Ptr AllocAlignedM128(std::size_t size_bytes);
 };

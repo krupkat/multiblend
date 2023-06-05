@@ -5,9 +5,10 @@
 #pragma once
 
 #include <cstring>
-#include <immintrin.h>
 #include <memory>
 #include <vector>
+
+#include <simde/x86/sse4.1.h>
 
 #include "mb/aligned_ptr.h"
 #include "mb/mapalloc.h"
@@ -52,24 +53,24 @@ class Pyramid {
                              int ey);
   void CopyPlanarThread_16bit(uint16_t* src_p, int pitch, bool gamma, int sy,
                               int ey);
-  void CopyPlanarThread_32bit(__m128* src_p, int pitch, bool gamma, int sy,
+  void CopyPlanarThread_32bit(simde__m128* src_p, int pitch, bool gamma, int sy,
                               int ey);
-  static void Subsample_Squeeze(__m128* in, __m128* Out, int m128_pitch_in,
-                                int m128_pitch_out, __m128* mul);
-  static void ShrinkThread(__m128* line, __m128* hi, __m128* lo,
+  static void Subsample_Squeeze(simde__m128* in, simde__m128* Out, int m128_pitch_in,
+                                int m128_pitch_out, simde__m128* mul);
+  static void ShrinkThread(simde__m128* line, simde__m128* hi, simde__m128* lo,
                            int m128_pitch_hi, int m128_pitch_lo,
                            int first_bad_line, int height_odd, int sy, int ey,
                            bool x_shift, bool y_shift);
 
-  static void Squeeze(__m128* line, __m128* lo, int m128_pitch_lo,
-                      int m128_pitch_hi, __m128 final_mul,
+  static void Squeeze(simde__m128* line, simde__m128* lo, int m128_pitch_lo,
+                      int m128_pitch_hi, simde__m128 final_mul,
                       bool x_shift);  // was __forceinline
   static void LaplaceThreadWrapper(Level* upper_level, Level* lower_level,
                                    int sy, int ey);
   static void LaplaceThread(Level* upper_level, Level* lower_level, int sy,
-                            int ey, __m128* temp1, __m128* temp2,
-                            __m128* temp3);
-  static void FuseThread(__m128* a, __m128* b, __m128* m, int m128_pitch,
+                            int ey, simde__m128* temp1, simde__m128* temp2,
+                            simde__m128* temp3);
+  static void FuseThread(simde__m128* a, simde__m128* b, simde__m128* m, int m128_pitch,
                          int sy, int ey, bool pre, int black);
   void LaplaceCollapse(int n_levels, bool Collapse);
 
@@ -115,13 +116,13 @@ class Pyramid {
   int GetHeight(int level = 0) { return levels_[level].height; };
   int GetX(int level = 0) { return levels_[level].x; };
   int GetY(int level = 0) { return levels_[level].y; };
-  static void LaplaceLine2(__m128* hi, __m128* temp1, __m128* temp2,
+  static void LaplaceLine2(simde__m128* hi, simde__m128* temp1, simde__m128* temp2,
                            int m128_pitch);
-  static void LaplaceLine3(__m128* hi, __m128* temp1, __m128* temp2,
-                           __m128* temp3, int m128_pitch);
-  static void LaplaceExpand(__m128* hi, __m128* lo, int m128_pitch_hi,
+  static void LaplaceLine3(simde__m128* hi, simde__m128* temp1, simde__m128* temp2,
+                           simde__m128* temp3, int m128_pitch);
+  static void LaplaceExpand(simde__m128* hi, simde__m128* lo, int m128_pitch_hi,
                             int m128_pitch_lo);
-  static void LaplaceExpandShifted(__m128* hi, __m128* lo, int m128_pitch_hi,
+  static void LaplaceExpandShifted(simde__m128* hi, simde__m128* lo, int m128_pitch_hi,
                                    int m128_pitch_lo);
   [[nodiscard]] std::size_t GetTotalBytes() const { return total_bytes_; }
   [[nodiscard]] std::vector<Level>& GetLevels() { return levels_; };
@@ -132,8 +133,8 @@ class Pyramid {
   void Png(const char* filename);
 };
 
-__m128* GetLine(const Pyramid::Level& level, int y);
+simde__m128* GetLine(const Pyramid::Level& level, int y);
 
-void GetExpandedLine(const Pyramid::Level& level, __m128* temp, int y);
+void GetExpandedLine(const Pyramid::Level& level, simde__m128* temp, int y);
 
 }  // namespace multiblend

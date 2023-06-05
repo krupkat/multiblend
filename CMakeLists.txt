@@ -12,6 +12,7 @@ OPTION(MULTIBLEND_BUILD_EXE "Build executable" ${MULTIBLEND_ROOT_PROJECT})
 OPTION(MULTIBLEND_LIB_WITH_JPEG "Build with JPEG support" ${MULTIBLEND_ROOT_PROJECT})
 OPTION(MULTIBLEND_LIB_WITH_PNG "Build with PNG support" ${MULTIBLEND_ROOT_PROJECT})
 OPTION(MULTIBLEND_LIB_WITH_TIFF "Build with TIFF support" ${MULTIBLEND_ROOT_PROJECT})
+OPTION(MULTIBLEND_WITH_NEON "Build with NEON support" OFF)
 
 if(MULTIBLEND_BUILD_EXE)
   if(NOT MULTIBLEND_LIB_WITH_JPEG OR NOT MULTIBLEND_LIB_WITH_PNG OR NOT MULTIBLEND_LIB_WITH_TIFF)
@@ -40,6 +41,15 @@ target_include_directories(MultiblendLib PUBLIC
 
 find_package(spdlog REQUIRED)
 target_link_libraries(MultiblendLib PUBLIC spdlog::spdlog)
+
+find_path(SIMDE_INCLUDE_DIRS "simde/arm/neon.h")
+target_include_directories(MultiblendLib PRIVATE ${SIMDE_INCLUDE_DIRS})
+
+if(MULTIBLEND_WITH_NEON)
+  set(NEON_CXX_OPTIONS "-march=armv8-a+simd;-mfpu=neon;-mfloat-abi=softfp;-fopenmp-simd")
+  target_compile_options(MultiblendLib PUBLIC "${NEON_CXX_OPTIONS}")
+  target_compile_definitions(MultiblendLib PUBLIC SIMDE_ENABLE_OPENMP)
+endif()
 
 if(MULTIBLEND_LIB_WITH_JPEG)
   find_package(JPEG REQUIRED)
