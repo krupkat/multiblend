@@ -9,6 +9,8 @@
 #include <optional>
 #include <vector>
 
+#include "mb/flex.h"
+#include "mb/functions.h"
 #include "mb/image.h"
 #include "mb/linux_overrides.h"
 #include "mb/logging.h"

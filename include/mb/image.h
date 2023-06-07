@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "mb/file.h"
-#include "mb/functions.h"
+#include "mb/flex.h"
 #ifdef MULTIBLEND_WITH_JPEG
 #include "mb/jpeg.h"
 #endif

@@ -12,6 +12,7 @@
 
 #include <spdlog/fmt/fmt.h>
 
+#include "mb/flex.h"
 #include "mb/functions.h"
 #ifdef MULTIBLEND_WITH_JPEG
 #include "mb/jpeg.h"
