@@ -9,6 +9,8 @@
 #include <optional>
 #include <vector>
 
+#include "mb/flex.h"
+#include "mb/functions.h"
 #include "mb/image.h"
 #include "mb/linux_overrides.h"
 #include "mb/logging.h"
@@ -1286,6 +1288,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts,
       timing.out_time += timer.Read();
     }
   }
+
+  full_mask.Shrink();
 
   return Result{
       .output_bpp = opts.output_bpp,
