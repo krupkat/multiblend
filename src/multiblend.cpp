@@ -1289,6 +1289,8 @@ Result Multiblend(std::vector<io::Image>& images, Options opts,
     }
   }
 
+  full_mask.Shrink();
+
   return Result{
       .output_bpp = opts.output_bpp,
       .width = width,

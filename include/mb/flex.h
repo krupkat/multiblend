@@ -51,6 +51,7 @@ class Flex {
   uint64_t ReadBackwards64();
 
   uint32_t ReadForwards32();
+  uint32_t SafeReadForwards32();
 
   void Copy(uint8_t* src, int len);
 

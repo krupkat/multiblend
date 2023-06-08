@@ -19,7 +19,7 @@ std::unique_ptr<uint8_t, FreeDeleter> SafeMalloc(size_t size) {
       tmp) {
     return tmp;
   }
-  throw std::runtime_error("out of memory");
+  throw std::runtime_error("Multiblend: out of memory");
 }
 
 void SafeRealloc(std::unique_ptr<uint8_t, FreeDeleter>& data, size_t size) {
@@ -31,7 +31,7 @@ void SafeRealloc(std::unique_ptr<uint8_t, FreeDeleter>& data, size_t size) {
     data = std::move(tmp);
     return;
   }
-  throw std::runtime_error("out of memory");
+  throw std::runtime_error("Multiblend: out of memory");
 }
 }  // namespace
 
@@ -110,6 +110,13 @@ uint32_t Flex::ReadForwards32() {
   uint32_t out = *((uint32_t*)&data_.get()[p_]);
   p_ += 4;
   return out;
+}
+
+uint32_t Flex::SafeReadForwards32() {
+  if (p_ + 4 > end_p_) {
+    throw std::runtime_error("Multiblend: read past end of buffer");
+  }
+  return ReadForwards32();
 }
 
 void Flex::Copy(uint8_t* src, int len) {
