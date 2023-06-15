@@ -64,8 +64,30 @@ class TestMultiblend(unittest.TestCase):
 
         self.assert_equal(result_path, "data/expected.png")
 
+    def test_multiblend_png_alpha(self):
+        result_path = "result_alpha.png"
+
+        if os.path.exists(result_path):
+            os.remove(result_path)
+
+        subprocess.run(
+            [
+                MULTIBLEND_PATH,
+                "-o",
+                result_path,
+                "data/img_0_alpha.png",
+                "-91,204",
+                "data/img_1_alpha.png",
+                "-167,202",
+                "data/img_2_alpha.png",
+                "-41,193",
+            ]
+        ).check_returncode()
+
+        self.assert_equal(result_path, "data/expected_alpha.png")
+
     def test_multiblend_png_saveseams(self):
-        result_path = "result.png"
+        result_path = "result_saveseams.png"
         seams_path = "seams.png"
 
         if os.path.exists(result_path):
@@ -91,7 +113,7 @@ class TestMultiblend(unittest.TestCase):
         self.assert_equal(seams_path, "data/expected_seams.png")
 
     def test_multiblend_png_loadseams(self):
-        result_path = "result.png"
+        result_path = "result_loadseams.png"
 
         if os.path.exists(result_path):
             os.remove(result_path)

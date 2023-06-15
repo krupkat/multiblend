@@ -38,6 +38,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_library(MultiblendLib
   "src/aligned_ptr.cpp"
+  "src/flex.cpp"
   "src/functions.cpp"
   "src/image.cpp"
   "src/logging.cpp"

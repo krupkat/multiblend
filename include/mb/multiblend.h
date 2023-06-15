@@ -6,7 +6,7 @@
 
 #include <array>
 
-#include "mb/functions.h"
+#include "mb/flex.h"
 #include "mb/image.h"
 #include "mb/mapalloc.h"
 #include "mb/threadpool.h"
