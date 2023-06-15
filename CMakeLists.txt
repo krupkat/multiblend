@@ -55,9 +55,6 @@ target_include_directories(MultiblendLib PUBLIC
 find_package(spdlog REQUIRED)
 target_link_libraries(MultiblendLib PUBLIC spdlog::spdlog)
 
-find_path(SIMDE_INCLUDE_DIRS "simde/arm/neon.h")
-target_include_directories(MultiblendLib PRIVATE ${SIMDE_INCLUDE_DIRS})
-
 if(MULTIBLEND_LIB_WITH_JPEG)
   find_package(JPEG REQUIRED)
   target_link_libraries(MultiblendLib PUBLIC JPEG::JPEG)
