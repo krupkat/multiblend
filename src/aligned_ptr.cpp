@@ -3,12 +3,15 @@
 
 #include "mb/aligned_ptr.h"
 
+#include <cmath>
 #include <utility>
+
+#include <simde/x86/sse4.1.h>
 
 namespace multiblend::memory {
 
 AlignedM128Ptr AllocAlignedM128(std::size_t size_bytes) {
-  return AlignedM128Ptr(static_cast<__m128*>(
+  return AlignedM128Ptr(static_cast<simde__m128*>(
       ::operator new(size_bytes, AlignedM128Ptr::kAlignment)));
 }
 

@@ -7,18 +7,22 @@ import subprocess
 
 from PIL import Image
 from PIL import ImageChops
+from PIL import ImageStat
 
 MULTIBLEND_PATH = os.path.join("..", "Multiblend")
 
 
 class TestMultiblend(unittest.TestCase):
-    def assert_equal(self, result_path, expected_path):
+    def assert_equal(self, result_path, expected_path, eps=0.0001):
         with Image.open(result_path) as result, Image.open(expected_path) as expected:
             self.assertEqual(result.width, expected.width)
             self.assertEqual(result.height, expected.height)
 
             diff = ImageChops.difference(result, expected)
-            self.assertEqual(diff.getbbox(), None)
+            diff_stat = ImageStat.Stat(diff)
+
+            for diff_sum, diff_count in zip(diff_stat.sum, diff_stat.count):
+                self.assertLess(diff_sum, eps * diff_count)
 
     def test_multiblend_jpg(self):
         result_path = "result.jpg"

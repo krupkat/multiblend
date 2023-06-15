@@ -4,13 +4,10 @@
 
 #include "mb/pyramid.h"
 
-#ifdef PYR_DENOISE
-#define USE_SSE2
-#include "sse_mathfun.h"
-#endif
-
 #include <cmath>
 #include <cstring>
+
+#include <simde/x86/sse4.1.h>
 
 #include "mb/aligned_ptr.h"
 #include "mb/pnger.h"
@@ -171,7 +168,7 @@ void Pyramid::Copy(uint8_t* src_p, int step, int pitch, bool gamma, int bits) {
           break;
         case 32:
           tasks.push_back(threadpool_->Queue([=, this] {
-            CopyPlanarThread_32bit((__m128*)src_p, pitch, gamma,
+            CopyPlanarThread_32bit((simde__m128*)src_p, pitch, gamma,
                                    levels_[0].bands[t],
                                    levels_[0].bands[t + 1]);
           }));
@@ -237,13 +234,13 @@ void Pyramid::CopyPlanarThread_8bit(uint8_t* src_p, int pitch, bool gamma,
                                     int sy, int ey) {
   int x;
   int y;
-  __m128i pixels;
-  __m128 fpixels;
-  __m128i shuffle =
-      _mm_set_epi32(0x80808003, 0x80808002, 0x80808001, 0x80808000);
-  auto* rp_p = (__m128*)levels_[0].data.get();
-  __m128* p_p;
-  __m128i* src_pp_m;
+  simde__m128i pixels;
+  simde__m128 fpixels;
+  simde__m128i shuffle =
+      simde_mm_set_epi32(0x80808003, 0x80808002, 0x80808001, 0x80808000);
+  auto* rp_p = (simde__m128*)levels_[0].data.get();
+  simde__m128* p_p;
+  simde__m128i* src_pp_m;
   int* src_pp_i;
   uint8_t* src_pp_b;
 
@@ -258,43 +255,47 @@ void Pyramid::CopyPlanarThread_8bit(uint8_t* src_p, int pitch, bool gamma,
   int g;
 
   for (y = sy; y < ey; ++y) {
-    src_pp_m = (__m128i*)src_p;
+    src_pp_m = (simde__m128i*)src_p;
     p_p = rp_p;
     if (gamma) {
       for (x = 0; x < sixteens; ++x) {
-        pixels = _mm_loadu_si128(src_pp_m++);
-        fpixels = _mm_cvtepi32_ps(_mm_shuffle_epi8(pixels, shuffle));
-        _mm_store_ps((float*)p_p++, _mm_mul_ps(fpixels, fpixels));
+        pixels = simde_mm_loadu_si128(src_pp_m++);
+        fpixels = simde_mm_cvtepi32_ps(simde_mm_shuffle_epi8(pixels, shuffle));
+        simde_mm_store_ps((float*)p_p++, simde_mm_mul_ps(fpixels, fpixels));
 
-        pixels = _mm_srli_si128(pixels, 4);
-        fpixels = _mm_cvtepi32_ps(_mm_shuffle_epi8(pixels, shuffle));
-        _mm_store_ps((float*)p_p++, _mm_mul_ps(fpixels, fpixels));
+        pixels = simde_mm_srli_si128(pixels, 4);
+        fpixels = simde_mm_cvtepi32_ps(simde_mm_shuffle_epi8(pixels, shuffle));
+        simde_mm_store_ps((float*)p_p++, simde_mm_mul_ps(fpixels, fpixels));
 
-        pixels = _mm_srli_si128(pixels, 4);
-        fpixels = _mm_cvtepi32_ps(_mm_shuffle_epi8(pixels, shuffle));
-        _mm_store_ps((float*)p_p++, _mm_mul_ps(fpixels, fpixels));
+        pixels = simde_mm_srli_si128(pixels, 4);
+        fpixels = simde_mm_cvtepi32_ps(simde_mm_shuffle_epi8(pixels, shuffle));
+        simde_mm_store_ps((float*)p_p++, simde_mm_mul_ps(fpixels, fpixels));
 
-        pixels = _mm_srli_si128(pixels, 4);
-        fpixels = _mm_cvtepi32_ps(_mm_shuffle_epi8(pixels, shuffle));
-        _mm_store_ps((float*)p_p++, _mm_mul_ps(fpixels, fpixels));
+        pixels = simde_mm_srli_si128(pixels, 4);
+        fpixels = simde_mm_cvtepi32_ps(simde_mm_shuffle_epi8(pixels, shuffle));
+        simde_mm_store_ps((float*)p_p++, simde_mm_mul_ps(fpixels, fpixels));
       }
     } else {
       for (x = 0; x < sixteens; ++x) {
-        pixels = _mm_loadu_si128(src_pp_m++);
-        _mm_store_ps((float*)p_p++,
-                     _mm_cvtepi32_ps(_mm_shuffle_epi8(pixels, shuffle)));
+        pixels = simde_mm_loadu_si128(src_pp_m++);
+        simde_mm_store_ps(
+            (float*)p_p++,
+            simde_mm_cvtepi32_ps(simde_mm_shuffle_epi8(pixels, shuffle)));
 
-        pixels = _mm_srli_si128(pixels, 4);
-        _mm_store_ps((float*)p_p++,
-                     _mm_cvtepi32_ps(_mm_shuffle_epi8(pixels, shuffle)));
+        pixels = simde_mm_srli_si128(pixels, 4);
+        simde_mm_store_ps(
+            (float*)p_p++,
+            simde_mm_cvtepi32_ps(simde_mm_shuffle_epi8(pixels, shuffle)));
 
-        pixels = _mm_srli_si128(pixels, 4);
-        _mm_store_ps((float*)p_p++,
-                     _mm_cvtepi32_ps(_mm_shuffle_epi8(pixels, shuffle)));
+        pixels = simde_mm_srli_si128(pixels, 4);
+        simde_mm_store_ps(
+            (float*)p_p++,
+            simde_mm_cvtepi32_ps(simde_mm_shuffle_epi8(pixels, shuffle)));
 
-        pixels = _mm_srli_si128(pixels, 4);
-        _mm_store_ps((float*)p_p++,
-                     _mm_cvtepi32_ps(_mm_shuffle_epi8(pixels, shuffle)));
+        pixels = simde_mm_srli_si128(pixels, 4);
+        simde_mm_store_ps(
+            (float*)p_p++,
+            simde_mm_cvtepi32_ps(simde_mm_shuffle_epi8(pixels, shuffle)));
       }
     }
 
@@ -302,13 +303,13 @@ void Pyramid::CopyPlanarThread_8bit(uint8_t* src_p, int pitch, bool gamma,
 
     for (x = 0; x < fours; ++x) {
       if (gamma) {
-        fpixels = _mm_cvtepi32_ps(
-            _mm_shuffle_epi8(_mm_cvtsi32_si128(*src_pp_i++), shuffle));
-        _mm_store_ps((float*)p_p++, _mm_mul_ps(fpixels, fpixels));
+        fpixels = simde_mm_cvtepi32_ps(simde_mm_shuffle_epi8(
+            simde_mm_cvtsi32_si128(*src_pp_i++), shuffle));
+        simde_mm_store_ps((float*)p_p++, simde_mm_mul_ps(fpixels, fpixels));
       } else {
-        _mm_store_ps((float*)p_p++,
-                     _mm_cvtepi32_ps(_mm_shuffle_epi8(
-                         _mm_cvtsi32_si128(*src_pp_i++), shuffle)));
+        simde_mm_store_ps((float*)p_p++,
+                          simde_mm_cvtepi32_ps(simde_mm_shuffle_epi8(
+                              simde_mm_cvtsi32_si128(*src_pp_i++), shuffle)));
       }
     }
 
@@ -339,15 +340,15 @@ void Pyramid::CopyPlanarThread_16bit(uint16_t* src_p, int pitch, bool gamma,
   int x;
   int y;
 
-  __m128i pixels;
-  __m128 fpixels;
-  __m128i shuffle1 =
-      _mm_set_epi32(0x80800706, 0x80800504, 0x80800302, 0x80800100);
-  __m128i shuffle2 =
-      _mm_set_epi32(0x80800f0e, 0x80800d0c, 0x80800b0a, 0x80800908);
-  auto* rp_p = (__m128*)levels_[0].data.get();
-  __m128* p_p;
-  __m128i* src_pp_m;
+  simde__m128i pixels;
+  simde__m128 fpixels;
+  simde__m128i shuffle1 =
+      simde_mm_set_epi32(0x80800706, 0x80800504, 0x80800302, 0x80800100);
+  simde__m128i shuffle2 =
+      simde_mm_set_epi32(0x80800f0e, 0x80800d0c, 0x80800b0a, 0x80800908);
+  auto* rp_p = (simde__m128*)levels_[0].data.get();
+  simde__m128* p_p;
+  simde__m128i* src_pp_m;
   uint16_t* src_pp_w;
 
   int eights = levels_[0].width >> 3;
@@ -360,25 +361,27 @@ void Pyramid::CopyPlanarThread_16bit(uint16_t* src_p, int pitch, bool gamma,
   int g;
 
   for (y = sy; y < ey; ++y) {
-    src_pp_m = (__m128i*)src_p;
+    src_pp_m = (simde__m128i*)src_p;
     p_p = rp_p;
     if (gamma) {
       for (x = 0; x < eights; ++x) {
-        pixels = _mm_loadu_si128(src_pp_m++);
-        fpixels = _mm_cvtepi32_ps(_mm_shuffle_epi8(pixels, shuffle1));
-        _mm_store_ps((float*)p_p++, _mm_mul_ps(fpixels, fpixels));
+        pixels = simde_mm_loadu_si128(src_pp_m++);
+        fpixels = simde_mm_cvtepi32_ps(simde_mm_shuffle_epi8(pixels, shuffle1));
+        simde_mm_store_ps((float*)p_p++, simde_mm_mul_ps(fpixels, fpixels));
 
-        fpixels = _mm_cvtepi32_ps(_mm_shuffle_epi8(pixels, shuffle2));
-        _mm_store_ps((float*)p_p++, _mm_mul_ps(fpixels, fpixels));
+        fpixels = simde_mm_cvtepi32_ps(simde_mm_shuffle_epi8(pixels, shuffle2));
+        simde_mm_store_ps((float*)p_p++, simde_mm_mul_ps(fpixels, fpixels));
       }
     } else {
       for (x = 0; x < eights; ++x) {
-        pixels = _mm_loadu_si128(src_pp_m++);
-        _mm_store_ps((float*)p_p++,
-                     _mm_cvtepi32_ps(_mm_shuffle_epi8(pixels, shuffle1)));
+        pixels = simde_mm_loadu_si128(src_pp_m++);
+        simde_mm_store_ps(
+            (float*)p_p++,
+            simde_mm_cvtepi32_ps(simde_mm_shuffle_epi8(pixels, shuffle1)));
 
-        _mm_store_ps((float*)p_p++,
-                     _mm_cvtepi32_ps(_mm_shuffle_epi8(pixels, shuffle2)));
+        simde_mm_store_ps(
+            (float*)p_p++,
+            simde_mm_cvtepi32_ps(simde_mm_shuffle_epi8(pixels, shuffle2)));
       }
     }
 
@@ -404,14 +407,14 @@ void Pyramid::CopyPlanarThread_16bit(uint16_t* src_p, int pitch, bool gamma,
   }
 }
 
-void Pyramid::CopyPlanarThread_32bit(__m128* src_p, int pitch, bool gamma,
+void Pyramid::CopyPlanarThread_32bit(simde__m128* src_p, int pitch, bool gamma,
                                      int sy, int ey) {
   int x;
   int y;
 
   pitch >>= 2;
 
-  auto* rp_p = (__m128*)levels_[0].data.get();
+  auto* rp_p = (simde__m128*)levels_[0].data.get();
 
   src_p += static_cast<ptrdiff_t>(sy) * pitch;
   rp_p += static_cast<ptrdiff_t>(sy) * levels_[0].m128_pitch;
@@ -421,8 +424,8 @@ void Pyramid::CopyPlanarThread_32bit(__m128* src_p, int pitch, bool gamma,
 
     for (y = sy; y < ey; ++y) {
       for (x = 0; x < fours; ++x) {
-        __m128 pixels = _mm_load_ps((float*)&src_p[x]);
-        _mm_store_ps((float*)&rp_p[x], _mm_mul_ps(pixels, pixels));
+        simde__m128 pixels = simde_mm_load_ps((float*)&src_p[x]);
+        simde_mm_store_ps((float*)&rp_p[x], simde_mm_mul_ps(pixels, pixels));
       }
       float copy = ((float*)rp_p)[levels_[0].width - 1];
       for (x = levels_[0].width; x < levels_[0].pitch; ++x) {
@@ -453,57 +456,62 @@ void Pyramid::Subsample(int sub_w, int sub_h, Pyramid* source) {
   int x;
   int y;
   int p = 0;
-  auto* in = (__m128*)source->levels_[0].data.get();
-  auto* out = (__m128*)levels_[0].data.get();
+  auto* in = (simde__m128*)source->levels_[0].data.get();
+  auto* out = (simde__m128*)levels_[0].data.get();
   auto& temp_lines = source->lines_;
-  __m128* line = temp_lines[0].get();
+  simde__m128* line = temp_lines[0].get();
   int m128_pitch_in = source->levels_[0].m128_pitch;
   int m128_pitch_out = levels_[0].m128_pitch;
   int mid_pitch = sub_w == 2 ? ((m128_pitch_in >> 1) + 1) & ~1 : m128_pitch_in;
-  __m128 three = _mm_set_ps1(3);
-  __m128 four = _mm_set_ps1(4);
-  __m128 mul = _mm_set_ps1((sub_h != 0 ? 1.0f / 8 : 1.0f) *
-                           (sub_w == 2 ? 1.0f / 64 : 1.0f / 8));
+  simde__m128 three = simde_mm_set_ps1(3);
+  simde__m128 four = simde_mm_set_ps1(4);
+  simde__m128 mul = simde_mm_set_ps1((sub_h != 0 ? 1.0f / 8 : 1.0f) *
+                                     (sub_w == 2 ? 1.0f / 64 : 1.0f / 8));
 
   for (y = 0; y < levels_[0].height; ++y) {
     if (sub_h != 0) {
       if (y == 0) {
         for (x = 0; x < m128_pitch_in; ++x) {
-          _mm_store_ps(
+          simde_mm_store_ps(
               (float*)&temp_lines[0][x],
-              _mm_add_ps(
-                  _mm_mul_ps(_mm_load_ps((float*)&in[x]), four),
-                  _mm_add_ps(
-                      _mm_mul_ps(_mm_load_ps((float*)&in[x + m128_pitch_in]),
-                                 three),
-                      _mm_load_ps((float*)&in[x + (m128_pitch_in << 1)]))));
+              simde_mm_add_ps(
+                  simde_mm_mul_ps(simde_mm_load_ps((float*)&in[x]), four),
+                  simde_mm_add_ps(
+                      simde_mm_mul_ps(
+                          simde_mm_load_ps((float*)&in[x + m128_pitch_in]),
+                          three),
+                      simde_mm_load_ps(
+                          (float*)&in[x + (m128_pitch_in << 1)]))));
         }
       } else if (y == levels_[0].height - 1) {
         for (x = 0; x < m128_pitch_in; ++x) {
-          _mm_store_ps(
+          simde_mm_store_ps(
               (float*)&temp_lines[0][x],
-              _mm_add_ps(
-                  _mm_mul_ps(_mm_load_ps((float*)&in[x + m128_pitch_in]), four),
-                  _mm_add_ps(_mm_mul_ps(_mm_load_ps((float*)&in[x]), three),
-                             _mm_load_ps((float*)&in[x - m128_pitch_in]))));
+              simde_mm_add_ps(
+                  simde_mm_mul_ps(
+                      simde_mm_load_ps((float*)&in[x + m128_pitch_in]), four),
+                  simde_mm_add_ps(
+                      simde_mm_mul_ps(simde_mm_load_ps((float*)&in[x]), three),
+                      simde_mm_load_ps((float*)&in[x - m128_pitch_in]))));
         }
       } else {
         for (x = 0; x < m128_pitch_in; ++x) {
-          _mm_store_ps(
+          simde_mm_store_ps(
               (float*)&temp_lines[0][x],
-              _mm_add_ps(
-                  _mm_add_ps(
-                      _mm_load_ps((float*)&in[x - m128_pitch_in]),
-                      _mm_load_ps((float*)&in[x + (m128_pitch_in << 1)])),
-                  _mm_mul_ps(
-                      _mm_add_ps(_mm_load_ps((float*)&in[x]),
-                                 _mm_load_ps((float*)&in[x + m128_pitch_in])),
+              simde_mm_add_ps(
+                  simde_mm_add_ps(
+                      simde_mm_load_ps((float*)&in[x - m128_pitch_in]),
+                      simde_mm_load_ps((float*)&in[x + (m128_pitch_in << 1)])),
+                  simde_mm_mul_ps(
+                      simde_mm_add_ps(
+                          simde_mm_load_ps((float*)&in[x]),
+                          simde_mm_load_ps((float*)&in[x + m128_pitch_in])),
                       three)));
         }
       }
       in += m128_pitch_in << 1;
     } else {
-      line = (__m128*)in;
+      line = (simde__m128*)in;
       in += m128_pitch_in;
     }
     switch (sub_w) {
@@ -516,51 +524,54 @@ void Pyramid::Subsample(int sub_w, int sub_h, Pyramid* source) {
   }
 }
 
-void Pyramid::Subsample_Squeeze(__m128* in, __m128* Out, int m128_pitch_in,
-                                int m128_pitch_out, __m128* mul) {
+void Pyramid::Subsample_Squeeze(simde__m128* in, simde__m128* Out,
+                                int m128_pitch_in, int m128_pitch_out,
+                                simde__m128* mul) {
   int read = 0;
 
   int x;
-  __m128 a;
-  __m128 b;
-  __m128 c;
-  __m128 d;
-  __m128 e;
-  __m128 f;
-  __m128 three = _mm_set_ps1(3);
+  simde__m128 a;
+  simde__m128 b;
+  simde__m128 c;
+  simde__m128 d;
+  simde__m128 e;
+  simde__m128 f;
+  simde__m128 three = simde_mm_set_ps1(3);
 
-  b = _mm_load_ps((float*)&in[read++]);
-  a = _mm_shuffle_ps(b, b, _MM_SHUFFLE(0, 0, 0, 0));
-  c = _mm_load_ps((float*)&in[read++]);
-  d = _mm_load_ps((float*)&in[read++]);
+  b = simde_mm_load_ps((float*)&in[read++]);
+  a = simde_mm_shuffle_ps(b, b, SIMDE_MM_SHUFFLE(0, 0, 0, 0));
+  c = simde_mm_load_ps((float*)&in[read++]);
+  d = simde_mm_load_ps((float*)&in[read++]);
 
   for (x = 0; x < m128_pitch_out; ++x) {
-    e = _mm_shuffle_ps(a, c, _MM_SHUFFLE(0, 0, 3, 3));
-    f = _mm_shuffle_ps(b, d, _MM_SHUFFLE(0, 0, 3, 3));
-    e = _mm_blend_ps(b, e, 9);
-    f = _mm_blend_ps(c, f, 9);
-    e = _mm_shuffle_ps(e, e, _MM_SHUFFLE(3, 1, 2, 0));
-    f = _mm_shuffle_ps(f, f, _MM_SHUFFLE(3, 1, 2, 0));
-    e = _mm_hadd_ps(e, f);
+    e = simde_mm_shuffle_ps(a, c, SIMDE_MM_SHUFFLE(0, 0, 3, 3));
+    f = simde_mm_shuffle_ps(b, d, SIMDE_MM_SHUFFLE(0, 0, 3, 3));
+    e = simde_mm_blend_ps(b, e, 9);
+    f = simde_mm_blend_ps(c, f, 9);
+    e = simde_mm_shuffle_ps(e, e, SIMDE_MM_SHUFFLE(3, 1, 2, 0));
+    f = simde_mm_shuffle_ps(f, f, SIMDE_MM_SHUFFLE(3, 1, 2, 0));
+    e = simde_mm_hadd_ps(e, f);
 
-    f = _mm_hadd_ps(b, c);
+    f = simde_mm_hadd_ps(b, c);
     if (mul != nullptr) {
-      _mm_store_ps((float*)&Out[x],
-                   _mm_mul_ps(_mm_add_ps(e, _mm_mul_ps(f, three)), *mul));
+      simde_mm_store_ps(
+          (float*)&Out[x],
+          simde_mm_mul_ps(simde_mm_add_ps(e, simde_mm_mul_ps(f, three)), *mul));
     } else {
-      _mm_store_ps((float*)&Out[x], _mm_add_ps(e, _mm_mul_ps(f, three)));
+      simde_mm_store_ps((float*)&Out[x],
+                        simde_mm_add_ps(e, simde_mm_mul_ps(f, three)));
     }
     a = c;
     b = d;
     if (read < m128_pitch_in - 1) {
-      c = _mm_load_ps((float*)&in[read++]);
-      d = _mm_load_ps((float*)&in[read++]);
+      c = simde_mm_load_ps((float*)&in[read++]);
+      d = simde_mm_load_ps((float*)&in[read++]);
     } else {
       if (read < m128_pitch_in) {
-        c = _mm_load_ps((float*)&in[read++]);
-        d = _mm_shuffle_ps(c, c, _MM_SHUFFLE(3, 3, 3, 3));
+        c = simde_mm_load_ps((float*)&in[read++]);
+        d = simde_mm_shuffle_ps(c, c, SIMDE_MM_SHUFFLE(3, 3, 3, 3));
       } else {
-        c = _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 3, 3, 3));
+        c = simde_mm_shuffle_ps(b, b, SIMDE_MM_SHUFFLE(3, 3, 3, 3));
         d = c;
       }
     }
@@ -572,18 +583,18 @@ void Pyramid::Subsample_Squeeze(__m128* in, __m128* Out, int m128_pitch_in,
  ***********************************************************************/
 void Pyramid::Shrink() {
   int l;
-  __m128* hi;
-  __m128* lo;
-  const __m128 four = _mm_set_ps1(4);
-  const __m128 six = _mm_set_ps1(6);
-  const __m128 eleven = _mm_set_ps1(11);
-  const __m128 fifteen = _mm_set_ps1(15);
-  const __m128 _16th = _mm_set_ps1(1.0 / 16);
-  const __m128 _256th = _mm_set_ps1(1.0 / 256);
+  simde__m128* hi;
+  simde__m128* lo;
+  const simde__m128 four = simde_mm_set_ps1(4);
+  const simde__m128 six = simde_mm_set_ps1(6);
+  const simde__m128 eleven = simde_mm_set_ps1(11);
+  const simde__m128 fifteen = simde_mm_set_ps1(15);
+  const simde__m128 _16th = simde_mm_set_ps1(1.0 / 16);
+  const simde__m128 _256th = simde_mm_set_ps1(1.0 / 256);
 
   for (l = 0; l < (int)levels_.size() - 1; ++l) {
-    hi = (__m128*)levels_[l].data.get();
-    lo = (__m128*)levels_[l + 1].data.get();
+    hi = (simde__m128*)levels_[l].data.get();
+    lo = (simde__m128*)levels_[l + 1].data.get();
 
     int height_odd =
         (levels_[l].height & 1) ^ static_cast<int>(levels_[l].y_shift);
@@ -603,19 +614,19 @@ void Pyramid::Shrink() {
   }
 }
 
-void Pyramid::ShrinkThread(__m128* line, __m128* hi, __m128* lo,
+void Pyramid::ShrinkThread(simde__m128* line, simde__m128* hi, simde__m128* lo,
                            int m128_pitch_hi, int m128_pitch_lo,
                            int first_bad_line, int height_odd, int sy, int ey,
                            const bool x_shift, const bool y_shift) {
   int x;
   int y;
 
-  const __m128 four = _mm_set_ps1(4);
-  const __m128 six = _mm_set_ps1(6);
-  const __m128 eleven = _mm_set_ps1(11);
-  const __m128 fifteen = _mm_set_ps1(15);
-  const __m128 _16th = _mm_set_ps1(1.0 / 16);
-  const __m128 _256th = _mm_set_ps1(1.0 / 256);
+  const simde__m128 four = simde_mm_set_ps1(4);
+  const simde__m128 six = simde_mm_set_ps1(6);
+  const simde__m128 eleven = simde_mm_set_ps1(11);
+  const simde__m128 fifteen = simde_mm_set_ps1(15);
+  const simde__m128 _16th = simde_mm_set_ps1(1.0 / 16);
+  const simde__m128 _256th = simde_mm_set_ps1(1.0 / 256);
 
   // line 0
   if (sy == 0) {
@@ -626,10 +637,10 @@ void Pyramid::ShrinkThread(__m128* line, __m128* hi, __m128* lo,
     if (!y_shift) {
       // line 1
       for (x = 0; x < m128_pitch_hi; ++x) {
-        line[x] =
-            _mm_add_ps(_mm_add_ps(_mm_mul_ps(hi[x], eleven),
-                                  _mm_mul_ps(hi[x + m128_pitch_hi], four)),
-                       hi[x + (m128_pitch_hi << 1)]);
+        line[x] = simde_mm_add_ps(
+            simde_mm_add_ps(simde_mm_mul_ps(hi[x], eleven),
+                            simde_mm_mul_ps(hi[x + m128_pitch_hi], four)),
+            hi[x + (m128_pitch_hi << 1)]);
       }
       Squeeze(line, lo, m128_pitch_lo, m128_pitch_hi, _256th, x_shift);
       lo += m128_pitch_lo;
@@ -638,21 +649,24 @@ void Pyramid::ShrinkThread(__m128* line, __m128* hi, __m128* lo,
     } else {
       // line 1
       for (x = 0; x < m128_pitch_hi; ++x) {
-        line[x] = _mm_add_ps(_mm_mul_ps(hi[x], fifteen), hi[x + m128_pitch_hi]);
+        line[x] = simde_mm_add_ps(simde_mm_mul_ps(hi[x], fifteen),
+                                  hi[x + m128_pitch_hi]);
       }
       Squeeze(line, lo, m128_pitch_lo, m128_pitch_hi, _256th, x_shift);
       lo += m128_pitch_lo;
       hi += m128_pitch_hi;
       // line 2
       for (x = 0; x < m128_pitch_hi; ++x) {
-        _mm_store_ps(
+        simde_mm_store_ps(
             (float*)&line[x],
-            _mm_add_ps(_mm_add_ps(_mm_add_ps(hi[x - m128_pitch_hi],
-                                             hi[x + (m128_pitch_hi << 1)]),
-                                  _mm_mul_ps(_mm_add_ps(hi[x - m128_pitch_hi],
-                                                        hi[x + m128_pitch_hi]),
-                                             four)),
-                       _mm_mul_ps(hi[x], six)));
+            simde_mm_add_ps(
+                simde_mm_add_ps(
+                    simde_mm_add_ps(hi[x - m128_pitch_hi],
+                                    hi[x + (m128_pitch_hi << 1)]),
+                    simde_mm_mul_ps(simde_mm_add_ps(hi[x - m128_pitch_hi],
+                                                    hi[x + m128_pitch_hi]),
+                                    four)),
+                simde_mm_mul_ps(hi[x], six)));
       }
       Squeeze(line, lo, m128_pitch_lo, m128_pitch_hi, _256th, x_shift);
       lo += m128_pitch_lo;
@@ -674,14 +688,16 @@ void Pyramid::ShrinkThread(__m128* line, __m128* hi, __m128* lo,
   // good lines
   for (y = sy; y < ey; ++y) {  // was y < first_bad_line
     for (x = 0; x < m128_pitch_hi; ++x) {
-      _mm_store_ps(
+      simde_mm_store_ps(
           (float*)&line[x],
-          _mm_add_ps(_mm_add_ps(_mm_add_ps(hi[x - (m128_pitch_hi << 1)],
-                                           hi[x + (m128_pitch_hi << 1)]),
-                                _mm_mul_ps(_mm_add_ps(hi[x - m128_pitch_hi],
-                                                      hi[x + m128_pitch_hi]),
-                                           four)),
-                     _mm_mul_ps(hi[x], six)));
+          simde_mm_add_ps(
+              simde_mm_add_ps(
+                  simde_mm_add_ps(hi[x - (m128_pitch_hi << 1)],
+                                  hi[x + (m128_pitch_hi << 1)]),
+                  simde_mm_mul_ps(simde_mm_add_ps(hi[x - m128_pitch_hi],
+                                                  hi[x + m128_pitch_hi]),
+                                  four)),
+              simde_mm_mul_ps(hi[x], six)));
     }
     Squeeze(line, lo, m128_pitch_lo, m128_pitch_hi, _256th, x_shift);
     lo += m128_pitch_lo;
@@ -692,13 +708,14 @@ void Pyramid::ShrinkThread(__m128* line, __m128* hi, __m128* lo,
     // prepenultimate line
     if (height_odd == 0) {
       for (x = 0; x < m128_pitch_hi; ++x) {
-        line[x] = _mm_add_ps(
-            _mm_add_ps(
-                _mm_add_ps(hi[x - (m128_pitch_hi << 1)], hi[x + m128_pitch_hi]),
-                _mm_mul_ps(
-                    _mm_add_ps(hi[x - m128_pitch_hi], hi[x + m128_pitch_hi]),
-                    four)),
-            _mm_mul_ps(hi[x], six));
+        line[x] = simde_mm_add_ps(
+            simde_mm_add_ps(
+                simde_mm_add_ps(hi[x - (m128_pitch_hi << 1)],
+                                hi[x + m128_pitch_hi]),
+                simde_mm_mul_ps(simde_mm_add_ps(hi[x - m128_pitch_hi],
+                                                hi[x + m128_pitch_hi]),
+                                four)),
+            simde_mm_mul_ps(hi[x], six));
       }
 
       Squeeze(line, lo, m128_pitch_lo, m128_pitch_hi, _256th, x_shift);
@@ -708,16 +725,17 @@ void Pyramid::ShrinkThread(__m128* line, __m128* hi, __m128* lo,
 
       // this case moved from block below
       for (x = 0; x < m128_pitch_hi; ++x) {
-        line[x] = _mm_add_ps(hi[x - (m128_pitch_hi << 1)],
-                             _mm_mul_ps(hi[x - m128_pitch_hi], fifteen));
+        line[x] =
+            simde_mm_add_ps(hi[x - (m128_pitch_hi << 1)],
+                            simde_mm_mul_ps(hi[x - m128_pitch_hi], fifteen));
       }
     } else {
       // penultimate line
       for (x = 0; x < m128_pitch_hi; ++x) {
-        line[x] =
-            _mm_add_ps(_mm_add_ps(_mm_mul_ps(hi[x], eleven),
-                                  _mm_mul_ps(hi[x - m128_pitch_hi], four)),
-                       hi[x - (m128_pitch_hi << 1)]);
+        line[x] = simde_mm_add_ps(
+            simde_mm_add_ps(simde_mm_mul_ps(hi[x], eleven),
+                            simde_mm_mul_ps(hi[x - m128_pitch_hi], four)),
+            hi[x - (m128_pitch_hi << 1)]);
       }
       // other case removed from here, moved into block above
     }
@@ -735,24 +753,24 @@ void Pyramid::ShrinkThread(__m128* line, __m128* hi, __m128* lo,
   }
 }
 
-void Pyramid::Squeeze(__m128* line, __m128* lo, int m128_pitch_lo,
-                      int m128_pitch_hi, __m128 final_mul, bool x_shift) {
+void Pyramid::Squeeze(simde__m128* line, simde__m128* lo, int m128_pitch_lo,
+                      int m128_pitch_hi, simde__m128 final_mul, bool x_shift) {
   int hi_x = 0;
   int lo_x = 0;
 
-  __m128 a;
-  __m128 b;
-  __m128 c;
-  __m128 d;
-  __m128 e;
-  __m128 f;
-  __m128 g;
-  __m128 h;
-  __m128 i;
-  __m128 j;
+  simde__m128 a;
+  simde__m128 b;
+  simde__m128 c;
+  simde__m128 d;
+  simde__m128 e;
+  simde__m128 f;
+  simde__m128 g;
+  simde__m128 h;
+  simde__m128 i;
+  simde__m128 j;
 
-  const __m128 four = _mm_set_ps1(4);
-  const __m128 six = _mm_set_ps1(6);
+  const simde__m128 four = simde_mm_set_ps1(4);
+  const simde__m128 six = simde_mm_set_ps1(6);
 
   if (x_shift) {
     memmove(&((float*)line)[1], line, (m128_pitch_hi << 4) - 4);
@@ -760,13 +778,13 @@ void Pyramid::Squeeze(__m128* line, __m128* lo, int m128_pitch_lo,
 
   while (lo_x < m128_pitch_lo) {
     if (hi_x >= m128_pitch_hi) {  // was >= ... + 1
-      b = _mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 3, 3, 3));
+      b = simde_mm_shuffle_ps(a, a, SIMDE_MM_SHUFFLE(3, 3, 3, 3));
       c = b;
     } else {
       b = line[hi_x++];
       c = line[hi_x++];
       if (lo_x == 0) {
-        a = _mm_shuffle_ps(b, b, _MM_SHUFFLE(0, 0, 0, 0));
+        a = simde_mm_shuffle_ps(b, b, SIMDE_MM_SHUFFLE(0, 0, 0, 0));
       }
     }
 
@@ -775,27 +793,31 @@ void Pyramid::Squeeze(__m128* line, __m128* lo, int m128_pitch_lo,
     // c = MNOP
 
     // shuffle to four pairs of outer pixels
-    f = _mm_shuffle_ps(a, b, _MM_SHUFFLE(2, 0, 2, 0));  // EGIK
-    g = _mm_shuffle_ps(b, c, _MM_SHUFFLE(2, 0, 2, 0));  // IKMO
-    d = _mm_shuffle_ps(f, f, _MM_SHUFFLE(3, 1, 2, 0));  // EIGK
-    e = _mm_shuffle_ps(g, g, _MM_SHUFFLE(3, 1, 2, 0));  // IMKO
-    d = _mm_hadd_ps(d, e);
+    f = simde_mm_shuffle_ps(a, b, SIMDE_MM_SHUFFLE(2, 0, 2, 0));  // EGIK
+    g = simde_mm_shuffle_ps(b, c, SIMDE_MM_SHUFFLE(2, 0, 2, 0));  // IKMO
+    d = simde_mm_shuffle_ps(f, f, SIMDE_MM_SHUFFLE(3, 1, 2, 0));  // EIGK
+    e = simde_mm_shuffle_ps(g, g, SIMDE_MM_SHUFFLE(3, 1, 2, 0));  // IMKO
+    d = simde_mm_hadd_ps(d, e);
 
     // shuffle to four pairs of inner pixels
-    h = _mm_shuffle_ps(
-        a, b, _MM_SHUFFLE(1, 1, 3, 1));  // FHJJ // prev BDFF (should be BDDF)
-    i = _mm_shuffle_ps(
-        b, c, _MM_SHUFFLE(1, 1, 3, 1));  // JLNN // prev FHJJ (should be FHHJ)
-    h = _mm_shuffle_ps(h, h, _MM_SHUFFLE(3, 1, 1, 0));  // FHHJ
-    i = _mm_shuffle_ps(i, i, _MM_SHUFFLE(3, 1, 1, 0));  // JLLN
-    h = _mm_mul_ps(four, _mm_hadd_ps(h, i));
+    h = simde_mm_shuffle_ps(
+        a, b,
+        SIMDE_MM_SHUFFLE(1, 1, 3, 1));  // FHJJ // prev BDFF (should be BDDF)
+    i = simde_mm_shuffle_ps(
+        b, c,
+        SIMDE_MM_SHUFFLE(1, 1, 3, 1));  // JLNN // prev FHJJ (should be FHHJ)
+    h = simde_mm_shuffle_ps(h, h, SIMDE_MM_SHUFFLE(3, 1, 1, 0));  // FHHJ
+    i = simde_mm_shuffle_ps(i, i, SIMDE_MM_SHUFFLE(3, 1, 1, 0));  // JLLN
+    h = simde_mm_mul_ps(four, simde_mm_hadd_ps(h, i));
 
     // shuffle to four central pixels
-    j = _mm_mul_ps(six, _mm_shuffle_ps(f, g, _MM_SHUFFLE(2, 1, 2, 1)));  // GIKM
+    j = simde_mm_mul_ps(
+        six, simde_mm_shuffle_ps(f, g, SIMDE_MM_SHUFFLE(2, 1, 2, 1)));  // GIKM
 
     // store
-    _mm_store_ps((float*)&lo[lo_x++],
-                 _mm_mul_ps(_mm_add_ps(d, _mm_add_ps(h, j)), final_mul));
+    simde_mm_store_ps(
+        (float*)&lo[lo_x++],
+        simde_mm_mul_ps(simde_mm_add_ps(d, simde_mm_add_ps(h, j)), final_mul));
     a = c;
   }
 }
@@ -826,44 +848,46 @@ void Pyramid::LaplaceCollapse(int n_levels, bool Collapse) {
   }
 }
 
-void Pyramid::LaplaceExpand(__m128* hi, __m128* lo, int m128_pitch_hi,
+void Pyramid::LaplaceExpand(simde__m128* hi, simde__m128* lo, int m128_pitch_hi,
                             int m128_pitch_lo) {
-  __m128 p;
-  __m128 q;
+  simde__m128 p;
+  simde__m128 q;
 
-  const __m128 expand0 = _mm_set_ps(0, 0.125f, 0.75f, 0.125f);
-  const __m128 expand1 = _mm_set_ps(0, 0.5f, 0.5f, 0);
-  const __m128 expand2 = _mm_set_ps(0.125, 0.75f, 0.125f, 0);
-  const __m128 expand3 = _mm_set_ps(0.5f, 0.5f, 0, 0);
+  const simde__m128 expand0 = simde_mm_set_ps(0, 0.125f, 0.75f, 0.125f);
+  const simde__m128 expand1 = simde_mm_set_ps(0, 0.5f, 0.5f, 0);
+  const simde__m128 expand2 = simde_mm_set_ps(0.125, 0.75f, 0.125f, 0);
+  const simde__m128 expand3 = simde_mm_set_ps(0.5f, 0.5f, 0, 0);
 
   int x_hi = 0;
   int x_lo = 0;
 
-  p = _mm_load_ps((float*)lo);
+  p = simde_mm_load_ps((float*)lo);
   ++x_lo;
 
   while (x_hi < m128_pitch_hi) {
-    _mm_store_ps(
+    simde_mm_store_ps(
         (float*)&hi[x_hi],
-        _mm_hadd_ps(
-            _mm_hadd_ps(_mm_mul_ps(p, expand0), _mm_mul_ps(p, expand1)),
-            _mm_hadd_ps(_mm_mul_ps(p, expand2), _mm_mul_ps(p, expand3))));
+        simde_mm_hadd_ps(simde_mm_hadd_ps(simde_mm_mul_ps(p, expand0),
+                                          simde_mm_mul_ps(p, expand1)),
+                         simde_mm_hadd_ps(simde_mm_mul_ps(p, expand2),
+                                          simde_mm_mul_ps(p, expand3))));
 
     ++x_hi;
 
     if (x_lo < m128_pitch_lo) {
-      q = lo[x_lo];  // _mm_load_ps((float*)&lo[x_lo]);
+      q = lo[x_lo];  // simde_mm_load_ps((float*)&lo[x_lo]);
     } else if (x_lo == m128_pitch_lo) {
-      q = _mm_shuffle_ps(q, q, _MM_SHUFFLE(3, 3, 3, 3));
+      q = simde_mm_shuffle_ps(q, q, SIMDE_MM_SHUFFLE(3, 3, 3, 3));
     }
     ++x_lo;
-    p = _mm_shuffle_ps(p, q, _MM_SHUFFLE(1, 0, 3, 2));
+    p = simde_mm_shuffle_ps(p, q, SIMDE_MM_SHUFFLE(1, 0, 3, 2));
 
-    _mm_store_ps(
+    simde_mm_store_ps(
         (float*)&hi[x_hi],
-        _mm_hadd_ps(
-            _mm_hadd_ps(_mm_mul_ps(p, expand0), _mm_mul_ps(p, expand1)),
-            _mm_hadd_ps(_mm_mul_ps(p, expand2), _mm_mul_ps(p, expand3))));
+        simde_mm_hadd_ps(simde_mm_hadd_ps(simde_mm_mul_ps(p, expand0),
+                                          simde_mm_mul_ps(p, expand1)),
+                         simde_mm_hadd_ps(simde_mm_mul_ps(p, expand2),
+                                          simde_mm_mul_ps(p, expand3))));
 
     p = q;
 
@@ -871,21 +895,21 @@ void Pyramid::LaplaceExpand(__m128* hi, __m128* lo, int m128_pitch_hi,
   }
 }
 
-void Pyramid::LaplaceExpandShifted(__m128* hi, __m128* lo, int m128_pitch_hi,
-                                   int m128_pitch_lo) {
-  __m128 p;
-  __m128 q;
-  __m128 t;
+void Pyramid::LaplaceExpandShifted(simde__m128* hi, simde__m128* lo,
+                                   int m128_pitch_hi, int m128_pitch_lo) {
+  simde__m128 p;
+  simde__m128 q;
+  simde__m128 t;
 
-  const __m128 expand0 = _mm_set_ps(0, 0.5f, 0.5f, 0);
-  const __m128 expand1 = _mm_set_ps(0.125, 0.75f, 0.125f, 0);
-  const __m128 expand2 = _mm_set_ps(0.5f, 0.5f, 0, 0);
-  const __m128 expand3 = _mm_set_ps(0, 0.125f, 0.75f, 0.125f);
+  const simde__m128 expand0 = simde_mm_set_ps(0, 0.5f, 0.5f, 0);
+  const simde__m128 expand1 = simde_mm_set_ps(0.125, 0.75f, 0.125f, 0);
+  const simde__m128 expand2 = simde_mm_set_ps(0.5f, 0.5f, 0, 0);
+  const simde__m128 expand3 = simde_mm_set_ps(0, 0.125f, 0.75f, 0.125f);
 
   int x_hi = 0;
   int x_lo = 0;
 
-  p = _mm_load_ps((float*)lo);
+  p = simde_mm_load_ps((float*)lo);
   ++x_lo;
 
   while (x_hi < m128_pitch_hi) {
@@ -894,24 +918,26 @@ void Pyramid::LaplaceExpandShifted(__m128* hi, __m128* lo, int m128_pitch_hi,
     if (x_lo < m128_pitch_lo) {
       q = lo[x_lo];
     } else if (x_lo == m128_pitch_lo) {
-      q = _mm_shuffle_ps(q, q, _MM_SHUFFLE(3, 3, 3, 3));
+      q = simde_mm_shuffle_ps(q, q, SIMDE_MM_SHUFFLE(3, 3, 3, 3));
     }
     ++x_lo;
-    p = _mm_shuffle_ps(p, q, _MM_SHUFFLE(1, 0, 3, 2));
+    p = simde_mm_shuffle_ps(p, q, SIMDE_MM_SHUFFLE(1, 0, 3, 2));
 
-    _mm_store_ps(
+    simde_mm_store_ps(
         (float*)&hi[x_hi],
-        _mm_hadd_ps(
-            _mm_hadd_ps(_mm_mul_ps(t, expand0), _mm_mul_ps(t, expand1)),
-            _mm_hadd_ps(_mm_mul_ps(t, expand2), _mm_mul_ps(p, expand3))));
+        simde_mm_hadd_ps(simde_mm_hadd_ps(simde_mm_mul_ps(t, expand0),
+                                          simde_mm_mul_ps(t, expand1)),
+                         simde_mm_hadd_ps(simde_mm_mul_ps(t, expand2),
+                                          simde_mm_mul_ps(p, expand3))));
 
     ++x_hi;
 
-    _mm_store_ps(
+    simde_mm_store_ps(
         (float*)&hi[x_hi],
-        _mm_hadd_ps(
-            _mm_hadd_ps(_mm_mul_ps(p, expand0), _mm_mul_ps(p, expand1)),
-            _mm_hadd_ps(_mm_mul_ps(p, expand2), _mm_mul_ps(q, expand3))));
+        simde_mm_hadd_ps(simde_mm_hadd_ps(simde_mm_mul_ps(p, expand0),
+                                          simde_mm_mul_ps(p, expand1)),
+                         simde_mm_hadd_ps(simde_mm_mul_ps(p, expand2),
+                                          simde_mm_mul_ps(q, expand3))));
 
     p = q;
 
@@ -919,37 +945,41 @@ void Pyramid::LaplaceExpandShifted(__m128* hi, __m128* lo, int m128_pitch_hi,
   }
 }
 
-void Pyramid::LaplaceLine2(__m128* hi, __m128* temp1, __m128* temp2,
-                           int m128_pitch) {
-  const __m128 half = _mm_set_ps1(0.5f);
+void Pyramid::LaplaceLine2(simde__m128* hi, simde__m128* temp1,
+                           simde__m128* temp2, int m128_pitch) {
+  const simde__m128 half = simde_mm_set_ps1(0.5f);
 
   for (int x = 0; x < m128_pitch; ++x) {
-    _mm_store_ps(
+    simde_mm_store_ps(
         (float*)&hi[x],
-        _mm_sub_ps(_mm_mul_ps(_mm_add_ps(temp1[x], temp2[x]), half), hi[x]));
+        simde_mm_sub_ps(
+            simde_mm_mul_ps(simde_mm_add_ps(temp1[x], temp2[x]), half), hi[x]));
   }
 }
 
-void Pyramid::LaplaceLine3(__m128* hi, __m128* temp1, __m128* temp2,
-                           __m128* temp3, int m128_pitch) {
-  static const __m128 eighth = _mm_set_ps1(0.125f);
-  static const __m128 three_quarters = _mm_set_ps1(0.75f);
+void Pyramid::LaplaceLine3(simde__m128* hi, simde__m128* temp1,
+                           simde__m128* temp2, simde__m128* temp3,
+                           int m128_pitch) {
+  static const simde__m128 eighth = simde_mm_set_ps1(0.125f);
+  static const simde__m128 three_quarters = simde_mm_set_ps1(0.75f);
 
   for (int x = 0; x < m128_pitch; ++x) {
-    _mm_store_ps(
+    simde_mm_store_ps(
         (float*)&hi[x],
-        _mm_sub_ps(
-            _mm_add_ps(_mm_mul_ps(_mm_add_ps(temp1[x], temp3[x]), eighth),
-                       _mm_mul_ps(temp2[x], three_quarters)),
+        simde_mm_sub_ps(
+            simde_mm_add_ps(
+                simde_mm_mul_ps(simde_mm_add_ps(temp1[x], temp3[x]), eighth),
+                simde_mm_mul_ps(temp2[x], three_quarters)),
             hi[x]));
   }
 }
 
-__m128* GetLine(const Pyramid::Level& level, int y) {
-  return (__m128*)(level.data.get() + static_cast<ptrdiff_t>(y) * level.pitch);
+simde__m128* GetLine(const Pyramid::Level& level, int y) {
+  return (simde__m128*)(level.data.get() +
+                        static_cast<ptrdiff_t>(y) * level.pitch);
 }
 
-void GetExpandedLine(const Pyramid::Level& level, __m128* temp, int y) {
+void GetExpandedLine(const Pyramid::Level& level, simde__m128* temp, int y) {
   if (level.upper_x_shift) {
     Pyramid::LaplaceExpandShifted(temp, GetLine(level, y),
                                   level.upper_m128_pitch, level.m128_pitch);
@@ -972,10 +1002,10 @@ void Pyramid::LaplaceThreadWrapper(Level* upper_level, Level* lower_level,
 }
 
 void Pyramid::LaplaceThread(Level* upper_level, Level* lower_level, int sy,
-                            int ey, __m128* temp1, __m128* temp2,
-                            __m128* temp3) {
-  __m128* hi = (__m128*)upper_level->data.get() +
-               static_cast<ptrdiff_t>(sy) * upper_level->m128_pitch;
+                            int ey, simde__m128* temp1, simde__m128* temp2,
+                            simde__m128* temp3) {
+  simde__m128* hi = (simde__m128*)upper_level->data.get() +
+                    static_cast<ptrdiff_t>(sy) * upper_level->m128_pitch;
 
   int lo_y = sy >> 1;
 
@@ -997,7 +1027,7 @@ void Pyramid::LaplaceThread(Level* upper_level, Level* lower_level, int sy,
       // NOLINTNEXTLINE(readability-suspicious-call-argument)
       LaplaceLine2(hi, temp2, temp3, upper_level->m128_pitch);
 
-      __m128* temp = temp1;
+      simde__m128* temp = temp1;
       temp1 = temp2;
       temp2 = temp3;
       temp3 = temp;
@@ -1015,23 +1045,23 @@ float Pyramid::Average() {
   int y;
   int fours = levels_[0].width >> 2;
 
-  __m128 m128_total = {0};
-  __m128 one = _mm_set_ps1(1.0f);
+  simde__m128 m128_total = {0};
+  simde__m128 one = simde_mm_set_ps1(1.0f);
   double total = 0;
   double row_total;
 
-  auto* data = (__m128*)levels_[0].data.get();
+  auto* data = (simde__m128*)levels_[0].data.get();
 
   for (y = 0; y < levels_[0].height; ++y) {
-    m128_total = _mm_setzero_ps();
+    m128_total = simde_mm_setzero_ps();
 
     for (x = 0; x < fours; ++x) {
-      m128_total = _mm_add_ps(m128_total, data[x]);
+      m128_total = simde_mm_add_ps(m128_total, data[x]);
     }
 
-    m128_total = _mm_hadd_ps(m128_total, m128_total);
-    m128_total = _mm_hadd_ps(m128_total, m128_total);
-    row_total = _mm_cvtss_f32(m128_total);
+    m128_total = simde_mm_hadd_ps(m128_total, m128_total);
+    m128_total = simde_mm_hadd_ps(m128_total, m128_total);
+    row_total = simde_mm_cvtss_f32(m128_total);
 
     for (x <<= 2; x < levels_[0].width; ++x) {
       row_total += ((float*)data)[x];
@@ -1052,22 +1082,23 @@ float Pyramid::Average() {
  * Add
  ***********************************************************************/
 void Pyramid::Add(float add, int levels) {
-  __m128 __add = _mm_set_ps1(add);
+  simde__m128 __add = simde_mm_set_ps1(add);
 
   int lim = (std::min)(levels, (int)levels_.size() - 1);
 
   for (int l = 0; l < lim; ++l) {
-    auto* data = (__m128*)levels_[l].data.get();
+    auto* data = (simde__m128*)levels_[l].data.get();
 
     auto tasks = mt::MultiFuture<void>{};
     for (int t = 0; t < (int)levels_[l].bands.size() - 1; ++t) {
       tasks.push_back(threadpool_->Queue([=, this]() {
-        __m128* data =
-            (__m128*)levels_[l].data.get() +
+        simde__m128* data =
+            (simde__m128*)levels_[l].data.get() +
             static_cast<ptrdiff_t>(levels_[l].bands[t]) * levels_[l].m128_pitch;
         for (int y = levels_[l].bands[t]; y < levels_[l].bands[t + 1]; ++y) {
           for (int x = 0; x < levels_[l].m128_pitch; ++x) {
-            _mm_store_ps((float*)&data[x], _mm_add_ps(__add, data[x]));
+            simde_mm_store_ps((float*)&data[x],
+                              simde_mm_add_ps(__add, data[x]));
           }
           data += levels_[l].m128_pitch;
         }
@@ -1085,18 +1116,19 @@ void Pyramid::MultiplyAndAdd(float add, float mul, int levels) {
   int i;
   int x;
   int y;
-  __m128 __add = _mm_set_ps1(add);
-  __m128 __mul = _mm_set_ps1(mul);
+  simde__m128 __add = simde_mm_set_ps1(add);
+  simde__m128 __mul = simde_mm_set_ps1(mul);
 
   int lim = (std::min)(levels, (int)levels_.size() - 1);
 
   for (i = 0; i < lim; ++i) {
-    auto* data = (__m128*)levels_[i].data.get();
+    auto* data = (simde__m128*)levels_[i].data.get();
 
     for (y = 0; y < levels_[i].height; ++y) {
       for (x = 0; x < levels_[i].m128_pitch; ++x) {
-        _mm_store_ps((float*)&data[x],
-                     _mm_add_ps(__add, _mm_mul_ps(data[x], __mul)));
+        simde_mm_store_ps(
+            (float*)&data[x],
+            simde_mm_add_ps(__add, simde_mm_mul_ps(data[x], __mul)));
       }
       data += levels_[i].m128_pitch;
     }
@@ -1109,19 +1141,21 @@ void Pyramid::MultiplyAndAdd(float add, float mul, int levels) {
 void Pyramid::MultiplyAddClamp(float add, float mul, int level) {
   int x;
   int y;
-  __m128 __add = _mm_set_ps1(add);
-  __m128 __mul = _mm_set_ps1(mul);
-  __m128 __min = _mm_set_ps1(1.0f);
-  __m128 __max = _mm_set_ps1(0.0f);
+  simde__m128 __add = simde_mm_set_ps1(add);
+  simde__m128 __mul = simde_mm_set_ps1(mul);
+  simde__m128 __min = simde_mm_set_ps1(1.0f);
+  simde__m128 __max = simde_mm_set_ps1(0.0f);
 
-  auto* data = (__m128*)levels_[level].data.get();
+  auto* data = (simde__m128*)levels_[level].data.get();
 
   for (y = 0; y < levels_[level].height; ++y) {
     for (x = 0; x < levels_[level].m128_pitch; ++x) {
-      _mm_store_ps(
+      simde_mm_store_ps(
           (float*)&data[x],
-          _mm_max_ps(
-              _mm_min_ps(_mm_add_ps(__add, _mm_mul_ps(data[x], __mul)), __min),
+          simde_mm_max_ps(
+              simde_mm_min_ps(
+                  simde_mm_add_ps(__add, simde_mm_mul_ps(data[x], __mul)),
+                  __min),
               __max));
     }
     data += levels_[level].m128_pitch;
@@ -1144,14 +1178,15 @@ void Pyramid::Multiply(int level, float mul) {
 
   int x;
   int y;
-  __m128 __mul = _mm_set_ps1(mul);
+  simde__m128 __mul = simde_mm_set_ps1(mul);
 
-  auto* data = (__m128*)levels_[level].data.get();
+  auto* data = (simde__m128*)levels_[level].data.get();
 
   for (y = 0; y < levels_[level].height; ++y) {
     for (x = 0; x < levels_[level].m128_pitch; ++x) {
-      _mm_store_ps((float*)&data[x],
-                   _mm_mul_ps(_mm_load_ps((float*)&data[x]), __mul));
+      simde_mm_store_ps(
+          (float*)&data[x],
+          simde_mm_mul_ps(simde_mm_load_ps((float*)&data[x]), __mul));
     }
     data += levels_[level].m128_pitch;
   }
@@ -1165,13 +1200,14 @@ void Pyramid::MultplyByPyramid(Pyramid* b) {
   int y;
 
   for (int l = 0; l < (int)levels_.size() - 1; ++l) {
-    auto* data = (__m128*)levels_[l].data.get();
-    auto* _b = (__m128*)b->levels_[l].data.get();
+    auto* data = (simde__m128*)levels_[l].data.get();
+    auto* _b = (simde__m128*)b->levels_[l].data.get();
 
     for (y = 0; y < levels_[l].height; ++y) {
       for (x = 0; x < levels_[l].m128_pitch; ++x) {
-        _mm_store_ps((float*)&data[x], _mm_mul_ps(_mm_load_ps((float*)&data[x]),
-                                                  _mm_load_ps((float*)&_b[x])));
+        simde_mm_store_ps((float*)&data[x],
+                          simde_mm_mul_ps(simde_mm_load_ps((float*)&data[x]),
+                                          simde_mm_load_ps((float*)&_b[x])));
       }
       data += levels_[l].m128_pitch;
       _b += levels_[l].m128_pitch;
@@ -1187,9 +1223,9 @@ void Pyramid::Fuse(Pyramid* _b, Pyramid* mask, bool pre = false,
   int l;
 
   for (l = 0; l < (int)levels_.size(); ++l) {
-    //  fuse_thread((__m128*)levels[l].data,
-    //(__m128*)_b->levels[l].data,
-    //(__m128*)mask->levels[l].data, m128_pitch, 0, levels[l].height, pre,
+    //  fuse_thread((simde__m128*)levels[l].data,
+    //(simde__m128*)_b->levels[l].data,
+    //(simde__m128*)mask->levels[l].data, m128_pitch, 0, levels[l].height, pre,
     // black);
 
     // fuse doesn't see any gains from multithreading; leave this here as
@@ -1198,10 +1234,11 @@ void Pyramid::Fuse(Pyramid* _b, Pyramid* mask, bool pre = false,
     auto tasks = mt::MultiFuture<void>{};
     for (int t = 0; t < (int)levels_[l].bands.size() - 1; ++t) {
       tasks.push_back(threadpool_->Queue([=, this] {
-        FuseThread((__m128*)levels_[l].data.get(),
-                   (__m128*)_b->levels_[l].data.get(),
-                   (__m128*)mask->levels_[l].data.get(), levels_[l].m128_pitch,
-                   levels_[l].bands[t], levels_[l].bands[t + 1], pre, black);
+        FuseThread((simde__m128*)levels_[l].data.get(),
+                   (simde__m128*)_b->levels_[l].data.get(),
+                   (simde__m128*)mask->levels_[l].data.get(),
+                   levels_[l].m128_pitch, levels_[l].bands[t],
+                   levels_[l].bands[t + 1], pre, black);
       }));
     }
     tasks.wait();
@@ -1209,8 +1246,8 @@ void Pyramid::Fuse(Pyramid* _b, Pyramid* mask, bool pre = false,
   }
 }
 
-void Pyramid::FuseThread(__m128* a, __m128* b, __m128* m, int m128_pitch,
-                         int sy, int ey, bool pre, int black) {
+void Pyramid::FuseThread(simde__m128* a, simde__m128* b, simde__m128* m,
+                         int m128_pitch, int sy, int ey, bool pre, int black) {
   int p;
   int add = sy * m128_pitch;
   int count = (ey - sy) * m128_pitch;
@@ -1221,26 +1258,31 @@ void Pyramid::FuseThread(__m128* a, __m128* b, __m128* m, int m128_pitch,
 
   if (!pre) {
     for (p = 0; p < count; ++p) {
-      __m128 _a = a[p];
-      _mm_store_ps((float*)&a[p],
-                   _mm_add_ps(_a, _mm_mul_ps(_mm_sub_ps(b[p], _a), m[p])));
+      simde__m128 _a = a[p];
+      simde_mm_store_ps(
+          (float*)&a[p],
+          simde_mm_add_ps(_a,
+                          simde_mm_mul_ps(simde_mm_sub_ps(b[p], _a), m[p])));
     }
   } else {
-    __m128 ones = _mm_set_ps1(1.0f);
-    __m128 blacks = _mm_set_ps1((float)black);
+    simde__m128 ones = simde_mm_set_ps1(1.0f);
+    simde__m128 blacks = simde_mm_set_ps1((float)black);
     if (black != 0) {
       for (p = 0; p < count; ++p) {
-        _mm_store_ps(
+        simde_mm_store_ps(
             (float*)&a[p],
-            _mm_add_ps(blacks, _mm_add_ps(_mm_sub_ps(b[p], blacks),
-                                          _mm_mul_ps(_mm_sub_ps(a[p], blacks),
-                                                     _mm_sub_ps(ones, m[p])))));
+            simde_mm_add_ps(
+                blacks,
+                simde_mm_add_ps(simde_mm_sub_ps(b[p], blacks),
+                                simde_mm_mul_ps(simde_mm_sub_ps(a[p], blacks),
+                                                simde_mm_sub_ps(ones, m[p])))));
       }
     } else {
       for (p = 0; p < count; ++p) {
-        _mm_store_ps(
+        simde_mm_store_ps(
             (float*)&a[p],
-            _mm_add_ps(b[p], _mm_mul_ps(a[p], _mm_sub_ps(ones, m[p]))));
+            simde_mm_add_ps(
+                b[p], simde_mm_mul_ps(a[p], simde_mm_sub_ps(ones, m[p]))));
       }
     }
   }
@@ -1249,17 +1291,19 @@ void Pyramid::FuseThread(__m128* a, __m128* b, __m128* m, int m128_pitch,
 void Pyramid::Fuse(Pyramid* b, float weight) {
   int l;
   int p;
-  __m128 w = _mm_set_ps1(weight);
+  simde__m128 w = simde_mm_set_ps1(weight);
 
   for (l = 0; l < (int)levels_.size(); ++l) {
-    auto* _a = (__m128*)levels_[l].data.get();
-    auto* _b = (__m128*)b->levels_[l].data.get();
+    auto* _a = (simde__m128*)levels_[l].data.get();
+    auto* _b = (simde__m128*)b->levels_[l].data.get();
 
     int count = levels_[l].height * levels_[l].m128_pitch;
     for (p = 0; p < count; ++p) {
-      __m128 __a = _a[p];
-      _mm_store_ps((float*)&_a[p],
-                   _mm_add_ps(__a, _mm_mul_ps(_mm_sub_ps(_b[p], __a), w)));
+      simde__m128 __a = _a[p];
+      simde_mm_store_ps(
+          (float*)&_a[p],
+          simde_mm_add_ps(__a,
+                          simde_mm_mul_ps(simde_mm_sub_ps(_b[p], __a), w)));
     }
   }
 }
@@ -1272,27 +1316,30 @@ void Pyramid::Denoise(int level, float power, bool gamma) {
   if (power == 0) return;
 
   int x, y;
-  __m128 one = _mm_set_ps1(1);
-  __m128 half = _mm_set_ps1(0.5f);
-  __m128 _power = _mm_set_ps1(power);
-  __m128 pi = _mm_set_ps1(3.14159265359f);
-  __m128i andi = _mm_set_epi32(0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff);
-  __m128* _and = (__m128*)&andi;
+  simde__m128 one = simde_mm_set_ps1(1);
+  simde__m128 half = simde_mm_set_ps1(0.5f);
+  simde__m128 _power = simde_mm_set_ps1(power);
+  simde__m128 pi = simde_mm_set_ps1(3.14159265359f);
+  simde__m128i andi =
+      simde_mm_set_epi32(0x7fffffff, 0x7fffffff, 0x7fffffff, 0x7fffffff);
+  simde__m128* _and = (simde__m128*)&andi;
 
-  if (gamma) _power = _mm_mul_ps(_power, _power);
-  _power = _mm_div_ps(one, _power);
+  if (gamma) _power = simde_mm_mul_ps(_power, _power);
+  _power = simde_mm_div_ps(one, _power);
 
-  __m128* data = (__m128*)levels[level].data;
+  simde__m128* data = (simde__m128*)levels[level].data;
   for (y = 0; y < levels[level].height; ++y) {
     for (x = 0; x < levels[level].m128_pitch; ++x) {
-      __m128 d = data[x];
-      _mm_store_ps(
+      simde__m128 d = data[x];
+      simde_mm_store_ps(
           (float*)&data[x],
-          _mm_mul_ps(
-              _mm_mul_ps(
-                  _mm_sub_ps(
-                      one, cos_ps(_mm_min_ps(
-                               _mm_and_ps(_mm_mul_ps(d, _power), *_and), pi))),
+          simde_mm_mul_ps(
+              simde_mm_mul_ps(
+                  simde_mm_sub_ps(
+                      one,
+                      cos_ps(simde_mm_min_ps(
+                          simde_mm_and_ps(simde_mm_mul_ps(d, _power), *_and),
+                          pi))),
                   half),
               d));
     }
@@ -1341,19 +1388,19 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
   float* line2 = line1 + levels_[0].pitch;
   float* line3 = line2 + levels_[0].pitch;
   float* out = transpose->levels_[0].data.get() + sy;
-  __m128 temp1;
-  __m128 temp2;
+  simde__m128 temp1;
+  simde__m128 temp2;
 
   int iradius = (int)std::floor(radius);
-  __m128 irp1 = _mm_set_ps1((float)(iradius + 1));
-  __m128 mul = _mm_set_ps1(radius - iradius);
-  __m128 acc;
+  simde__m128 irp1 = simde_mm_set_ps1((float)(iradius + 1));
+  simde__m128 mul = simde_mm_set_ps1(radius - iradius);
+  simde__m128 acc;
 
   int left;
   int right;
 
   auto blur_sse_get = [line3, line2, line1, line0](int x) {
-    return _mm_set_ps(line3[x], line2[x], line1[x], line0[x]);
+    return simde_mm_set_ps(line3[x], line2[x], line1[x], line0[x]);
   };
 
   // +3 is probably not necessary because all bands are mod 4
@@ -1361,17 +1408,17 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
 
   if (iradius < levels_[0].width >> 1) {
     for (y = 0; y < fours; ++y) {
-      acc = _mm_setzero_ps();
+      acc = simde_mm_setzero_ps();
       left = 0;
 
       temp1 = blur_sse_get(left);
       left++;
 
-      acc = _mm_mul_ps(temp1, irp1);
+      acc = simde_mm_mul_ps(temp1, irp1);
       for (right = 1; right < iradius + 1;) {
         temp2 = blur_sse_get(right);
         right++;
-        acc = _mm_add_ps(acc, temp2);
+        acc = simde_mm_add_ps(acc, temp2);
       }
 
       x = 0;
@@ -1381,35 +1428,38 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
       for (i = 0; i <= iradius; ++i) {
         temp2 = blur_sse_get(right);
         right++;
-        _mm_store_ps(
+        simde_mm_store_ps(
             &out[o],
-            _mm_add_ps(acc, _mm_mul_ps(_mm_add_ps(temp1, temp2), mul)));
+            simde_mm_add_ps(
+                acc, simde_mm_mul_ps(simde_mm_add_ps(temp1, temp2), mul)));
         o += transpose->levels_[0].pitch;
-        acc = _mm_add_ps(_mm_sub_ps(temp2, temp1), acc);
+        acc = simde_mm_add_ps(simde_mm_sub_ps(temp2, temp1), acc);
         ++x;
       }
 
       while (right < levels_[0].width) {
         temp2 = blur_sse_get(right);
         right++;
-        _mm_store_ps(
+        simde_mm_store_ps(
             &out[o],
-            _mm_add_ps(acc, _mm_mul_ps(_mm_add_ps(temp1, temp2), mul)));
+            simde_mm_add_ps(
+                acc, simde_mm_mul_ps(simde_mm_add_ps(temp1, temp2), mul)));
         o += transpose->levels_[0].pitch;
         temp1 = blur_sse_get(left);
         left++;
-        acc = _mm_add_ps(_mm_sub_ps(temp2, temp1), acc);
+        acc = simde_mm_add_ps(simde_mm_sub_ps(temp2, temp1), acc);
         ++x;
       }
 
       while (x < levels_[0].width) {
-        _mm_store_ps(
+        simde_mm_store_ps(
             &out[o],
-            _mm_add_ps(acc, _mm_mul_ps(_mm_add_ps(temp1, temp2), mul)));
+            simde_mm_add_ps(
+                acc, simde_mm_mul_ps(simde_mm_add_ps(temp1, temp2), mul)));
         o += transpose->levels_[0].pitch;
         temp1 = blur_sse_get(left);
         left++;
-        acc = _mm_add_ps(_mm_sub_ps(temp2, temp1), acc);
+        acc = simde_mm_add_ps(simde_mm_sub_ps(temp2, temp1), acc);
         ++x;
       }
 
@@ -1422,17 +1472,17 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
   } else {
     // if radius is wider than image
     for (y = 0; y < fours; ++y) {
-      acc = _mm_setzero_ps();
+      acc = simde_mm_setzero_ps();
 
       temp1 = blur_sse_get(0);
-      acc = _mm_mul_ps(temp1, irp1);
+      acc = simde_mm_mul_ps(temp1, irp1);
       right = 1;
       for (x = 1; x < iradius + 1; ++x) {
         if (right < levels_[0].width) {
           temp2 = blur_sse_get(right);
           ++right;
         }
-        acc = _mm_add_ps(acc, temp2);
+        acc = simde_mm_add_ps(acc, temp2);
       }
 
       x = 0;
@@ -1444,15 +1494,16 @@ void Pyramid::BlurXThread(float radius, Pyramid* transpose, int sy, int ey) {
           temp2 = blur_sse_get(right);
           ++right;
         }
-        _mm_store_ps(
+        simde_mm_store_ps(
             &out[o],
-            _mm_add_ps(acc, _mm_mul_ps(_mm_add_ps(temp1, temp2), mul)));
+            simde_mm_add_ps(
+                acc, simde_mm_mul_ps(simde_mm_add_ps(temp1, temp2), mul)));
         o += transpose->levels_[0].pitch;
         if (left > 0) {
           temp1 = blur_sse_get(left);
         }
         ++left;
-        acc = _mm_add_ps(_mm_sub_ps(temp2, temp1), acc);
+        acc = simde_mm_add_ps(simde_mm_sub_ps(temp2, temp1), acc);
       }
 
       line0 += levels_[0].pitch << 2;
@@ -1517,24 +1568,24 @@ void OutPlanar8(void* dst_vp, F loader, int pitch, const Pyramid::Level& level,
   auto* dst_p = (uint8_t*)dst_vp;
   uint8_t black = chroma ? 0x80 : 0x00;
 
-  __m128 zeroes = _mm_setzero_ps();
-  __m128 maxes = _mm_set_ps1(255.0f);
+  simde__m128 zeroes = simde_mm_setzero_ps();
+  simde__m128 maxes = simde_mm_set_ps1(255.0f);
 
-  __m128i shuffle1 =
-      _mm_set_epi32(0x80808080, 0x80808080, 0x80808080, 0x0c080400);
-  __m128i shuffle2 =
-      _mm_set_epi32(0x80808080, 0x80808080, 0x0c080400, 0x80808080);
-  __m128i shuffle3 =
-      _mm_set_epi32(0x80808080, 0x0c080400, 0x80808080, 0x80808080);
-  __m128i shuffle4 =
-      _mm_set_epi32(0x0c080400, 0x80808080, 0x80808080, 0x80808080);
-  __m128i four_shuffle =
-      _mm_set_epi32(0x80808080, 0x80808080, 0x80808080, 0x0c080400);
-  __m128i pixels;
-  __m128* p_p;
-  auto* p_pt = (__m128*)level.data.get();
+  simde__m128i shuffle1 =
+      simde_mm_set_epi32(0x80808080, 0x80808080, 0x80808080, 0x0c080400);
+  simde__m128i shuffle2 =
+      simde_mm_set_epi32(0x80808080, 0x80808080, 0x0c080400, 0x80808080);
+  simde__m128i shuffle3 =
+      simde_mm_set_epi32(0x80808080, 0x0c080400, 0x80808080, 0x80808080);
+  simde__m128i shuffle4 =
+      simde_mm_set_epi32(0x0c080400, 0x80808080, 0x80808080, 0x80808080);
+  simde__m128i four_shuffle =
+      simde_mm_set_epi32(0x80808080, 0x80808080, 0x80808080, 0x0c080400);
+  simde__m128i pixels;
+  simde__m128* p_p;
+  auto* p_pt = (simde__m128*)level.data.get();
 
-  __m128i* dst_pp_m;
+  simde__m128i* dst_pp_m;
   int* dst_pp_i;
   uint8_t* dst_pp_b;
 
@@ -1560,57 +1611,60 @@ void OutPlanar8(void* dst_vp, F loader, int pitch, const Pyramid::Level& level,
 
   p_pt += (std::size_t)m128_pitch * sy;
 
-  __m128 dither_add;
+  simde__m128 dither_add;
 
-  auto load = [&]() -> __m128 {
+  auto load = [&]() -> simde__m128 {
     return loader((float*)p_p++, dither_add, zeroes, maxes);
   };
 
   for (y = sy; y < ey; y++) {
     switch (y & 3) {
       case 0:
-        dither_add = _mm_set_ps(0.4999f, 0.0f, 0.375f, -0.125f);
+        dither_add = simde_mm_set_ps(0.4999f, 0.0f, 0.375f, -0.125f);
         break;
       case 1:
-        dither_add = _mm_set_ps(-0.25f, 0.25f, -0.375f, 0.125f);
+        dither_add = simde_mm_set_ps(-0.25f, 0.25f, -0.375f, 0.125f);
         break;
       case 2:
-        dither_add = _mm_set_ps(0.3125f, -0.1875f, 0.4375f, -0.0625f);
+        dither_add = simde_mm_set_ps(0.3125f, -0.1875f, 0.4375f, -0.0625f);
         break;
       case 3:
-        dither_add = _mm_set_ps(-0.4375f, 0.0625f, -0.3125f, 0.1875f);
+        dither_add = simde_mm_set_ps(-0.4375f, 0.0625f, -0.3125f, 0.1875f);
         break;
     }
 
-    dst_pp_m = (__m128i*)dst_p;
+    dst_pp_m = (simde__m128i*)dst_p;
     p_p = p_pt;
     for (x = 0; x < sixteens; ++x) {
-      pixels = _mm_shuffle_epi8(_mm_cvtps_epi32(load()), shuffle1);
-      pixels = _mm_or_si128(
-          pixels, _mm_shuffle_epi8(_mm_cvtps_epi32(load()), shuffle2));
-      pixels = _mm_or_si128(
-          pixels, _mm_shuffle_epi8(_mm_cvtps_epi32(load()), shuffle3));
-      pixels = _mm_or_si128(
-          pixels, _mm_shuffle_epi8(_mm_cvtps_epi32(load()), shuffle4));
+      pixels = simde_mm_shuffle_epi8(simde_mm_cvtps_epi32(load()), shuffle1);
+      pixels = simde_mm_or_si128(
+          pixels,
+          simde_mm_shuffle_epi8(simde_mm_cvtps_epi32(load()), shuffle2));
+      pixels = simde_mm_or_si128(
+          pixels,
+          simde_mm_shuffle_epi8(simde_mm_cvtps_epi32(load()), shuffle3));
+      pixels = simde_mm_or_si128(
+          pixels,
+          simde_mm_shuffle_epi8(simde_mm_cvtps_epi32(load()), shuffle4));
 
-      _mm_storeu_si128(dst_pp_m++, pixels);
+      simde_mm_storeu_si128(dst_pp_m++, pixels);
     }
 
     dst_pp_i = (int*)dst_pp_m;
     for (x = 0; x < fours; ++x) {
-      *dst_pp_i++ = _mm_cvtsi128_si32(
-          _mm_shuffle_epi8(_mm_cvtps_epi32(load()), four_shuffle));
+      *dst_pp_i++ = simde_mm_cvtsi128_si32(
+          simde_mm_shuffle_epi8(simde_mm_cvtps_epi32(load()), four_shuffle));
     }
 
     if (singles) {
       dst_pp_b = (uint8_t*)dst_pp_i;
-      __m128i a;
-      a = _mm_cvtps_epi32(load());
-      *dst_pp_b++ = (uint8_t)_mm_extract_epi8(a, 0);
+      simde__m128i a;
+      a = simde_mm_cvtps_epi32(load());
+      *dst_pp_b++ = (uint8_t)simde_mm_extract_epi8(a, 0);
       if (singles > 1) {
-        *dst_pp_b++ = (uint8_t)_mm_extract_epi8(a, 4);
+        *dst_pp_b++ = (uint8_t)simde_mm_extract_epi8(a, 4);
         if (singles == 3) {
-          *dst_pp_b++ = (uint8_t)_mm_extract_epi8(a, 8);
+          *dst_pp_b++ = (uint8_t)simde_mm_extract_epi8(a, 8);
         }
       }
     }
@@ -1637,18 +1691,18 @@ void OutPlanar16(void* dst_vp, F loader, int pitch, const Pyramid::Level& level,
   auto* dst_p = (uint16_t*)dst_vp;
   uint16_t black = chroma ? 0x8000 : 0x0000;
 
-  __m128 zeroes = _mm_setzero_ps();
-  __m128 maxes = _mm_set_ps1(65535.0f);
+  simde__m128 zeroes = simde_mm_setzero_ps();
+  simde__m128 maxes = simde_mm_set_ps1(65535.0f);
 
-  __m128i shuffle1 =
-      _mm_set_epi32(0x80808080, 0x80808080, 0x0d0c0908, 0x05040100);
-  __m128i shuffle2 =
-      _mm_set_epi32(0x0d0c0908, 0x05040100, 0x80808080, 0x80808080);
-  __m128i pixels;
-  __m128* p_p;
-  auto* p_pt = (__m128*)level.data.get();
+  simde__m128i shuffle1 =
+      simde_mm_set_epi32(0x80808080, 0x80808080, 0x0d0c0908, 0x05040100);
+  simde__m128i shuffle2 =
+      simde_mm_set_epi32(0x0d0c0908, 0x05040100, 0x80808080, 0x80808080);
+  simde__m128i pixels;
+  simde__m128* p_p;
+  auto* p_pt = (simde__m128*)level.data.get();
 
-  __m128i* dst_pp_m;
+  simde__m128i* dst_pp_m;
   uint16_t* dst_pp_w;
 
   int m128_pitch = level.pitch >> 2;
@@ -1673,56 +1727,57 @@ void OutPlanar16(void* dst_vp, F loader, int pitch, const Pyramid::Level& level,
 
   p_pt += static_cast<ptrdiff_t>(m128_pitch) * sy;
 
-  __m128 dither_add;
+  simde__m128 dither_add;
 
-  auto load = [&]() -> __m128 {
+  auto load = [&]() -> simde__m128 {
     return loader((float*)p_p++, dither_add, zeroes, maxes);
   };
 
   for (y = sy; y < ey; y++) {
     switch (y & 3) {
       case 0:
-        dither_add = _mm_set_ps(0.4999f, 0.0f, 0.375f, -0.125f);
+        dither_add = simde_mm_set_ps(0.4999f, 0.0f, 0.375f, -0.125f);
         break;
       case 1:
-        dither_add = _mm_set_ps(-0.25f, 0.25f, -0.375f, 0.125f);
+        dither_add = simde_mm_set_ps(-0.25f, 0.25f, -0.375f, 0.125f);
         break;
       case 2:
-        dither_add = _mm_set_ps(0.3125f, -0.1875f, 0.4375f, -0.0625f);
+        dither_add = simde_mm_set_ps(0.3125f, -0.1875f, 0.4375f, -0.0625f);
         break;
       case 3:
-        dither_add = _mm_set_ps(-0.4375f, 0.0625f, -0.3125f, 0.1875f);
+        dither_add = simde_mm_set_ps(-0.4375f, 0.0625f, -0.3125f, 0.1875f);
         break;
     }
 
-    dst_pp_m = (__m128i*)dst_p;
+    dst_pp_m = (simde__m128i*)dst_p;
     p_p = p_pt;
     for (x = 0; x < eights; ++x) {
-      pixels = _mm_shuffle_epi8(_mm_cvtps_epi32(load()), shuffle1);
-      pixels = _mm_or_si128(
-          pixels, _mm_shuffle_epi8(_mm_cvtps_epi32(load()), shuffle2));
+      pixels = simde_mm_shuffle_epi8(simde_mm_cvtps_epi32(load()), shuffle1);
+      pixels = simde_mm_or_si128(
+          pixels,
+          simde_mm_shuffle_epi8(simde_mm_cvtps_epi32(load()), shuffle2));
 
-      _mm_storeu_si128(dst_pp_m++, pixels);
+      simde_mm_storeu_si128(dst_pp_m++, pixels);
     }
 
-    __m128i a;
+    simde__m128i a;
 
     dst_pp_w = (uint16_t*)dst_pp_m;
     if (four) {
-      a = _mm_cvtps_epi32(load());
-      *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 0);
-      *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 2);
-      *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 4);
-      *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 6);
+      a = simde_mm_cvtps_epi32(load());
+      *dst_pp_w++ = (uint16_t)simde_mm_extract_epi16(a, 0);
+      *dst_pp_w++ = (uint16_t)simde_mm_extract_epi16(a, 2);
+      *dst_pp_w++ = (uint16_t)simde_mm_extract_epi16(a, 4);
+      *dst_pp_w++ = (uint16_t)simde_mm_extract_epi16(a, 6);
     }
 
     if (singles) {
-      a = _mm_cvtps_epi32(load());
-      *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 0);
+      a = simde_mm_cvtps_epi32(load());
+      *dst_pp_w++ = (uint16_t)simde_mm_extract_epi16(a, 0);
       if (singles > 1) {
-        *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 2);
+        *dst_pp_w++ = (uint16_t)simde_mm_extract_epi16(a, 2);
         if (singles == 3) {
-          *dst_pp_w++ = (uint16_t)_mm_extract_epi16(a, 4);
+          *dst_pp_w++ = (uint16_t)simde_mm_extract_epi16(a, 4);
         }
       }
     }
@@ -1747,25 +1802,25 @@ void OutPlanar32(void* dst_vp, F loader, int pitch, const Pyramid::Level& level,
                  int band, bool chroma) {
   int x;
   int y;
-  auto* dst_p = (__m128*)dst_vp;
+  auto* dst_p = (simde__m128*)dst_vp;
 
-  __m128 zeroes;
-  __m128 maxes;
-  __m128 dither_add = _mm_set_ps1(0.0f);
+  simde__m128 zeroes;
+  simde__m128 maxes;
+  simde__m128 dither_add = simde_mm_set_ps1(0.0f);
 
-  pitch >>= 2;  // number of floats to number of __m128s
+  pitch >>= 2;  // number of floats to number of simde__m128s
 
   if (chroma) {
-    zeroes = _mm_set_ps1(-0.5f);
-    maxes = _mm_set_ps1(0.5f);
+    zeroes = simde_mm_set_ps1(-0.5f);
+    maxes = simde_mm_set_ps1(0.5f);
   } else {
-    zeroes = _mm_set_ps1(0.0f);
-    maxes = _mm_set_ps1(1.0f);
+    zeroes = simde_mm_set_ps1(0.0f);
+    maxes = simde_mm_set_ps1(1.0f);
   }
 
-  auto* p_p = (__m128*)level.data.get();
+  auto* p_p = (simde__m128*)level.data.get();
 
-  auto load = [&]() -> __m128 {
+  auto load = [&]() -> simde__m128 {
     return loader((float*)&p_p[x], dither_add, zeroes, maxes);
   };
 
@@ -1826,8 +1881,8 @@ void OutInterleaved(T dst_p, F loader, int pitch, const Pyramid::Level& level,
   int x;
   int y;
 
-  __m128 zeroes = _mm_setzero_ps();
-  __m128 maxes = _mm_set_ps1(sizeof(*dst_p) == 1 ? 255.0f : 65535.0f);
+  simde__m128 zeroes = simde_mm_setzero_ps();
+  simde__m128 maxes = simde_mm_set_ps1(sizeof(*dst_p) == 1 ? 255.0f : 65535.0f);
 
   int sy = level.bands[band];
   int ey = level.bands[band + 1];
@@ -1844,11 +1899,11 @@ void OutInterleaved(T dst_p, F loader, int pitch, const Pyramid::Level& level,
   dst_p += (sy - (level.id ? 1 : 0)) * pitch + offset;
 
   int m128_pitch = level.pitch >> 2;
-  __m128* p_p =
-      (__m128*)level.data.get() + static_cast<ptrdiff_t>(m128_pitch) * sy;
+  simde__m128* p_p =
+      (simde__m128*)level.data.get() + static_cast<ptrdiff_t>(m128_pitch) * sy;
   T dst_pp;
 
-  __m128i a;
+  simde__m128i a;
   int fours = level.width >> 2;
   int singles = level.width & 3;
 
@@ -1860,9 +1915,9 @@ void OutInterleaved(T dst_p, F loader, int pitch, const Pyramid::Level& level,
     }
   }
 
-  __m128 dither_add;
+  simde__m128 dither_add;
 
-  auto load = [&]() -> __m128 {
+  auto load = [&]() -> simde__m128 {
     return loader((float*)&p_p[x], dither_add, zeroes, maxes);
   };
 
@@ -1870,53 +1925,53 @@ void OutInterleaved(T dst_p, F loader, int pitch, const Pyramid::Level& level,
   for (y = sy; y < ey; y++) {
     switch (y & 3) {
       case 0:
-        dither_add = _mm_set_ps(0.4999f, 0.0f, 0.375f, -0.125f);
+        dither_add = simde_mm_set_ps(0.4999f, 0.0f, 0.375f, -0.125f);
         break;
       case 1:
-        dither_add = _mm_set_ps(-0.25f, 0.25f, -0.375f, 0.125f);
+        dither_add = simde_mm_set_ps(-0.25f, 0.25f, -0.375f, 0.125f);
         break;
       case 2:
-        dither_add = _mm_set_ps(0.3125f, -0.1875f, 0.4375f, -0.0625f);
+        dither_add = simde_mm_set_ps(0.3125f, -0.1875f, 0.4375f, -0.0625f);
         break;
       case 3:
-        dither_add = _mm_set_ps(-0.4375f, 0.0625f, -0.3125f, 0.1875f);
+        dither_add = simde_mm_set_ps(-0.4375f, 0.0625f, -0.3125f, 0.1875f);
         break;
     }
 
     dst_pp = dst_p;
     x = 0;
     if (level.id > 0) {
-      a = _mm_cvtps_epi32(load());
-      *dst_pp = _mm_extract_epi16(a, 2);
+      a = simde_mm_cvtps_epi32(load());
+      *dst_pp = simde_mm_extract_epi16(a, 2);
       dst_pp += step;
-      *dst_pp = _mm_extract_epi16(a, 4);
+      *dst_pp = simde_mm_extract_epi16(a, 4);
       dst_pp += step;
-      *dst_pp = _mm_extract_epi16(a, 6);
+      *dst_pp = simde_mm_extract_epi16(a, 6);
       dst_pp += step;
       x++;
     }
 
     for (; x < fours; x++) {
-      a = _mm_cvtps_epi32(load());
-      *dst_pp = _mm_extract_epi16(a, 0);
+      a = simde_mm_cvtps_epi32(load());
+      *dst_pp = simde_mm_extract_epi16(a, 0);
       dst_pp += step;
-      *dst_pp = _mm_extract_epi16(a, 2);
+      *dst_pp = simde_mm_extract_epi16(a, 2);
       dst_pp += step;
-      *dst_pp = _mm_extract_epi16(a, 4);
+      *dst_pp = simde_mm_extract_epi16(a, 4);
       dst_pp += step;
-      *dst_pp = _mm_extract_epi16(a, 6);
+      *dst_pp = simde_mm_extract_epi16(a, 6);
       dst_pp += step;
     }
 
     if (singles) {
-      a = _mm_cvtps_epi32(load());
-      *dst_pp = _mm_extract_epi8(a, 0);
+      a = simde_mm_cvtps_epi32(load());
+      *dst_pp = simde_mm_extract_epi8(a, 0);
       if (singles > 1) {
         dst_pp += step;
-        *dst_pp = _mm_extract_epi16(a, 2);
+        *dst_pp = simde_mm_extract_epi16(a, 2);
         if (singles == 3) {
           dst_pp += step;
-          *dst_pp = _mm_extract_epi16(a, 2);
+          *dst_pp = simde_mm_extract_epi16(a, 2);
         }
       }
     }
@@ -1943,73 +1998,85 @@ enum class Transform {
 
 template <Transform mode>
 struct Loader {
-  __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
-                    __m128 maxes) {
-    return _mm_load_ps(src_p);
+  simde__m128 operator()(float* src_p, simde__m128 dither_add,
+                         simde__m128 zeroes, simde__m128 maxes) {
+    return simde_mm_load_ps(src_p);
   }
 };
 
 template <>
 struct Loader<Transform::kGamma> {
-  __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
-                    __m128 maxes) {
-    return _mm_sqrt_ps(_mm_load_ps(src_p));
+  simde__m128 operator()(float* src_p, simde__m128 dither_add,
+                         simde__m128 zeroes, simde__m128 maxes) {
+    return simde_mm_sqrt_ps(simde_mm_load_ps(src_p));
   }
 };
 
 template <>
 struct Loader<Transform::kDither> {
-  __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
-                    __m128 maxes) {
-    return _mm_add_ps(_mm_load_ps(src_p), dither_add);
+  simde__m128 operator()(float* src_p, simde__m128 dither_add,
+                         simde__m128 zeroes, simde__m128 maxes) {
+    return simde_mm_add_ps(simde_mm_load_ps(src_p), dither_add);
   }
 };
 
 template <>
 struct Loader<Transform::kClamp> {
-  __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
-                    __m128 maxes) {
-    return _mm_min_ps(_mm_max_ps(_mm_load_ps(src_p), zeroes), maxes);
+  simde__m128 operator()(float* src_p, simde__m128 dither_add,
+                         simde__m128 zeroes, simde__m128 maxes) {
+    return simde_mm_min_ps(simde_mm_max_ps(simde_mm_load_ps(src_p), zeroes),
+                           maxes);
   }
 };
 
 template <>
 struct Loader<Transform::kDitherGamma> {
-  __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
-                    __m128 maxes) {
-    return _mm_add_ps(_mm_sqrt_ps(_mm_load_ps(src_p)), dither_add);
+  simde__m128 operator()(float* src_p, simde__m128 dither_add,
+                         simde__m128 zeroes, simde__m128 maxes) {
+    return simde_mm_add_ps(simde_mm_sqrt_ps(simde_mm_load_ps(src_p)),
+                           dither_add);
   }
 };
 
 template <>
 struct Loader<Transform::kClampGamma> {
-  __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
-                    __m128 maxes) {
-    // Originally: _mm_min_ps(_mm_sqrt_ps(_mm_max_ps(_mm_load_ps(p), z)), m)
-    return _mm_min_ps(_mm_max_ps(_mm_sqrt_ps(_mm_load_ps(src_p)), zeroes),
-                      maxes);
+  simde__m128 operator()(float* src_p, simde__m128 dither_add,
+                         simde__m128 zeroes, simde__m128 maxes) {
+    // Originally:
+    // simde_mm_min_ps(simde_mm_sqrt_ps(simde_mm_max_ps(simde_mm_load_ps(p),
+    // z)), m)
+    return simde_mm_min_ps(
+        simde_mm_max_ps(simde_mm_sqrt_ps(simde_mm_load_ps(src_p)), zeroes),
+        maxes);
   }
 };
 
 template <>
 struct Loader<Transform::kClampDither> {
-  __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
-                    __m128 maxes) {
-    // Originally: _mm_min_ps(_mm_add_ps(_mm_max_ps(_mm_load_ps(p), z), d), m)
-    return _mm_min_ps(
-        _mm_max_ps(_mm_add_ps(_mm_load_ps(src_p), dither_add), zeroes), maxes);
+  simde__m128 operator()(float* src_p, simde__m128 dither_add,
+                         simde__m128 zeroes, simde__m128 maxes) {
+    // Originally:
+    // simde_mm_min_ps(simde_mm_add_ps(simde_mm_max_ps(simde_mm_load_ps(p), z),
+    // d), m)
+    return simde_mm_min_ps(
+        simde_mm_max_ps(simde_mm_add_ps(simde_mm_load_ps(src_p), dither_add),
+                        zeroes),
+        maxes);
   }
 };
 
 template <>
 struct Loader<Transform::kClampDitherGamma> {
-  __m128 operator()(float* src_p, __m128 dither_add, __m128 zeroes,
-                    __m128 maxes) {
+  simde__m128 operator()(float* src_p, simde__m128 dither_add,
+                         simde__m128 zeroes, simde__m128 maxes) {
     // Originally:
-    // _mm_min_ps(_mm_add_ps(_mm_sqrt_ps(_mm_max_ps(_mm_load_ps(p), z)), d), m)
-    return _mm_min_ps(
-        _mm_max_ps(_mm_add_ps(_mm_sqrt_ps(_mm_load_ps(src_p)), dither_add),
-                   zeroes),
+    // simde_mm_min_ps(simde_mm_add_ps(simde_mm_sqrt_ps(simde_mm_max_ps(simde_mm_load_ps(p),
+    // z)), d), m)
+    return simde_mm_min_ps(
+        simde_mm_max_ps(
+            simde_mm_add_ps(simde_mm_sqrt_ps(simde_mm_load_ps(src_p)),
+                            dither_add),
+            zeroes),
         maxes);
   }
 };
