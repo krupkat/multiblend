@@ -38,6 +38,8 @@ Changes from version 2.0rc5:
   - Remove macros: https://github.com/krupkat/multiblend/pull/8
   - Disable MapAlloc: https://github.com/krupkat/multiblend/pull/20
   - C++ memory alignment: https://github.com/krupkat/multiblend/pull/21
+- Non x86 support
+  - SIMDe integration: https://github.com/krupkat/multiblend/pull/25
 
 ## Build
 
@@ -67,9 +69,9 @@ Build with [thread sanitizer](https://github.com/google/sanitizers/wiki/ThreadSa
 ./misc/tsan_build.sh
 ```
 
-## Limitations
+## Test requirements
 
-Multiblend requires SSE4.1 at the moment, so it won't build on e.g. Mac M1+. This can be fixed by integrating the [simde](https://github.com/simd-everywhere/simde) library.
+Python + pip
 
 ## Library integration
 
