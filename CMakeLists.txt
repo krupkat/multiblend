@@ -1,10 +1,14 @@
 cmake_minimum_required(VERSION 3.21)
 project(Multiblend)
 
+cmake_host_system_information(RESULT MULTIBLEND_HAS_SSE QUERY HAS_SSE)
+
 set(MULTIBLEND_ROOT_PROJECT OFF)
 if (CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
   set(MULTIBLEND_ROOT_PROJECT ON)
 endif()
+
+include (CMakeDependentOption)
 
 OPTION(MULTIBLEND_WITH_ASAN "Build with address sanitizer" OFF)
 OPTION(MULTIBLEND_WITH_TSAN "Build with thread sanitizer" OFF)
@@ -12,7 +16,15 @@ OPTION(MULTIBLEND_BUILD_EXE "Build executable" ${MULTIBLEND_ROOT_PROJECT})
 OPTION(MULTIBLEND_LIB_WITH_JPEG "Build with JPEG support" ${MULTIBLEND_ROOT_PROJECT})
 OPTION(MULTIBLEND_LIB_WITH_PNG "Build with PNG support" ${MULTIBLEND_ROOT_PROJECT})
 OPTION(MULTIBLEND_LIB_WITH_TIFF "Build with TIFF support" ${MULTIBLEND_ROOT_PROJECT})
-OPTION(MULTIBLEND_WITH_NEON "Build with NEON support" OFF)
+OPTION(MULTIBLEND_ARM_OPTIMIZED "Enable optimizations for ARM" OFF)
+
+set(MULTIBLEND_ARM_ARCHITECTURE "armv8-a+simd"
+  CACHE STRING "ARM architecture target"
+)
+
+cmake_dependent_option(MULTIBLEND_WITH_OPENMP_SIMD "Build SIMDe with OpenMP" 
+  ON "MULTIBLEND_ARM_OPTIMIZED" OFF
+)
 
 if(MULTIBLEND_BUILD_EXE)
   if(NOT MULTIBLEND_LIB_WITH_JPEG OR NOT MULTIBLEND_LIB_WITH_PNG OR NOT MULTIBLEND_LIB_WITH_TIFF)
@@ -45,12 +57,6 @@ target_link_libraries(MultiblendLib PUBLIC spdlog::spdlog)
 find_path(SIMDE_INCLUDE_DIRS "simde/arm/neon.h")
 target_include_directories(MultiblendLib PRIVATE ${SIMDE_INCLUDE_DIRS})
 
-if(MULTIBLEND_WITH_NEON)
-  set(NEON_CXX_OPTIONS "-march=armv8-a+simd;-mfpu=neon;-mfloat-abi=softfp;-fopenmp-simd")
-  target_compile_options(MultiblendLib PUBLIC "${NEON_CXX_OPTIONS}")
-  target_compile_definitions(MultiblendLib PUBLIC SIMDE_ENABLE_OPENMP)
-endif()
-
 if(MULTIBLEND_LIB_WITH_JPEG)
   find_package(JPEG REQUIRED)
   target_link_libraries(MultiblendLib PUBLIC JPEG::JPEG)
@@ -80,8 +86,15 @@ if(MULTIBLEND_BUILD_EXE)
   )
 endif()
 
-if(NOT MSVC)
-    target_compile_options(MultiblendLib PRIVATE -msse4.1)
+if(MULTIBLEND_ARM_OPTIMIZED)
+  target_compile_options(MultiblendLib PRIVATE "-march=${MULTIBLEND_ARM_ARCHITECTURE}")
+elseif(MULTIBLEND_HAS_SSE AND NOT MSVC)
+  target_compile_options(MultiblendLib PRIVATE -msse4.1)
+endif()
+
+if(MULTIBLEND_WITH_OPENMP_SIMD)
+  target_compile_options(MultiblendLib PRIVATE "-fopenmp-simd")
+  target_compile_definitions(MultiblendLib PRIVATE SIMDE_ENABLE_OPENMP)
 endif()
 
 function(multiblend_build_with_sanitizer sanitizer)
