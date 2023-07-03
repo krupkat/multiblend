@@ -76,3 +76,7 @@ Python + pip
 ## Library integration
 
 Check out [Xpano](https://github.com/krupkat/xpano) for an example of integrating the Multiblend library in your C++ project.
+
+## Example results
+
+https://discuss.pixls.us/t/xpano-0-15-0-multiblend-integration
