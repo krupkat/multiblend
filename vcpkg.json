@@ -9,5 +9,12 @@
     "spdlog",
     "bshoshany-thread-pool",
     "simde"
+  ],
+  "builtin-baseline": "83972272512ce4ede5fc3b2ba98f6468b179f192",
+  "overrides": [
+    {
+        "name": "bshoshany-thread-pool",
+        "version": "3.5.0"
+    }
   ]
 }
