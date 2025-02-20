@@ -33,7 +33,7 @@ jobs:
           - os: ubuntu-latest
             generator: 'Unix Makefiles'
           - os: macos-latest
-            generator: 'Unix Makefiles'
+            generator: 'Ninja'
 
     steps:
       - uses: actions/checkout@v4
@@ -41,13 +41,16 @@ jobs:
       - uses: ilammy/msvc-dev-cmd@v1
         if: matrix.os == 'windows-latest'
 
+      - name: Install ninja
+        if: matrix.os == 'macos-latest'
+        run: brew install ninja
+
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
         id: runvcpkg
         with:
           vcpkgDirectory: '${{ runner.workspace }}/vcpkg'
           vcpkgGitCommitId: '${{ env.VCPKG_VERSION }}'
-          runVcpkgInstall: true
 
       - name: Run CMake
         run: cmake -B build -G "${{ matrix.generator }}" -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_TOOLCHAIN_FILE=${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}/scripts/buildsystems/vcpkg.cmake
