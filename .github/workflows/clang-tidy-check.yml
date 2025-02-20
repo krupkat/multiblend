@@ -15,7 +15,7 @@ permissions:
 
 env:
   BUILD_TYPE: "Release"
-  VCPKG_VERSION: "eb8e75bb4f5b5f46f65cb10aa863285815c2b69c"
+  VCPKG_VERSION: "d5ec528843d29e3a52d745a64b469f810b2cedbf"
 
 jobs:
   clang-tidy-check:
