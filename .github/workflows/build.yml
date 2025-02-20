@@ -17,7 +17,7 @@ permissions:
 
 env:
   BUILD_TYPE: "Release"
-  VCPKG_VERSION: "83972272512ce4ede5fc3b2ba98f6468b179f192"
+  VCPKG_VERSION: "d5ec528843d29e3a52d745a64b469f810b2cedbf"
 
 jobs:
   build-and-test:
@@ -36,7 +36,7 @@ jobs:
             generator: 'Unix Makefiles'
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: ilammy/msvc-dev-cmd@v1
         if: matrix.os == 'windows-latest'
