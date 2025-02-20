@@ -17,7 +17,7 @@ permissions:
 
 env:
   BUILD_TYPE: "Release"
-  VCPKG_VERSION: "83972272512ce4ede5fc3b2ba98f6468b179f192"
+  VCPKG_VERSION: "d5ec528843d29e3a52d745a64b469f810b2cedbf"
 
 jobs:
   build-and-test:
@@ -33,16 +33,27 @@ jobs:
           - os: ubuntu-latest
             generator: 'Unix Makefiles'
           - os: macos-latest
-            generator: 'Unix Makefiles'
+            generator: 'Ninja'
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: ilammy/msvc-dev-cmd@v1
         if: matrix.os == 'windows-latest'
 
+      - name: Install ninja
+        if: matrix.os == 'macos-latest'
+        run: brew install ninja
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install test dependencies
+        run: pip install -r tests/requirements.txt
+
       - name: Setup vcpkg
-        uses: lukka/run-vcpkg@main
+        uses: lukka/run-vcpkg@v11
         id: runvcpkg
         with:
           vcpkgDirectory: '${{ runner.workspace }}/vcpkg'

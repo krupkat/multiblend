@@ -10,7 +10,7 @@
     "bshoshany-thread-pool",
     "simde"
   ],
-  "builtin-baseline": "83972272512ce4ede5fc3b2ba98f6468b179f192",
+  "builtin-baseline": "d5ec528843d29e3a52d745a64b469f810b2cedbf",
   "overrides": [
     {
         "name": "bshoshany-thread-pool",

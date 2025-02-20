@@ -8,9 +8,6 @@ if(MULTIBLEND_BUILD_EXE)
 
   add_test(NAME MultiblendTest COMMAND 
     ${Python3_EXECUTABLE} -m unittest discover -s ${CMAKE_CURRENT_SOURCE_DIR} -v)
-
-  execute_process(COMMAND 
-    ${Python3_EXECUTABLE} -m pip install -r ${CMAKE_CURRENT_SOURCE_DIR}/requirements.txt)
 endif()
 
 find_package(Catch2 REQUIRED)

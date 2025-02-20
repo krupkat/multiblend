@@ -15,7 +15,7 @@ permissions:
 
 env:
   BUILD_TYPE: "Release"
-  VCPKG_VERSION: "eb8e75bb4f5b5f46f65cb10aa863285815c2b69c"
+  VCPKG_VERSION: "d5ec528843d29e3a52d745a64b469f810b2cedbf"
 
 jobs:
   clang-tidy-check:
@@ -24,20 +24,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest] # windows runner doesn't support clang-tidy with export-fixes
+        os: [ubuntu-22.04]
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             generator: 'Unix Makefiles'
             tidy_runner_script: './misc/tidy.sh'
-          # - os: windows-latest
-          #   generator: 'Ninja'
-          #   tidy_runner_script: './misc/tidy.ps1'
 
     steps:
-      - uses: actions/checkout@v3
-
-      # - uses: ilammy/msvc-dev-cmd@v1
-      #   if: matrix.os == 'windows-latest'
+      - uses: actions/checkout@v4
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@main
