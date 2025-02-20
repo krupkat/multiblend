@@ -24,20 +24,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest] # windows runner doesn't support clang-tidy with export-fixes
+        os: [ubuntu-22.04]
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             generator: 'Unix Makefiles'
             tidy_runner_script: './misc/tidy.sh'
-          # - os: windows-latest
-          #   generator: 'Ninja'
-          #   tidy_runner_script: './misc/tidy.ps1'
 
     steps:
       - uses: actions/checkout@v4
-
-      # - uses: ilammy/msvc-dev-cmd@v1
-      #   if: matrix.os == 'windows-latest'
 
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@main
